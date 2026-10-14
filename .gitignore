@@ -1,0 +1,76 @@
+# Local review output, evidence, history and invocation ledger
+/review/
+
+# Python / frontend generated files
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.venv/
+venv/
+node_modules/
+dist/
+build/
+build_*/
+coverage/
+*.log
+
+# Hardware outputs (keep source, constraints and project files)
+impl/
+Objects/
+Listings/
+*.fs
+*.bit
+*.bin
+*.elf
+*.axf
+*.hex
+*.o
+*.vcd
+*.fst
+*.vvp
+
+# Local model weights and exported models; keep training source
+*.pt
+*.pth
+*.onnx
+*.tflite
+
+# Credentials / local environment (examples can be versioned)
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.pfx
+*.lic
+
+# Rebuildable frontend caches
+.vite/
+*.tsbuildinfo
+
+# Local acquired session databases (keep schema and migrations in source)
+/data/sessions/
+
+# Large/local datasets and demo media; keep dataset configuration in source
+/ai_training/dataset_4k_yolo/images/
+/ai_training/dataset_4k_yolo/labels/
+/ai_training/dataset_4k_yolo/labels_5class_backup/
+/ai_training/manifests/
+/ai_training/runs/
+/media/
+~$*.docx
+
+# Vendor SDKs, installers, drivers and packs are acquired separately
+/docs/hardware/sonix_sn34f788/*_SDK_*/
+/docs/hardware/sonix_sn34f788/*_Package_*/
+/docs/hardware/sonix_sn34f788/**/*.exe
+/docs/hardware/sonix_sn34f788/**/*.dll
+/docs/hardware/onekiwi20k/*.pdf
+/docs/hardware/onekiwi20k/*.png
+
+# Personal workspace rules; keep local, not in the public project repository
+/AGENTS.md
+/.agents/rules/kvc.md
+/docs/KVC_AI_WORKFLOW.md

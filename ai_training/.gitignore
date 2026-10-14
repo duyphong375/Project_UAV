@@ -1,0 +1,11 @@
+raw_videos/
+raw_images/
+dataset_exports/
+evaluation_videos/
+releases/*.pt
+releases/*.onnx
+releases/*.tflite
+
+# Dataset files are stored outside Git; keep data.yaml and source tracked
+/dataset_4k_yolo/images/
+/dataset_4k_yolo/labels/

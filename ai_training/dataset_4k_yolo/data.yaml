@@ -1,0 +1,7 @@
+train: images/train
+val: images/val
+# test chưa cấu hình: asset/session locked-test độc lập hiện chưa được xác minh.
+nc: 2
+names:
+  0: person   # Model class; wire mapping remains pending G1 ABI approval.
+  1: lifebuoy # Model class; wire mapping remains pending G1 ABI approval.
