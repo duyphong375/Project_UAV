@@ -1,18 +1,18 @@
-> **Backlog kỹ thuật tham khảo.** Phân công theo tên và checklist đang dùng ở [phân công](KVC_PHAN_CONG_5_NGUOI.md) và [công việc chi tiết](KVC_CONG_VIEC_CHI_TIET_5_NGUOI.md). Các vai A–E/kịch bản sa bàn trong backlog này là nội dung cũ; demo hiện hành theo [kịch bản demo](../demo/KVC_DEMO.md).
+> **Backlog tham khảo, chưa giao triển khai.** Phân công theo tên và checklist đang dùng ở [phân công](KVC_PHAN_CONG_5_NGUOI.md) và [công việc chi tiết](KVC_CONG_VIEC_CHI_TIET_5_NGUOI.md). Các vai A–E/kịch bản sa bàn và những task USB/STM32 trong backlog này là nội dung cũ. Kiến trúc hiện hành dùng ESP32 trạm đất có nguồn riêng, Wi-Fi SoftAP/WebSocket tới dịch vụ GCS trên laptop; RF32 còn là draft. Không thực hiện các task GCS USB/serial bên dưới như giao diện mục tiêu. Hãy lập task mới theo thiết kế hệ thống và checklist hiện hành.
 
 # KVC — Backlog kỹ thuật tham khảo từ kế hoạch trước
 
 **Mốc lập: 14/10/2026, Asia/Saigon.** Task tài liệu: KVC-TODO-DOC-20261014-001. Owner tài liệu: Codex; SELF-REVIEW, chưa human approval. Mọi việc dưới đây là **PROPOSED**, trừ chỗ ghi rõ chờ đầu vào. Tài liệu này lập backlog, không tự giao triển khai, flash hoặc duyệt thay đổi phần cứng.
 
-Nguồn: [tiến độ hiện tại](../KVC_PROJECT_STATUS.md), [thiết kế/lịch hệ thống](../KVC_ThietKeHeThong.md), [kế hoạch GCS](../gcs/KVC_GCS_PLAN.md), [contract](../gcs/KVC_GCS_DATA_CONTRACT.md), [dữ liệu AI](../ai/KVC_AI_DATA_PREPARATION.md).
+Nguồn: [tiến độ hiện tại](../KVC_PROJECT_STATUS.md), [thiết kế/lịch hệ thống](../KVC_ThietKeHeThong.md), [kế hoạch GCS](../gcs/KVC_GCS_PLAN.md), [contract](../gcs/KVC_GCS_DATA_CONTRACT.md), [dữ liệu AI](../ai/KVC_AI_DATA_PREPARATION.md), [workflow](../KVC_AI_WORKFLOW.md) và [AGENTS](../../AGENTS.md).
 
 ## 1. Điểm xuất phát và cách dùng
 
 - GCS đã có frontend, backend MOCK, SQLite và replay. Tiếp tục source hiện tại; không tạo lại dashboard hoặc logger từ đầu.
 - AI có adapter, dữ liệu và reports PC. Generator/validator đã có guardrails, nhưng evidence release còn BLOCKED; 335 issues là kết quả lần chạy cũ, cần kiểm lại candidate hiện tại.
-- Chưa có bằng chứng project RTL/firmware KVC dạng rời đã build hoặc chuỗi FPGA–MCU–LoRa–USB–GCS đã chạy. SDK mẫu không thay implementation KVC.
+- Chưa có bằng chứng project RTL/firmware KVC dạng rời đã build hoặc chuỗi FPGA–MCU–LoRa–ESP32–Wi-Fi/WebSocket–GCS đã chạy. SDK mẫu không thay implementation KVC.
 - OneKiwi V1.1 đã được người dùng xác nhận cùng mẫu; camera, DDR3, nối SONiX, VCCIO/reset/IRQ chưa được chốt đủ dùng. Không dùng pinout Tang/DVP trong thiết kế cũ để đấu nối OneKiwi.
-- RF32/USB48 và UART FPGA là DESIGN; ABI chưa được duyệt. Parser telemetry20 cũ không có trong ingress hiện tại; không tự dựng lại layout từ ghi nhận lịch sử.
+- RF payload 32 byte và UART FPGA là DESIGN; RF ABI chưa được duyệt. Wi-Fi SoftAP/WebSocket v1 là baseline thiết kế chưa xác minh. USB48 thuộc kiến trúc cũ. Parser telemetry20 cũ không có trong ingress hiện tại; không tự dựng lại layout từ ghi nhận lịch sử.
 - Không giả định tất cả linh kiện đều thiếu. Từng việc hardware được mở khi **chính các linh kiện và đầu vào của việc đó** đã có, không đợi đủ toàn bộ bộ kit.
 
 **Ưu tiên công việc:** ƯT1 = làm trước để gỡ điểm chặn/đường tích hợp; ƯT2 = hoàn thiện khả năng kiểm thử và tích hợp; ƯT3 = tối ưu/hoàn thiện sau khi chuỗi cơ bản ổn. Đây không phải severity P0/P1/P2 của finding code.

@@ -10,11 +10,11 @@
 
 ## 1. Phân định ranh giới và Tính độc lập của Giao thức
 
-### 1.1. Hiện trạng giao thức và mức bằng chứng — 14/10/2026
+### 1.1. Hiện trạng giao thức và mức bằng chứng — 15/10/2026
 
-- Source telemetry 20 byte cũ là ghi nhận lịch sử. Snapshot hiện có frontend React/TypeScript và backend FastAPI MOCK/logger/replay; chưa có parser serial/legacy; không suy đoán layout hoặc khôi phục parser 20 byte. MVP không đặt mục tiêu hỗ trợ giao thức cũ.
-- RF 32 byte và USB envelope 48 byte là **DESIGN** tại mục IV.3 [thiết kế hệ thống](../KVC_ThietKeHeThong.md). Chưa coi là giao thức đã nạp trên bo; C+D xác nhận ABI tại G1 (14/10/2026). Task tài liệu KVC-DOC-21D-001 không thay layout, CRC, baud, IRQ hoặc pinout.
-- Endpoint ứng dụng hiện hành có trong Dashboard/backend/main.py và backend README; schemas/state, logger và replay đã có tests. Phần RF/USB vẫn là mục tiêu tích hợp; D đối chiếu types/adapter/reducer và golden vectors theo task. Khác biệt source/contract phải được ghi nhận, không đổi hardware để vừa UI.
+- Source telemetry 20 byte cũ đã được ghi nhận trong AGENTS.md/workflow lịch sử. Snapshot hiện có frontend React/TypeScript và backend FastAPI MOCK/logger/replay; chưa có parser serial/legacy; không suy đoán layout hoặc khôi phục parser 20 byte. MVP không đặt mục tiêu hỗ trợ giao thức cũ.
+- RF 32 byte vẫn là **DRAFT** tại mục IV.3 [thiết kế hệ thống](../KVC_ThietKeHeThong.md), chưa coi là giao thức đã nạp trên bo. Transport ESP32–laptop mục IV.4 đã chốt Wi-Fi SoftAP/WebSocket v1 nhưng cũng chưa có bằng chứng firmware, ingress hoặc capture REAL.
+- Endpoint ứng dụng hiện hành có trong Dashboard/backend/main.py và backend README; schemas/state, logger và replay đã có tests. Wi-Fi/WebSocket ingress từ ESP32 là mục tiêu tích hợp; owner đối chiếu types/adapter/reducer và golden vectors theo task. Khác biệt source/contract phải được ghi nhận, không đổi hardware để vừa UI.
 - Vector review/KVC-PLAN-002_reference_vectors.json là tham chiếu thiết kế lịch sử nếu còn, không phải phép thử sản phẩm. C+D tạo bộ golden C/Python có version/hash trong Dashboard/fixtures theo task được giao; không phụ thuộc duy nhất file Git ignored.
 - REAL ingress chưa có thiết bị/capture thì BLOCKED; tiếp tục MOCK độc lập có nhãn. Tiêu chí hệ thống ở mục VII thiết kế; mốc G1/G2/G3 trong kế hoạch cũ là lịch sử, không phải lịch hiện hành. Replay ứng dụng đã có, ingress REAL chưa có.
 
@@ -38,7 +38,7 @@ Toàn bộ dữ liệu trao đổi giữa Backend và Frontend được chuẩn 
 | `original_source_mode` | Nguồn dữ liệu gốc của gói tin | `string` | Enum: `REAL`, `MOCK`, `REPLAY`, `UNKNOWN` | Có | Thiết bị / Log | Trích xuất từ bits 4–5 của trường Flags phần cứng (hoặc từ log file). |
 | `inference_device` | Thiết bị thực hiện suy luận AI | `string` | Enum: `FPGA_GW2A`, `PC_REFERENCE`, `SIMULATED`, `UNKNOWN` | Có | Backend Manifest | Ánh xạ từ cấu hình Preflight. Chưa đối chiếu manifest thì bắt buộc ghi `UNKNOWN`. |
 | `sender_session_id` | Định danh phiên nguồn từ MCU tải | `integer` hoặc `null` | uint32 (1 .. $2^{32}-1$) | Tùy chọn | Thiết bị MCU | Bằng `null` nếu là nguồn MOCK không có phần cứng hoặc chưa nhận được gói. |
-| `ground_session_id` | Định danh phiên MCU trạm đất | `integer` hoặc `null` | uint16 (1 .. 65535) | Tùy chọn | MCU trạm đất | Bằng `null` nếu không qua dongle trạm đất. |
+| `ground_session_id` | Định danh phiên ESP32 trạm đất | `integer` hoặc `null` | uint32 (1 .. $2^{32}-1$) | Tùy chọn | ESP32 gateway | Ánh xạ từ `gateway_session_id` của WebSocket v1; bằng `null` nếu MOCK/REPLAY hoặc chưa có gateway. |
 
 *Lưu ý bảo mật kiến trúc:* `session_id` của Backend GCS là định danh phiên ứng dụng PC, tuyệt đối không được đánh đồng với `sender_session_id` của MCU phát trên không hoặc `sequence_number` của phần cứng.
 
@@ -102,7 +102,7 @@ Toàn bộ dữ liệu trao đổi giữa Backend và Frontend được chuẩn 
 
 | Tên trường | Ý nghĩa | Kiểu dữ liệu | Bắt buộc | Nguồn tạo | Quy tắc xử lý |
 | :--- | :--- | :--- | :--- | :--- | :--- |
-| `packets_received_total` | Tổng số envelope USB nhận được | `integer` | Có | Backend Framer | Tăng đơn điệu từ khi khởi chạy Backend. |
+| `packets_received_total` | Tổng số message WebSocket hợp lệ từ ESP32 nhận được | `integer` | Có | Backend Ingress | Tăng đơn điệu từ khi khởi chạy Backend. |
 | `decode_errors_total` | Số bản tin lỗi CRC hoặc sai cấu trúc | `integer` | Có | Backend Parser | Tăng khi CRC fail, sai length, sai sync hoặc sai version. |
 | `ingress_drops_total` | Số gói bị drop do đầy hàng đợi Ingress | `integer` | Có | Ingress FIFO | Tăng khi Ingress FIFO vượt ngưỡng 256. |
 | `logger_drops_total` | Số bản ghi bị drop do đầy hàng đợi Logger | `integer` | Có | Logger FIFO | Tăng khi Logger Queue vượt ngưỡng 1.024. |
@@ -168,7 +168,7 @@ CREATE TABLE IF NOT EXISTS telemetry_records (
     pc_rx_monotonic_ms INTEGER NOT NULL,
     pc_rx_iso TEXT NOT NULL,
     source_mode TEXT NOT NULL,
-    raw_envelope_hex TEXT,         -- Chuỗi hex 48 byte nếu nhận qua USB
+    raw_transport_json TEXT,       -- JSON WebSocket v1 nhận từ ESP32, nếu có
     rf_payload_hex TEXT,           -- Chuỗi hex 32 byte payload
     is_valid INTEGER NOT NULL,     -- 1 nếu giải mã thành công, 0 nếu reject
     reject_reason TEXT,            -- Ghi rõ nguyên nhân nếu reject (VD: "CRC_FAIL")
@@ -195,7 +195,7 @@ CREATE INDEX IF NOT EXISTS idx_records_session ON telemetry_records(session_id);
    - State Reducer **bắt buộc phải xóa sạch trạng thái hiện tại**.
    - Thực hiện truy vấn phục hồi trạng thái từ đầu phiên (hoặc từ điểm checkpoint gần nhất) đến đúng mốc $T_{seek}$.
    - Tuyệt đối **không giữ lại mục tiêu hoặc cảnh báo của tương lai** ($T > T_{seek}$) trên màn hình.
-3. **Cách ly Tuyệt đối Cổng Phần cứng:** Khi chế độ Replay kích hoạt, luồng giao tiếp với cổng nối tiếp (Serial Ingress) bị khóa hoàn toàn. Không mở cổng serial ở chế độ phát (TX), không gửi bất kỳ gói tin nào ra bên ngoài.
+3. **Cách ly Tuyệt đối Kết nối Phần cứng:** Khi chế độ Replay kích hoạt, WebSocket ingress từ ESP32 bị đóng hoàn toàn. Không gửi lệnh hoặc bất kỳ gói tin nào ra thiết bị.
 
 ---
 
@@ -484,7 +484,7 @@ CREATE INDEX IF NOT EXISTS idx_records_session ON telemetry_records(session_id);
 ---
 
 ### Ví dụ 6: Mất Kết nối Phần cứng (Hardware Disconnected / Link Lost)
-*Mô tả:* Backend vẫn kết nối WebSocket tốt với Trình duyệt, nhưng cáp USB của mạch CP2102 bị rút đột ngột. Backend báo trạng thái phần cứng `DISCONNECTED`.
+*Mô tả:* Backend vẫn kết nối WebSocket với trình duyệt, nhưng mất kết nối Wi-Fi/WebSocket tới ESP32. Backend báo trạng thái phần cứng `DISCONNECTED`.
 
 ```json
 {
@@ -505,13 +505,13 @@ CREATE INDEX IF NOT EXISTS idx_records_session ON telemetry_records(session_id);
   "is_stale": true,
   "hardware_link": {
     "status": "DISCONNECTED",
-    "port": "COM3",
-    "error_message": "Serial device disconnected: ClearCommError failed (device unmounted)"
+    "endpoint": "ws://192.168.4.1:8080/telemetry",
+    "error_message": "ESP32 WebSocket disconnected; reconnect pending"
   },
   "alert": {
     "level": "CRITICAL",
-    "code": "HARDWARE_PORT_LOST",
-    "message": "Mất kết nối cổng COM3 với trạm thu mặt đất. Đang thử kết nối lại tự động..."
+    "code": "GATEWAY_LINK_LOST",
+    "message": "Mất kết nối WebSocket với ESP32 trạm đất. Đang thử kết nối lại tự động..."
   },
   "diagnostics": {
     "packets_received_total": 312,
@@ -592,7 +592,7 @@ CREATE INDEX IF NOT EXISTS idx_records_session ON telemetry_records(session_id);
 
 ## 7. Application MOCK slice — KVC-PRE-GCS-BACKEND-001
 
-Phần này bổ sung semantics ứng dụng đã triển khai cho backend MOCK và frontend hiện hữu. Các phần mô tả RF/USB/flags/sentinel phía trên giữ nguyên là DESIGN; chưa có parser, COM, camera hoặc inference model trong backend. Logger và replay đã được bổ sung bởi KVC-PRE-GCS-LOGGER-001 / KVC-PRE-GCS-REPLAY-001. Các fixture thiết kế cũ ở mục 6 không tự chứng minh code đang chạy; patch hiện hành chỉ mang field thuộc domain của event.
+Phần này bổ sung semantics ứng dụng đã triển khai cho backend MOCK và frontend hiện hữu. RF/flags/sentinel vẫn là DESIGN; WebSocket ingress ESP32 cũng chưa được triển khai hoặc kiểm REAL trong backend. Logger và replay đã được bổ sung bởi KVC-PRE-GCS-LOGGER-001 / KVC-PRE-GCS-REPLAY-001. Các fixture thiết kế cũ ở mục 6 không tự chứng minh code đang chạy; patch hiện hành chỉ mang field thuộc domain của event.
 
 ### 7.1. Nguồn, phiên, socket và storage
 
@@ -641,4 +641,4 @@ Ví dụ reconnect: target được nhận 10 giây trước và telemetry 1 gi�
 
 ### 7.4. Replay phiên đã commit
 
-Backend có start/pause/resume/seek/speed/stop qua HTTP; xem [backend README](../../Dashboard/backend/README.md) cho request/response. Replay đọc SQLite read-only, giữ original_source_mode và inference_device, phát source REPLAY với phiên ứng dụng riêng, không ghi lại playback vào logger và không gọi hardware transport. Clock ảo dừng khi pause; seek tái dựng từ đầu, rồi phát full snapshot. Stop tạo phiên MOCK sạch. Đây là semantics ứng dụng đã có tests, không phải chứng nhận chuỗi RF/USB. Phần tải phiên hiện nạp toàn bộ records vào RAM và seek duyệt từ đầu; cần đo session dài trước mở rộng.
+Backend có start/pause/resume/seek/speed/stop qua HTTP; xem [backend README](../../Dashboard/backend/README.md) cho request/response. Replay đọc SQLite read-only, giữ original_source_mode và inference_device, phát source REPLAY với phiên ứng dụng riêng, không ghi lại playback vào logger và không gọi WebSocket ingress ESP32. Clock ảo dừng khi pause; seek tái dựng từ đầu, rồi phát full snapshot. Stop tạo phiên MOCK sạch. Đây là semantics ứng dụng đã có tests, không phải chứng nhận chuỗi RF/ESP32/GCS. Phần tải phiên hiện nạp toàn bộ records vào RAM và seek duyệt từ đầu; cần đo session dài trước mở rộng.

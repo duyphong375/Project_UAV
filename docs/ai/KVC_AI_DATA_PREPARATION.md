@@ -8,7 +8,7 @@
 
 ## Snapshot evidence mới — 14/10/2026
 
-KVC-AI-DATAFIX-20261014-001 đã sửa generator thành dry-run/hash thật/UNREVIEWED, thêm validator chỉ đọc và fixture tests; không sửa dataset/manifest cũ hoặc chứng nhận release. Lần validator được lưu ghi exit 1, AI_EVIDENCE_BLOCKED, 335 issues. Cần nguồn/license/consent, QA người, session có hash, locked-test và calibration thật. Đây là kết quả lịch sử, không chạy lại trong KVC-STATUS-DOC-20261014-001. Xem [AI README](../../ai_training/README.md), [tiến độ dự án](../KVC_PROJECT_STATUS.md) và [báo cáo DATAFIX](../../review/KVC-AI-DATAFIX-20261014-001/REPORT.md). Wire ID 1/2 là mapping ứng dụng và đề xuất wire; RF32/USB48 vẫn DESIGN_PENDING_G1_ABI.
+KVC-AI-DATAFIX-20261014-001 đã sửa generator thành dry-run/hash thật/UNREVIEWED, thêm validator chỉ đọc và fixture tests; không sửa dataset/manifest cũ hoặc chứng nhận release. Lần validator được lưu ghi exit 1, AI_EVIDENCE_BLOCKED, 335 issues. Cần nguồn/license/consent, QA người, session có hash, locked-test và calibration thật. Đây là kết quả lịch sử, không chạy lại trong KVC-STATUS-DOC-20261014-001. Xem [AI README](../../ai_training/README.md), [tiến độ dự án](../KVC_PROJECT_STATUS.md) và [báo cáo DATAFIX](../../review/KVC-AI-DATAFIX-20261014-001/REPORT.md). Wire ID 1/2 là mapping ứng dụng và đề xuất wire; RF payload 32 byte vẫn DESIGN_PENDING duyệt ABI. Wi-Fi SoftAP/WebSocket v1 là giao diện mục tiêu ESP32–laptop, chưa triển khai/xác minh; USB48 thuộc kiến trúc cũ.
 
 ## Bước 1 — Ontology và Hợp đồng Giao thức (Wire Contract)
 
@@ -22,7 +22,7 @@ KVC-AI-DATAFIX-20261014-001 đã sửa generator thành dry-run/hash thật/UNRE
    - Tham chiếu mở rộng cho Dashboard PC: `person`, `lifebuoy`, `boat`, `life_jacket`, `person_model`. Đây là profile tham chiếu trong ontology; không đồng nhất với backup dataset. `labels_5class_backup/` dùng swimmer/boat/jetski/life_saving_appliances/buoy theo script remap; cần adapter riêng nếu muốn dùng profile tham chiếu.
 
 3. **Ngữ cảnh Phần cứng & Adapter (Inference Adapter)**:
-   - Telemetry 20-byte là ghi nhận source lịch sử; inventory hiện không có parser/firmware tương ứng. RF 32-byte/USB 48-byte trong thiết kế vẫn cần C+D chốt ABI và bằng chứng trên bo.
+   - Telemetry 20-byte là ghi nhận source lịch sử; inventory hiện không có parser/firmware tương ứng. RF payload 32-byte vẫn cần duyệt ABI và bằng chứng trên bo. USB envelope 48-byte thuộc phương án cũ, không còn là transport mục tiêu.
    - Adapter `ai_training/inference_adapter.py` ánh xạ lớp (0,1) sang ID ứng dụng (1,2) và confidence 0..1 sang 0..100%. Mặc định nhận boxes ở pixel ảnh gốc (`ORIGINAL_IMAGE_XYXY`); chỉ unletterbox khi caller khai báo `LETTERBOX_640_XYXY`. Không unletterbox lần nữa boxes đã ở ảnh gốc của Ultralytics. Adapter chưa đóng gói wire bytes và luôn ghi PC_REFERENCE/NOT_TRACKED.
    - Tiền xử lý (Preprocessing): RGB, letterbox 640x640 với viền màu 114 (114, 114, 114), chuẩn hóa pixel `[0, 255] -> [0.0, 1.0]`.
 

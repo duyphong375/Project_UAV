@@ -4,6 +4,8 @@ Cập nhật **14/10/2026, Asia/Saigon**. Task: **KVC-STATUS-DOC-20261014-001**;
 
 > Đồng bộ nội dung trong **KVC-DOC-CONSISTENCY-20261014-001**, owner Codex, 14/10/2026. Các kết quả test phía dưới là lịch sử; lượt này đối chiếu source/tài liệu và sửa Markdown, chưa chạy phần cứng. Xem [báo cáo cập nhật](../review/KVC-DOC-CONSISTENCY-20261014-001/REPORT.md).
 
+> **Cập nhật kiến trúc 15/10/2026:** Thiết kế hiện hành chọn ESP32-WROOM-32D trạm đất có nguồn riêng, Wi-Fi SoftAP/WebSocket tới dịch vụ GCS trên laptop và Dashboard web trong browser. Snapshot/status, test và log bên dưới giữ nguyên mốc 14/10; các chỗ ghi USB/CP2102 hoặc STM32 là lịch sử, không phải cấu hình mục tiêu mới. RF 32 byte vẫn draft; transport Wi-Fi chưa được xác minh trên thiết bị.
+
 ## Kết luận hiện tại
 
 **KVC đã có nền tảng phần mềm GCS và AI tham chiếu PC; chưa có bằng chứng hoàn thành payload FPGA–MCU–LoRa–GCS trên phần cứng.** Phần mềm MOCK đã đi xa hơn skeleton, nhưng chưa thay thế serial ingress, định vị bằng cảm biến thật hoặc AI chạy trên FPGA. Không có cơ sở quy toàn dự án thành một tỷ lệ phần trăm.
@@ -19,13 +21,13 @@ Cập nhật UI trong **KVC-PROJECT-SYNC-CLEAN-20261014-001**: tên thiết bị
 | Phân hệ | Đã có | Mức bằng chứng hiện có | Còn thiếu để tích hợp/nghiệm thu |
 | --- | --- | --- | --- |
 | GCS frontend | React/TypeScript/Vite; radar local, bản đồ, cảnh báo, MOCK; adapter/reducer, HTTP/WS và UI replay | SOURCE-VERIFIED; log lịch sử 76 tests và build exit 0 | Browser E2E đúng candidate, offline cold-cache, soak và máy demo sạch |
-| Backend GCS | FastAPI loopback; schema/state; MOCK, client queues hữu hạn; API trạng thái/sessions/replay | SOURCE-VERIFIED; SIMULATED theo tests/log lịch sử | Serial ingress, binary framing/decoder, capture thật, reconnect USB |
+| Backend GCS | FastAPI loopback; schema/state; MOCK, client queues hữu hạn; API trạng thái/sessions/replay | SOURCE-VERIFIED; SIMULATED theo tests/log lịch sử | ESP32 Wi-Fi/WebSocket ingress, RF decoder, capture thật và reconnect thiết bị |
 | SQLite/replay | Logger, WAL/FULL, commit boundary, session replay/seek/pause; tests recovery | SOURCE-VERIFIED; SIMULATED trong log | Phiên dài, tải/concurrent controls; mất điện thật chưa được thử |
 | AI tham chiếu PC | Adapter person/lifebuoy, caller video/webcam, dataset, checkpoints và reports | SOURCE-VERIFIED; adapter test bằng dữ liệu giả | Provenance/license, QA có evidence, locked-test, calibration và metrics tái lập trên candidate |
 | AI evidence tooling | Generator mặc định dry-run/hash thật, validator chỉ đọc và fixture tests | SOURCE-VERIFIED; SIMULATED trong báo cáo DATAFIX | Manifest cũ chưa được chữa bằng dữ liệu thật; validator ghi 335 issues ở lần chạy đã lưu |
 | FPGA KVC | Hồ sơ OneKiwi/Gowin, SDK/tài liệu hãng; người dùng xác nhận cùng mẫu Kiwi Primer 20K V1.1 | DOCUMENTED / HUMAN-CONFIRMED, chưa hardware verified | Project/top-level KVC, RTL/testbench/constraints, camera bring-up, DDR/IP, synthesis/timing, khả năng GoAI |
 | MCU KVC | Tài liệu SONiX/SDK và kế hoạch UART/cảm biến/LoRa | DOCUMENTED / DESIGN | Project đúng chip/board, pin mux, compiler/build, ISR/DMA/ring, cảm biến, georef và RF thử trên bo |
-| Chuỗi REAL | Kiến trúc, application JSON và dự thảo RF32/USB48/UART | DESIGN đối với wire protocol | C+D duyệt ABI/pinout/golden vectors; FPGA→MCU→LoRa→USB→GCS có log đối chiếu |
+| Chuỗi REAL | Kiến trúc, application JSON, draft RF32/UART và baseline ESP32 Wi-Fi/WebSocket | DESIGN; ingress chưa xác minh | C+D duyệt RF ABI/pinout/golden vectors; FPGA→MCU→LoRa→ESP32→Wi-Fi/WebSocket→GCS có log đối chiếu |
 | Quản lý dự án | AGENTS, adapter Antigravity, review workflow, Git baseline | SOURCE-VERIFIED tài liệu và metadata Git | Kiểm worktree/staging bằng Git; nghiệm thu task, sao lưu evidence/data; không coi test PASS là approval |
 
 Phạm vi inventory chỉ xác nhận source KVC dạng rời được thấy trong workspace. Source mẫu bên trong SDK không phải implementation payload đã tích hợp; không kết luận công việc trên máy/bo ngoài workspace chưa tồn tại.
@@ -47,7 +49,7 @@ Bản thiết kế hiện tại không còn lịch 21 ngày; bảng G0–G5 gi�
 
 1. **Board/camera:** nhóm xác nhận đang có OneKiwi Primer 20K V1.1; thiết kế/BOM đã thống nhất dùng bo này, mua thêm 0. Camera/cáp và RX pipeline chưa chốt; không mặc định DVP 24 chân hoặc HDMI cắm là chạy.
 2. **Điện và nối FPGA–SONiX:** UART, DATA_READY/IRQ, reset, VCCIO/I/O standard và mapping hai board chưa có phê duyệt đủ dùng. Không còn lấy 128/512 MB làm cấu hình chắc chắn: DDR3 fitted part/density/map và controller chưa được xác minh trên bo. Manual cũng có số Flash không thống nhất; cần đối chiếu revision và mã chip. Các chi tiết này là câu hỏi tích hợp, chưa phải phép đo.
-3. **Wire ABI:** RF32/USB48 là dự thảo; parser telemetry20 không có trong đường ingress hiện tại. UART FPGA có đặc tả riêng, không phải gói telemetry20. Chốt endian/CRC/framing/wrap/session/timeout/status rồi tạo golden vectors C/Python. Giữ nguyên baud/layout/CRC/IRQ/pinout khi chưa được giao thay đổi.
+3. **Wire ABI:** RF32 vẫn là draft chưa duyệt; USB48 thuộc kiến trúc cũ. Wi-Fi SoftAP/WebSocket v1 là baseline thiết kế chưa có REAL ingress. Parser telemetry20 không có trong đường ingress hiện tại. UART FPGA có đặc tả riêng, không phải gói telemetry20. Chốt endian/CRC/framing/wrap/session/timeout/status rồi tạo golden vectors C/Python. Giữ nguyên baud/layout/CRC/IRQ/pinout khi chưa được giao thay đổi.
 4. **AI release:** guardrails đã sửa cách tạo/kiểm evidence, nhưng không làm dữ liệu release-ready. Cần nguồn/license/consent, session có hash, QA độc lập, test khóa theo phiên và calibration hợp lệ. Không công bố INT8/FPS/GoAI support từ metrics PC hoặc tên file weights.
 
 Nguồn: [ABI report](../review/KVC-G1-ABI-20261014-001/REPORT.md), [hardware report](../review/KVC-G1-HW-DOC-20261014-003/REPORT.md), [AI fix report](../review/KVC-AI-DATAFIX-20261014-001/REPORT.md). Các report là snapshot lịch sử trong review bị Git ignore; vị trí/line của report có thể khác source mới.

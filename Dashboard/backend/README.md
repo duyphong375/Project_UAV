@@ -1,6 +1,6 @@
 # KVC MOCK application backend
 
-Tasks KVC-PRE-GCS-BACKEND-001, KVC-PRE-GCS-LOGGER-001 and KVC-PRE-GCS-REPLAY-001. Live acquisition in this slice is MOCK with inference SIMULATED. Replay reads committed application events and exposes them as source REPLAY while preserving `original_source_mode` and `inference_device`. HTTP/WS connectivity is independent of hardware status; hardware is UNKNOWN and no serial port is opened. Serial ingestion remains unimplemented. MOCK counters are application event counts (`mock_events_emitted`); USB packet/CRC counters remain zero.
+Tasks KVC-PRE-GCS-BACKEND-001, KVC-PRE-GCS-LOGGER-001 and KVC-PRE-GCS-REPLAY-001. Live acquisition in this slice is MOCK with inference SIMULATED. Replay reads committed application events and exposes them as source REPLAY while preserving `original_source_mode` and `inference_device`. HTTP/WS connectivity is independent of hardware status; hardware is UNKNOWN and no device link is opened. Ingress from the ESP32 ground gateway over Wi-Fi/WebSocket and RF decoding remain unimplemented. MOCK counters are application event counts (`mock_events_emitted`); hardware packet/CRC counters remain zero.
 
 From repository root (Windows PowerShell):
 

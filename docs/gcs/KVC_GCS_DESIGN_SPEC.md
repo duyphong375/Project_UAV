@@ -3,6 +3,8 @@
 
 > DESIGN, đối chiếu 14/10/2026: UI thực tế lấy từ routes/AppShell và GpsMapPanel (Map2DView). Map3DView cũ không được ứng dụng dùng và đã bỏ trong KVC-ORGANIZE-20261014-001; mô tả 3D bên dưới là mục tiêu thiết kế, chưa triển khai. Các mô tả layout/tính năng trong bản thiết kế không phải xác nhận runtime; xem frontend README và báo cáo audit cho kiểm thử.
 
+> Kiến trúc kết nối được đồng bộ 15/10/2026 theo [thiết kế hệ thống](../KVC_ThietKeHeThong.md): ESP32-WROOM-32D trạm đất, nguồn riêng, Wi-Fi SoftAP/WebSocket v1 tới dịch vụ GCS trên laptop. Dashboard web chỉ hiển thị dữ liệu từ backend local; browser không kết nối trực tiếp ESP32. Ingress này chưa triển khai/kiểm chứng. Các mô tả STM32/CP2102/USB phía dưới là nội dung cũ, đã superseded.
+
 > **Phiên bản:** v1.2 (SortiX-Inspired Tactical SAR)<br>
 > **Phân loại tài liệu:** `DESIGN SPECIFICATION`<br>
 > **Đối tượng sử dụng:** Design Agent (Stitch / Figma / Frontend Engineers)<br>
@@ -16,7 +18,7 @@
   1. Video RGB từ kênh riêng hoặc file tham chiếu; không có camera nhiệt trong BOM.
   2. AI mục tiêu **YOLO11n**, phân loại person/lifebuoy theo candidate có hash; chưa mặc định đã chạy trên FPGA.
   3. Định vị local/WGS-84 khi có GNSS hoặc origin/pose, calibration camera–IMU–LiDAR và dữ liệu hợp lệ; gá cố định theo BOM, chưa có gimbal.
-  4. Giám sát OneKiwi Primer 20K, MCU tải Sonix SN34F788, cảm biến và LoRa. STM32F103C8T6 là phương án MCU trạm đất. Trạng thái chưa có dữ liệu phải là UNKNOWN/N/A.
+  4. Giám sát OneKiwi Primer 20K, MCU tải Sonix SN34F788, cảm biến và LoRa. ESP32-WROOM-32D DevKit V1 là MCU trạm đất theo kiến trúc hiện hành; có nguồn riêng và gửi dữ liệu tới dịch vụ GCS trên laptop qua Wi-Fi SoftAP/WebSocket v1. Trạng thái chưa có dữ liệu phải là UNKNOWN/N/A.
 * **Cảm hứng & Ngôn ngữ tạo hình:** Lấy cảm hứng từ hệ sinh thái giao diện y tế/chiến thuật cao cấp **SortiX-Med**:
   - Giao diện siêu phẳng (Flat Minimalist) kết hợp chiều sâu viền kính mờ (Subtle Glassmorphism & Micro-borders).
   - Tương phản cao, bố cục mô-đun hóa (Card-based Layout) giúp người vận hành không bị quá tải thông tin trong điều kiện thời tiết khắc nghiệt.
@@ -54,7 +56,7 @@
 +----------------------------------------------------------------------------------------------------+
 | [1] APP HEADER: Logo KVC-GCS | Breadcrumb | [ MOCK | REAL ] Segmented | Connect | Fix | Batt | Thm |
 +----------------------------------------------------------------------------------------------------+
-| [2] MODE CONTEXT SUB-BAR: 🟣 Chế độ đang chọn • Dropdown kịch bản / Cổng COM • [Lấy GPS Tôi] • [Reset]  |
+| [2] MODE CONTEXT SUB-BAR: 🟣 Nguồn dữ liệu • Kịch bản MOCK / trạng thái ESP32 Wi-Fi • [Lấy GPS Tôi] • [Reset]  |
 +--------------------+-------------------------------------------------------------------------------+
 |                    | [3] MAIN CONTENT AREA (Theo Tab được chọn)                                    |
 |  [SIDEBAR NAV]     |                                                                               |
@@ -99,7 +101,7 @@
   - Nút **"Khởi động lại"**: Đặt lại hành trình mô phỏng từ đầu.
 * **Khi ở chế độ REAL:**
   - Nền xanh lục an toàn (`bg-emerald-500/10 border-b border-emerald-500/20`).
-  - Hiển thị cổng vật lý `COM3 @ 115200 baud`, trạng thái WebSocket `ws://localhost:8080`, bộ đếm gói tin Telemetry nhận được và tỷ lệ rớt gói (Drop Rate).
+  - Hiển thị trạng thái ingress ESP32 qua Wi-Fi/WebSocket, trạng thái WebSocket local giữa backend và browser, bộ đếm gói telemetry nhận được và tỷ lệ rớt gói (Drop Rate). Không hiển thị COM/baud như giao diện gateway mục tiêu.
 
 ---
 
@@ -158,7 +160,7 @@ Các số dưới đây chỉ minh họa bố cục, không phải kết quả �
   5. Ra-02 SX1278 hai đầu — SPI; hardware link độc lập WebSocket.
   6. FPGA OneKiwi Primer 20K V1.1 — AI chưa được kiểm chứng, không gắn nhãn ONLINE từ MOCK.
   7. MCU tải Sonix SN34F788 — UART/cảm biến/LoRa theo pin map được duyệt.
-  8. MCU đất STM32F103C8T6 + CP2102 — phương án BOM, chưa có firmware/REAL ingress.
+  8. ESP32-WROOM-32D trạm đất — baseline BOM; firmware/REAL ingress chưa được xác minh. STM32F103C8T6 + CP2102 là phương án kiến trúc cũ, không còn là cấu hình hiện hành.
 
 Không thêm FLIR, MIPI CSI, PCIe, bộ thả phao hoặc MCU quản lý năng lượng riêng vào cấu hình KVC. UI mẫu không chứng minh thiết bị đã hiện diện.
 

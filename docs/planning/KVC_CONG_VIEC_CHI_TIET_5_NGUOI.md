@@ -1,6 +1,6 @@
 # KVC — Công việc chi tiết để hoàn thiện dự án
 
-**Ngày lập: 14/10/2026.** Dựa trên [phân công 5 người](KVC_PHAN_CONG_5_NGUOI.md), [tiến độ dự án](../KVC_PROJECT_STATUS.md) và [thiết kế hệ thống](../KVC_ThietKeHeThong.md).
+**Cập nhật: 15/10/2026.** Dựa trên [phân công 5 người](KVC_PHAN_CONG_5_NGUOI.md), [tiến độ dự án](../KVC_PROJECT_STATUS.md) và [thiết kế hệ thống](../KVC_ThietKeHeThong.md).
 
 Đây là danh sách việc cần làm, chưa xác nhận đã hoàn thành. Các ô chỉ đánh dấu khi có kết quả kiểm tra.
 Dashboard, lưu/phát lại dữ liệu và phần AI trên máy tính đã có nền tảng; tiếp tục hoàn thiện các phần này.
@@ -42,12 +42,13 @@ Việc còn lại là xây phần FPGA/MCU, nối thiết bị thật, đo kiể
 
 ### 1.5. Gửi LoRa và ghép hệ thống
 
-- [ ] Viết phần tạo/gửi gói LoRa theo bản giao thức được duyệt, có hàng đợi và xử lý hết thời gian chờ.
-- [ ] Ghi số gói gửi, lỗi gửi và trạng thái cảm biến để đối chiếu với trạm đất.
-- [ ] Ghép FPGA → MCU → LoRa → trạm đất → USB → Dashboard bằng dữ liệu giả trước.
-- [ ] Chạy chuỗi thử 30 phút, đối chiếu dữ liệu và giải thích số gói mất hoặc bị loại.
+- [ ] Viết phần tạo/gửi gói LoRa theo giao thức RF đã được duyệt; RF 32 byte hiện còn là draft, không tự coi là ABI đã chốt.
+- [ ] Giữ nguyên cấu hình phần cứng/giao thức đang có tới khi nhóm duyệt thay đổi; telemetry source 20 byte là hiện trạng lịch sử, không tự chuyển sang 32 byte.
+- [ ] Ghi số gói TxDone/lỗi và trạng thái cảm biến để đối chiếu với log ESP32 trạm đất.
+- [ ] Ghép FPGA → MCU tải → LoRa → ESP32 trạm đất → ingress laptop/Dashboard bằng dữ liệu giả, dùng transport đã được chọn.
+- [ ] Chạy bài thử chuỗi theo gate được duyệt; đối chiếu packet capture và giải thích gói mất/bị loại.
 - [ ] Thay từng nguồn giả bằng AI/cảm biến thật, kiểm lại sau mỗi lần thay.
-- [ ] Chốt model/cấu hình cùng Vững và Thịnh, điều phối kiểm toàn hệ thống và demo trực tiếp.
+- [ ] Chốt giao diện MCU–FPGA và cấu hình LoRa với owner liên quan trước khi khóa tích hợp; triển khai theo baseline Wi-Fi SoftAP/WebSocket v1 cho ESP32–laptop, ghi nhận mọi thay đổi qua quyết định/task.
 
 **Hoàn thành phần của Phong khi:** MCU nhận/đọc/gửi đúng trong các tình huống đã thử, xử lý được lỗi và có kết quả kiểm toàn chuỗi. Tọa độ chỉ được công nhận khi có phép đối chiếu thực tế.
 
@@ -96,30 +97,31 @@ Việc còn lại là xây phần FPGA/MCU, nối thiết bị thật, đo kiể
 
 ## 3. Thịnh — Trạm đất, Dashboard, AI và video
 
-### 3.1. Tiếp tục phần mềm hiện có
+### 3.1. Tiếp tục phần mềm GCS hiện có
 
-- [ ] Tự chạy frontend/backend, chế độ dữ liệu giả, lưu dữ liệu và phát lại.
-- [ ] Chạy các bài kiểm tra hiện có; ghi lỗi môi trường hoặc chức năng còn thiếu.
-- [ ] Xác định phần nối dữ liệu USB cần bổ sung; không tạo lại Dashboard từ đầu.
-- [ ] Tiếp tục các task GCS/AI đã có, giữ mã và lịch sử; phần nhận serial theo KVC-GCS-004/009.
+- [ ] Tự chạy frontend/backend, dữ liệu MOCK, lưu dữ liệu và replay theo workflow dự án.
+- [ ] Kiểm trạng thái hiện có và lỗi môi trường; không coi kết quả lịch sử là xác minh runtime hiện tại.
+- [ ] Tiếp tục dùng Dashboard web và backend GCS hiện có; bổ sung ingress ESP32 theo kiến trúc đã duyệt, không tạo lại Dashboard.
+- [ ] Giữ phân biệt MOCK, REPLAY và REAL; ingress thật chưa được xác nhận nếu chưa có capture từ thiết bị.
+- [ ] Đối chiếu task GCS/AI đang mở với kiến trúc hiện tại trước khi tiếp tục, nhất là phần còn giả định USB/serial là liên kết gateway.
 
-### 3.2. Viết chương trình MCU trạm đất
+### 3.2. Viết firmware gateway ESP32 trạm đất
 
-- [ ] Xác định đúng MCU/bo trạm đất và tạo project riêng cho KVC.
-- [ ] Viết phần nhận LoRa và kiểm gói theo bản giao thức được duyệt.
-- [ ] Đọc thông tin chất lượng tín hiệu từ thiết bị, ghi thời gian và số gói nhận/lỗi.
-- [ ] Đóng gói dữ liệu gửi qua USB; thử bằng dữ liệu mẫu trước khi nối RF thật.
-- [ ] Kiểm khởi động lại trạm đất, rút/cắm USB và khôi phục kết nối.
+- [ ] Xác nhận bo ESP32-WROOM-32D DevKit V1 theo thiết kế và mẫu thực có; chốt module LoRa, nguồn riêng, chân SPI/IRQ/reset và OLED theo sơ đồ được nhóm duyệt; không tự thay pinout.
+- [ ] Viết phần nhận LoRa, kiểm CRC phần cứng và đọc RSSI/SNR theo module/cấu hình đã chọn; giữ giao thức RF ở trạng thái draft cho tới khi được duyệt.
+- [ ] Thiết kế trạng thái boot, packet counter, timeout và hành vi khi laptop mất kết nối; ESP32 vẫn tiếp tục nhận LoRa khi laptop tắt.
+- [ ] Triển khai và kiểm framing/schema, session/sequence, timestamp, integrity, xác thực và reconnect theo baseline Wi-Fi SoftAP/WebSocket v1 trong mục IV.4 thiết kế; các giá trị mục tiêu vẫn cần thử nghiệm.
+- [ ] Thử từng lớp bằng gói mẫu trước khi nối RF; lưu log nhận/lỗi và trạng thái link. Không tuyên bố lưu bền hoặc buffer khi disconnect nếu chưa thiết kế và kiểm thử.
 
-### 3.3. Đưa dữ liệu thật lên Dashboard
+### 3.3. Nối ingress ESP32 với Dashboard web
 
-- [ ] Viết phần đọc cổng USB/COM, tách gói và giải mã dữ liệu.
-- [ ] Kiểm dữ liệu bị chia nhỏ, nhiều gói nối nhau, gói sai CRC, mất đầu gói và hết thời gian chờ.
-- [ ] Kiểm bộ đệm/hàng đợi khi dữ liệu đến nhanh; ghi gói mất thay vì giấu lỗi.
-- [ ] Hiển thị nhận diện, trạng thái link/cảm biến và tọa độ theo dữ liệu hợp lệ.
-- [ ] Mất kết nối hoặc dữ liệu quá cũ thì báo đúng trạng thái; không trình bày số cũ như số mới.
-- [ ] Kiểm kết nối lại USB/WebSocket, phiên dữ liệu và cảnh báo trên giao diện.
-- [ ] Đối chiếu dữ liệu nhận với dữ liệu hiển thị, lưu và phát lại.
+- [ ] Xây ingress phía laptop theo transport/schema đã được chốt; browser hiển thị Dashboard, dịch vụ GCS trên laptop nhận dữ liệu, cập nhật state, lưu log và replay.
+- [ ] Giải mã application envelope/RF theo contract đã duyệt; không coi RF32 draft hoặc telemetry source 20 byte là ABI đã được xác nhận.
+- [ ] Kiểm frame bị chia/nối, CRC/integrity, sequence/session, timeout, dữ liệu trùng/lỗi và trạng thái stale.
+- [ ] Kiểm queue/backpressure và ghi nhận mất dữ liệu khi tốc độ nhận vượt khả năng xử lý; không hiển thị mẫu cũ như dữ liệu mới.
+- [ ] Hiển thị trạng thái ESP32/link/cảm biến, detection và tọa độ chỉ khi validity flags/điều kiện định vị hợp lệ.
+- [ ] Thử laptop ngắt kết nối, reconnect và phiên mới; ESP32 vẫn có nguồn riêng và tiếp tục nhận LoRa. Xác minh dữ liệu nào được giữ/mất theo cơ chế buffer đã chọn.
+- [ ] Đối chiếu packet capture với Dashboard, SQLite và replay cùng phiên.
 
 ### 3.4. Kiểm chất lượng AI
 
@@ -142,12 +144,12 @@ Việc còn lại là xây phần FPGA/MCU, nối thiết bị thật, đo kiể
 
 ### 3.6. Chuẩn bị laptop thi
 
-- [ ] Đóng gói phần mềm, cấu hình, tài nguyên offline, hai video và hướng dẫn chạy.
-- [ ] Thử trên đúng laptop demo từ lúc khởi động đến kết thúc phiên.
-- [ ] Thử tạo phiên mới, mất link/kết nối lại, lưu và phát lại phiên vừa chạy.
+- [ ] Đóng gói Dashboard web, dịch vụ GCS, cấu hình Wi-Fi SoftAP/WebSocket, tài nguyên offline, hai video và hướng dẫn chạy.
+- [ ] Thử trên đúng laptop demo từ lúc khởi động đến kết thúc phiên, không phụ thuộc Internet.
+- [ ] Thử tạo phiên mới, mất link/reconnect theo transport đã chốt, lưu và phát lại phiên vừa chạy.
 - [ ] Chuẩn bị video/log dự phòng có nhãn và cách khôi phục khi ứng dụng lỗi.
 
-**Hoàn thành phần của Thịnh khi:** dữ liệu trạm đất lên Dashboard đúng, lưu/phát lại được, chạy offline đã kiểm; có kết quả đánh giá AI, hai video và phần mềm demo dùng được trên laptop thi.
+**Hoàn thành phần của Thịnh khi:** ingress ESP32 lên Dashboard đúng theo giao diện được duyệt, lưu/replay đúng phiên, mất link/stale hiển thị đúng; ESP32 tiếp tục thu LoRa bằng nguồn riêng khi laptop tắt. Các chức năng chưa thử phải ghi rõ NOT RUN/BLOCKED.
 
 ## 4. Kiên — Nguồn điện, dây nối, camera và gá lắp
 
@@ -184,11 +186,12 @@ Việc còn lại là xây phần FPGA/MCU, nối thiết bị thật, đo kiể
 
 ## 5. Cường — MCU, cảm biến, LoRa và đo thực tế
 
-### 5.1. Kiểm linh kiện phía MCU và trạm đất
+### 5.1. Kiểm linh kiện MCU, LoRa và trạm đất
 
-- [ ] Lập danh sách MCU hai đầu, cảm biến, LoRa/anten, USB và dụng cụ kết nối.
-- [ ] Xác nhận đúng chip, phiên bản bo, chân giao tiếp, nguồn và công cụ lập trình/debug.
-- [ ] Ghi module đã có/còn thiếu; xác định đường USB dùng bridge hay MCU hỗ trợ trực tiếp.
+- [ ] Lập danh sách MCU tải, ESP32 gateway, cảm biến, module LoRa/anten, nguồn riêng và dụng cụ kết nối.
+- [ ] Xác nhận chip/bo thực tế, chân giao tiếp, nguồn, anten và công cụ nạp/debug cùng Kiên/Thịnh.
+- [ ] Ghi phần cứng đã có/còn thiếu; laptop không cấp nguồn hoặc làm bộ thu LoRa cho trạm đất.
+- [ ] Ghi đúng model module RF hai đầu. Thiết kế hiện ghi Ra-02/SX1278; nếu nhóm chọn E22 hoặc model khác, cập nhật BOM/driver/cấu hình hai đầu trước khi tích hợp.
 
 ### 5.2. Lắp và thử cảm biến
 
@@ -198,14 +201,15 @@ Việc còn lại là xây phần FPGA/MCU, nối thiết bị thật, đo kiể
 - [ ] Thử mất kết nối và khôi phục từng module, ghi kết quả.
 - [ ] Ghi vị trí/góc cảm biến so với camera để dùng khi tính vị trí.
 
-### 5.3. Hoàn thiện LoRa và trạm đất
+### 5.3. Hoàn thiện liên kết LoRa và ESP32 gateway
 
-- [ ] Lắp LoRa hai đầu, anten, nguồn và dây theo cấu hình đã chốt.
-- [ ] Cùng Phong/Thịnh thử truyền nhận trên bàn trước khi đo ngoài khu vực thử.
-- [ ] Kiểm gói gửi/nhận/lỗi và chất lượng tín hiệu từ thiết bị.
-- [ ] Đo tối thiểu 200 gói theo bài đo trong thiết kế; ghi cự ly, điều kiện, cấu hình và số gói mất.
-- [ ] Tính tỷ lệ nhận gói từ log hai đầu; cùng Phong/Thịnh đo độ trễ đầu-cuối.
-- [ ] Lắp trạm đất/USB; thử rút/cắm lại, reset và lỗi nguồn/đầu nối cùng Thịnh.
+- [ ] Lắp hai module LoRa, anten và nguồn theo đúng model/cấu hình đã được nhóm chốt.
+- [ ] Cùng Phong/Thịnh thử truyền nhận trên bàn; ESP32 gateway có nguồn riêng và laptop nhận dữ liệu qua baseline Wi-Fi SoftAP/WebSocket v1.
+- [ ] Kiểm gói gửi/nhận/lỗi, CRC và RSSI/SNR từ module; ghi đúng cấu hình BW/SF/CR/công suất thực dùng.
+- [ ] Đo tối thiểu 200 gói như mục VII thiết kế; ghi cự ly, anten, vị trí, môi trường, cấu hình, TxDone và số gói nhận hợp lệ.
+- [ ] Tính PRR theo log hai đầu; đo p95 độ trễ chỉ khi có clock đồng bộ hoặc mốc đo chung.
+- [ ] Thử laptop ngắt/reconnect và ESP32 reset/mất nguồn; không giả định ESP32 giữ gói khi mất kết nối nếu chưa có cơ chế buffer được thiết kế.
+
 
 ### 5.4. Tổ chức thử bể bơi và đo vị trí
 
@@ -226,43 +230,43 @@ Việc còn lại là xây phần FPGA/MCU, nối thiết bị thật, đo kiể
 ### 5.6. Chuẩn bị vận hành tại cuộc thi
 
 - [ ] Kiểm cảm biến/LoRa/trạm đất trước mỗi lượt tổng duyệt.
-- [ ] Chuẩn bị anten, cáp USB, module/phụ kiện dự phòng đang có.
+- [ ] Chuẩn bị anten, dây/đầu nối RF, nguồn và phụ kiện dự phòng đang có; laptop không phải nguồn cho ESP32 trạm đất.
 - [ ] Thực hiện thao tác ngắt–kết nối lại đã thử trước và ghi hiện tượng thực tế.
 - [ ] Kiểm bộ thiết bị và cấu hình sau khi vận chuyển tới địa điểm thi.
 
-**Hoàn thành phần của Cường khi:** các module đã được kiểm riêng và khi ghép, có kết quả đo đường truyền/vị trí, trạm đất/USB khôi phục được trong các bài thử đã làm.
+**Hoàn thành phần của Cường khi:** các module đã được kiểm riêng và khi ghép, có kết quả đo đường truyền/vị trí, ESP32 trạm đất có nguồn riêng và khôi phục được theo các bài thử đã làm.
 
 ## 6. Thứ tự ưu tiên để hoàn thiện dự án
 
-1. **Chốt đầu vào:** đúng bo/camera/cảm biến, nguồn/chân nối, công cụ và giao thức; kiểm khả năng AI FPGA sớm.
-2. **Ghép dữ liệu giả:** FPGA → MCU → LoRa → trạm đất → USB → Dashboard; chạy 30 phút.
-3. **Ghép dữ liệu thật:** lần lượt camera/AI và cảm biến, kiểm sau mỗi lần ghép.
-4. **Đo kiểm:** AI, đường truyền, định vị, nguồn/nhiệt, phần mềm offline và phục hồi lỗi.
-5. **Chuẩn bị demo:** hai video, bộ thiết bị/laptop cố định và tổng duyệt trực tiếp 5 lượt.
+1. **Xác nhận phần cứng:** đúng OneKiwi, camera/cáp, Sonix, cảm biến, ESP32, module LoRa, anten, nguồn và giao diện chân; chưa chốt pinout thì chưa đấu nối.
+2. **Chốt giao diện trước tích hợp:** UART FPGA–Sonix và RF LoRa; tạo vectors mẫu. RF32 là draft; không thay source 20 byte hay giao thức khác khi chưa duyệt. ESP32–laptop dùng baseline Wi-Fi SoftAP/WebSocket v1 trong thiết kế, chưa xác minh triển khai.
+3. **Thử độc lập từng phân hệ:** BBox giả/MCU tải, camera/FPGA, cảm biến, ESP32 nhận LoRa, Dashboard MOCK/offline; ghi trạng thái và lỗi.
+4. **Ghép theo tầng:** FPGA → MCU tải → LoRa → ESP32 → transport đã chọn → ingress laptop/Dashboard. Đối chiếu log/capture tại mỗi ranh giới.
+5. **Đo nghiệm thu:** AI, PRR/độ trễ LoRa, định vị, nguồn/nhiệt, offline/reconnect/log/replay theo mục VII thiết kế. Các KPI là mục tiêu cho đến khi có phép đo.
+6. **Chuẩn bị demo:** video lũ lụt, video bể bơi có đối chiếu cùng phiên, bộ thiết bị/laptop cố định và tổng duyệt trực tiếp không sa bàn.
 
-Khi chờ linh kiện, tiếp tục mô phỏng, thử gói mẫu, kiểm Dashboard và dữ liệu AI. Không chờ đủ mọi module mới bắt đầu thử từng phần.
-Nếu AI FPGA không khả thi, nhóm quyết định phương án thay thế dựa trên lỗi đo/biên dịch cụ thể và ghi rõ phạm vi thực hiện.
+Khi chờ linh kiện, tiếp tục mô phỏng, thử vectors, kiểm Dashboard và QA dữ liệu AI. Không cần chờ đủ mọi module để kiểm từng phần.
+Nếu AI FPGA không khả thi, ghi lỗi build/đo cụ thể và để nhóm quyết định phương án; gắn nhãn PC_REFERENCE cho inference trên laptop.
 
 ## 7. Điều kiện để coi dự án hoàn thiện
 
-- [ ] Các phần chạy thật đã có log/capture đối chiếu từ đầu vào đến Dashboard; phần giả/tham chiếu được ghi rõ.
-- [ ] Kết quả AI, tỷ lệ nhận gói, độ trễ, sai số vị trí và nguồn/nhiệt được so với mục VII của thiết kế; phần chưa đạt có kết luận xử lý.
-- [ ] Dashboard chạy offline, báo mất link/dữ liệu cũ đúng, khôi phục kết nối và phát lại đúng phiên.
+- [ ] Các phần chạy thật có log/capture đối chiếu từ đầu vào đến Dashboard; phần MOCK/PC_REFERENCE/REPLAY được ghi rõ.
+- [ ] Kết quả AI, PRR, độ trễ, sai số vị trí và nguồn/nhiệt được đo theo mục VII thiết kế; phần chưa đạt có kết luận và giới hạn.
+- [ ] Dashboard web và dịch vụ GCS chạy offline; báo mất link/dữ liệu stale đúng, reconnect và replay đúng phiên.
+- [ ] ESP32 trạm đất chạy nguồn riêng, tiếp tục nhận LoRa khi laptop tắt/mất kết nối; không suy ra buffer bền nếu chưa kiểm.
 - [ ] Video lũ lụt và video bể bơi mở được offline, đúng nguồn/cấu hình, giữ file và log gốc.
-- [ ] Tổng duyệt 5 lượt: khởi động → đầu vào đã thử → dữ liệu mới → mất link/khôi phục → lưu/phát lại.
+- [ ] Tổng duyệt 5 lượt theo checklist thiết kế: khởi động → đầu vào đã thử → dữ liệu mới → mất link/khôi phục → lưu/phát lại.
 - [ ] Cấu hình demo cố định; bộ thiết bị, tài liệu vận hành và bản sao dữ liệu/log đã chuẩn bị.
 
-Các con số trong thiết kế là mục tiêu, không phải kết quả đã đo. Tại gian thi không cần sa bàn; thiếu GPS hoặc thông số định vị thì hiển thị không hợp lệ/chưa có.
-LoRa chỉ mang dữ liệu nhận diện/cảm biến, không mang video.
+Các con số trong thiết kế là mục tiêu, không phải kết quả đã đo. Tại gian thi không cần sa bàn; thiếu GPS hoặc thông số định vị thì hiển thị INVALID/N/A. LoRa chỉ mang metadata, không mang video.
 
 ## 8. Quy tắc khi triển khai
 
-- Mỗi task có một người chịu trách nhiệm, phạm vi/file rõ, điều kiện hoàn thành, phép kiểm tra và trạng thái. Bảng này không tự cấp quyền sửa toàn repo.
-- Không tự đổi baud, cấu trúc gói, CRC, IRQ hoặc chân nối. Telemetry 20 byte là ghi nhận source; RF32/USB48 trong thiết kế còn cần chốt trước khi triển khai.
-- Dùng lại code hiện có và SDK theo tài liệu; không sửa trực tiếp SDK hãng thành code dự án.
-- Phân biệt kế hoạch, đã kiểm source, mô phỏng, build và thử trên phần cứng. Công cụ không chạy thì ghi NOT RUN/BLOCKED.
-- Ghi lệnh/cách thử, đầu vào, exit code nếu có, kết quả, log và giới hạn; lưu log trong review/ và sao lưu riêng.
+- Mỗi task có một owner, scope/file, acceptance, phép kiểm tra và status rõ; checklist không tự cấp quyền sửa toàn repo.
+- Không tự đổi baud, packet layout, CRC, IRQ, pinout hay giao thức phần cứng. Telemetry 20 byte là hiện trạng lịch sử; RF32 chưa phải ABI đã duyệt. Wi-Fi SoftAP/WebSocket v1 là baseline thiết kế cho ESP32–laptop nhưng chưa được kiểm chứng.
+- Dùng lại source và SDK hiện có; không coi code mẫu trong SDK là firmware KVC đã tích hợp.
+- Phân biệt PLANNED, SOURCE-VERIFIED, SIMULATED, BUILT và HARDWARE-VERIFIED. Công cụ/thiết bị không chạy thì ghi NOT RUN/BLOCKED.
+- Ghi lệnh/cách thử, đầu vào, kết quả, exit code nếu có, log và giới hạn; không khẳng định KPI chưa đo.
+- Theo [AGENTS.md](../../AGENTS.md) và [workflow](../KVC_AI_WORKFLOW.md). Không tự commit/push/merge/deploy/nạp FPGA hoặc MCU.
 
-<!-- Task ID: KVC-TEAM-DETAIL-20261014-001. Owner: Codex. Scope/allowed files: docs/planning/KVC_CONG_VIEC_CHI_TIET_5_NGUOI.md (file mới duy nhất). Acceptance: checklist chi tiết đúng vai trò 5 người, dựa trên tiến độ/thiết kế, có triển khai/kiểm thử/demo; không có mục bàn giao giữa người. Tests: đối chiếu nội dung, đọc lại UTF-8, kiểm khoảng trắng/link và git diff --check nếu chạy được. Status: READY_FOR_REVIEW; SELF-REVIEW, chưa HUMAN APPROVAL. Không triển khai code hoặc phần cứng trong task này. -->
-
-<!-- Kiểm tra tài liệu: đọc lại UTF-8 khớp; link nội bộ tồn tại; không có khoảng trắng cuối dòng; task chỉ tạo file chi tiết, không ghi vào bản phân công gốc. git diff --check: NOT RUN, exit N/A, process bị chặn (spawn EPERM). Đây là kiểm tài liệu, không phải test triển khai/hardware. -->
+<!-- Task ID: KVC-TEAM-PLAN-20261015-001. Owner: Codex. Scope/allowed files: docs/planning/KVC_PHAN_CONG_5_NGUOI.md and docs/planning/KVC_CONG_VIEC_CHI_TIET_5_NGUOI.md only. Acceptance: both documents align with KVC_ThietKeHeThong.md, clearly mark planned/unverified items and draft interfaces, and describe ESP32 ground gateway + web Dashboard topology without laptop-dependent ground MCU. Tests: content/link/whitespace checks and git diff --check. Status: READY_FOR_REVIEW; SELF-REVIEW, not HUMAN APPROVAL.

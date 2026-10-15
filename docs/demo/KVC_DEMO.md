@@ -23,7 +23,7 @@ Thịnh quay màn hình/dựng video; Kiên quay toàn cảnh và lo nguồn/gá
 
 ## 3. Test trực tiếp tại cuộc thi — không sa bàn
 
-Phong điều phối; Vững lo FPGA/camera; Thịnh lo Dashboard/log; Kiên lo nguồn/dây; Cường lo LoRa/USB/trạm đất.
+Phong điều phối; Vững lo FPGA/camera; Thịnh lo ESP32 gateway và Dashboard/log; Kiên lo nguồn/dây; Cường lo LoRa và trạm đất.
 
 ### Chuẩn bị
 
@@ -35,7 +35,7 @@ Phong điều phối; Vững lo FPGA/camera; Thịnh lo Dashboard/log; Kiên lo 
 
 ### Thao tác
 
-1. Mở Dashboard offline, kết nối trạm đất và tạo phiên mới.
+1. Cấp nguồn riêng cho ESP32 trạm đất; mở Dashboard web và dịch vụ GCS trên laptop, kết nối Wi-Fi SoftAP/WebSocket theo cấu hình đã kiểm, rồi tạo phiên mới.
 2. Đưa đầu vào đã tổng duyệt; đối chiếu sự kiện với nhận diện, dữ liệu và màn hình.
 3. Thử ngắt/kết nối lại link theo thao tác đã kiểm. Màn hình phải báo mất link/dữ liệu cũ và khôi phục đúng.
 4. Kết thúc phiên, mở log/phát lại phiên vừa tạo với nhãn REPLAY.
@@ -46,7 +46,7 @@ Phong điều phối; Vững lo FPGA/camera; Thịnh lo Dashboard/log; Kiên lo 
 - Live thất bại thì ghi lỗi; mở video/log dự phòng bằng thao tác rõ ràng và nói đó là kết quả ghi trước.
 - Không tự thay nguồn REAL bằng MOCK khi mất kết nối.
 - LoRa chỉ truyền dữ liệu nhận diện/cảm biến, không truyền video. Kênh video phải được mô tả riêng.
-- Một đoạn chạy được chưa chứng minh toàn chuỗi FPGA → MCU → LoRa → USB → Dashboard chạy thật.
+- Một đoạn chạy được chưa chứng minh toàn chuỗi FPGA → MCU tải → LoRa → ESP32 → Wi-Fi/WebSocket → GCS/Dashboard chạy thật.
 - Không tự đổi baud/gói/CRC/IRQ/chân nối để xử lý demo.
 
 Hướng dẫn phần mềm: [backend](../../Dashboard/backend/README.md), [frontend](../../Dashboard/frontend/README.md). Việc cần hoàn thiện: [checklist 5 người](../planning/KVC_CONG_VIEC_CHI_TIET_5_NGUOI.md). Tiến độ: [báo cáo hiện tại](../KVC_PROJECT_STATUS.md).

@@ -12,7 +12,7 @@ Tài liệu thiết kế mô tả mục tiêu và cấu hình dự kiến; khôn
 - [Cấu trúc repository](#cấu-trúc-repository)
 - [Trạng thái các phân hệ](#trạng-thái-các-phân-hệ)
 - [Bắt đầu chạy phần mềm](#bắt-đầu-chạy-phần-mềm)
-- [Kiểm tra source](#kiểm-tra-source)
+- [Chạy test phần mềm](#chạy-test-phần-mềm)
 - [Dữ liệu, model và file cục bộ](#dữ-liệu-model-và-file-cục-bộ)
 - [Tài liệu nên đọc](#tài-liệu-nên-đọc)
 
@@ -27,20 +27,21 @@ AI phát hiện mục tiêu ──→ FPGA / MCU payload
                               ↓ telemetry
                          LoRa / RF link
                               ↓
-                   Trạm thu mặt đất / USB
-                              ↓
-                Backend GCS → Dashboard GCS
+              ESP32 trạm đất (nguồn riêng)
+                              ↓ Wi-Fi SoftAP / WebSocket
+            Backend GCS trên laptop → Dashboard web
                               ↓
                     Lưu phiên / phát lại
 ```
 
-Source hiện tại tập trung vào **Dashboard GCS**, **backend MOCK có lưu phiên/replay**, và **AI tham chiếu chạy trên PC**. Luồng từ cảm biến/serial/RF trên thiết bị thật vào GCS chưa được triển khai và xác minh. Giao thức RF 32 byte và USB envelope 48 byte trong tài liệu vẫn là thiết kế cần chốt; ghi nhận telemetry 20 byte là trạng thái source lịch sử. Không tự suy ra baud, packet layout, CRC, IRQ hoặc pinout từ sơ đồ trên.
+Source hiện tại tập trung vào **Dashboard GCS**, **backend MOCK có lưu phiên/replay**, và **AI tham chiếu chạy trên PC**. Luồng từ cảm biến/RF trên thiết bị thật qua ESP32 vào GCS chưa được triển khai và xác minh. ESP32 trạm đất dùng nguồn riêng và tiếp tục thu LoRa khi laptop tắt; laptop chạy backend GCS để nhận/lưu/phát lại dữ liệu và hiển thị Dashboard web. Wi-Fi SoftAP/WebSocket v1 là baseline thiết kế, chưa xác minh. RF 32 byte vẫn là dự thảo ABI; USB envelope 48 byte thuộc kiến trúc cũ và không còn là giao diện mục tiêu. Telemetry 20 byte là ghi nhận source lịch sử. Không tự suy ra baud, packet layout, CRC, IRQ hoặc pinout từ sơ đồ trên.
 
 ## Cấu trúc repository
 
 ```text
 KVC/
 ├── README.md                         # Điểm vào dự án này
+├── AGENTS.md                         # Quy tắc task, sửa code, review và bằng chứng
 ├── .gitignore                        # Loại môi trường, artifact và dữ liệu cục bộ
 ├── Phancongviec.docx                 # Tài liệu phân công tại root
 ├── Dashboard/
@@ -93,6 +94,7 @@ KVC/
 │   ├── KVC_ThietKeHeThong.md           # Kiến trúc, BOM, giao thức draft, nghiệm thu
 │   ├── KVC_PROJECT_STATUS.md           # Trạng thái theo bằng chứng và việc còn thiếu
 │   ├── KVC_DOCUMENT_INDEX.md           # Danh mục tài liệu chuẩn
+│   ├── KVC_AI_WORKFLOW.md              # Workflow phát triển/review AI
 │   ├── planning/                       # Phân công, checklist, backlog, rủi ro
 │   ├── gcs/                            # Kế hoạch, data contract và thiết kế GCS
 │   ├── ai/                             # Chuẩn bị dữ liệu AI
@@ -113,7 +115,7 @@ KVC/
 | Phân hệ | Source hiện có | Giới hạn cần nhớ |
 | --- | --- | --- |
 | Dashboard frontend | React/TypeScript/Vite; LOCAL dùng generator trong trình duyệt; có adapter cho backend và các màn hình giám sát | UI/fixture không chứng minh dữ liệu phần cứng; bản đồ nền cần tile server hoặc Internet |
-| Backend GCS | FastAPI MOCK, schema/state, WebSocket, SQLite logger, session và replay | Chưa có serial ingress/parser RF/USB; MOCK/SIMULATED không phải dữ liệu thiết bị thật |
+| Backend GCS | FastAPI MOCK, schema/state, WebSocket, SQLite logger, session và replay | Chưa có ingress Wi-Fi/WebSocket từ ESP32 hoặc parser RF; MOCK/SIMULATED không phải dữ liệu thiết bị thật |
 | AI | YOLO11n hai lớp person/lifebuoy là lựa chọn dự án; có adapter, script PC, dataset/manifests và báo cáo | PC_REFERENCE; provenance/QA/release còn điều kiện; chưa chứng minh chạy trên FPGA hay độ chính xác INT8 |
 | FPGA/MCU và RF | Có tài liệu board/chip/SDK tham khảo | Inventory hiện tại chưa có source/project RTL và firmware KVC dạng rời đã xác minh; chưa có build, synthesis, flash hay đo trên bo |
 
@@ -193,6 +195,7 @@ Các test adapter dùng dữ liệu giả. `scripts/test_webcam.py` có thể m�
 1. [Tiến độ dự án](docs/KVC_PROJECT_STATUS.md) — phần đã có, evidence và blocker.
 2. [Thiết kế hệ thống](docs/KVC_ThietKeHeThong.md) — kiến trúc, BOM, giao thức draft và tiêu chí nghiệm thu.
 3. [Danh mục tài liệu](docs/KVC_DOCUMENT_INDEX.md) — nguồn chuẩn theo chủ đề.
+4. [Workflow AI](docs/KVC_AI_WORKFLOW.md) và [AGENTS.md](AGENTS.md) — owner, phạm vi file, kiểm thử, review và approval.
 5. [Tài liệu GCS](docs/gcs/) — kế hoạch, data contract và thiết kế frontend/backend.
 6. [Tài liệu AI](ai_training/README.md) và [chuẩn bị dữ liệu](docs/ai/KVC_AI_DATA_PREPARATION.md).
 7. [Tài liệu phần cứng](docs/hardware/) — OneKiwi, Gowin và Sonix; cần phân biệt tài liệu thiết kế với phép đo thực tế.

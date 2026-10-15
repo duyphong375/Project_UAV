@@ -70,7 +70,9 @@ Listings/
 /docs/hardware/onekiwi20k/*.pdf
 /docs/hardware/onekiwi20k/*.png
 
-# Personal workspace rules; keep local, not in the public project repository
+# Personal AI rules, workflow and local assignment documents (local only)
 /AGENTS.md
-/.agents/rules/kvc.md
+/.agents/
 /docs/KVC_AI_WORKFLOW.md
+/scripts/kvc-review.ps1
+/Phancongviec.docx

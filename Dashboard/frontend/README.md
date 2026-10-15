@@ -87,7 +87,7 @@ Source có bộ MOCK phía trình duyệt phục vụ phát triển khi chưa c�
 
 ## 5. Ý Nghĩa Kỹ Thuật & Giới Hạn Phần Cứng
 
-Cấu hình mục tiêu: OneKiwi Primer 20K V1.1, Sonix SN34F788, TF-Luna, GY-87, GNSS NEO-M8N/ATGM336H, Ra-02 hai đầu và trạm đất STM32F103C8T6 + CP2102; model YOLO11n hai lớp. Camera/cáp và pinout còn phải xác minh. UI không tự tạo số vệ tinh/DOP/sai số, điện áp/cell/dòng pin hoặc hiệu năng AI khi schema không có dữ liệu; chỉ số thiếu là N/A.
+Cấu hình mục tiêu theo [thiết kế hệ thống](../../docs/KVC_ThietKeHeThong.md): OneKiwi Primer 20K V1.1, Sonix SN34F788, TF-Luna, GY-87, GNSS NEO-M8N/ATGM336H, Ra-02 hai đầu, ESP32-WROOM-32D trạm đất và model YOLO11n hai lớp. ESP32 có nguồn riêng; baseline kết nối laptop là Wi-Fi SoftAP/WebSocket. Camera/cáp và pinout còn phải xác minh; ingress ESP32 chưa được triển khai. UI không tự tạo số vệ tinh/DOP/sai số, điện áp/cell/dòng pin hoặc hiệu năng AI khi schema không có dữ liệu; chỉ số thiếu là N/A.
 
 ### 5.1. Vị Trí Camera / Tải Nhiệm Vụ
 - **Nguồn:** Trích xuất từ anten GNSS gắn trên cụm tải nhiệm vụ hoặc thân UAV do backend truyền về qua bản tin telemetry.
@@ -101,7 +101,7 @@ Cấu hình mục tiêu: OneKiwi Primer 20K V1.1, Sonix SN34F788, TF-Luna, GY-87
 
 ### 5.3. Giới Hạn Video Stream và Telemetry
 - Video là nguồn tham chiếu tùy chọn trên PC; chưa có bằng chứng camera IMX219 hoặc kênh video riêng đã được triển khai. Camera payload theo quyết định G1 trong thiết kế.
-- LoRa chỉ truyền metadata, **không truyền video**. Thiết kế RF 32 byte/USB envelope 48 byte chờ C+D xác nhận G1; 20 byte là source lịch sử, không tự coi frontend hỗ trợ cả hai ABI.
+- LoRa chỉ truyền metadata, **không truyền video**. RF payload 32 byte còn là draft chờ duyệt ABI. Wi-Fi SoftAP/WebSocket v1 là transport mục tiêu giữa ESP32 và laptop nhưng chưa có REAL ingress. USB envelope 48 byte thuộc kiến trúc cũ; telemetry 20 byte là ghi nhận source lịch sử. Frontend hiện chưa hỗ trợ các ABI phần cứng này.
 - Bounding Box overlay chỉ được vẽ lên khung video khi có dữ liệu đồng bộ; nếu thiếu liên kết đồng bộ frame, hệ thống thông báo overlay chưa khả dụng thay vì vẽ sai lệch.
 
 ### 5.4. Bản Đồ Offline
@@ -132,6 +132,6 @@ Các script Playwright ở tests/ dùng URL/port và thư mục evidence cố đ
 
 ## 7. Dùng backend MOCK và replay
 
-Đọc [backend README](../backend/README.md) để chạy server, kiểm trạng thái logger và API replay. Trong terminal Vite đặt VITE_MOCK_TRANSPORT=BACKEND trước khi chạy dev/build, giữ source MOCK và cổng 5173 để khớp CORS. LOCAL là mặc định, không mở WS, không lưu SQLite. BACKEND không tự fallback LOCAL khi mất socket; REAL chưa có serial ingress. REPLAY cần session đã commit trong backend, không phải timeline của generator trình duyệt.
+Đọc [backend README](../backend/README.md) để chạy server, kiểm trạng thái logger và API replay. Trong terminal Vite đặt VITE_MOCK_TRANSPORT=BACKEND trước khi chạy dev/build, giữ source MOCK và cổng 5173 để khớp CORS. LOCAL là mặc định, không mở WS, không lưu SQLite. BACKEND không tự fallback LOCAL khi mất socket; ingress REAL từ ESP32 qua Wi-Fi/WebSocket chưa có. REPLAY cần session đã commit trong backend, không phải timeline của generator trình duyệt.
 
 Tiêu chí đo ở mục VII của [thiết kế](../../docs/KVC_ThietKeHeThong.md); bản hiện tại không chứa lịch 21 ngày. Công việc theo checklist 5 người; không tự đánh dấu gate hoàn thành chỉ vì có source hoặc test PASS.

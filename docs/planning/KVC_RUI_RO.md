@@ -2,6 +2,8 @@
 
 Cập nhật 14/10/2026 trong KVC-MAINT-20261014-001. Đồng bộ nội dung KVC-DOC-CONSISTENCY-20261014-001: kiến trúc/BOM ở [thiết kế hệ thống](../KVC_ThietKeHeThong.md), nghiệm thu mục VII. Bản thiết kế không còn lịch 21 ngày; ngày/gate bên dưới là lịch sử audit. Tài liệu này phân biệt tiến độ source/kiểm thử với mục tiêu thiết kế. Không có docs/archive trong inventory hiện tại.
 
+> Đây là snapshot rủi ro ngày 14/10. Từ 15/10, phương án GCS mục tiêu là ESP32 trạm đất có nguồn riêng → Wi-Fi SoftAP/WebSocket → backend GCS trên laptop → Dashboard web. Các tham chiếu USB/STM32 bên dưới mô tả kiến trúc cũ; RF32 vẫn draft, Wi-Fi chưa được xác minh. Dùng thiết kế và checklist hiện hành cho quyết định tiếp theo.
+
 ## Tiến độ theo bằng chứng
 
 Nguồn trạng thái tổng hợp hiện hành: [KVC_PROJECT_STATUS](../KVC_PROJECT_STATUS.md), task KVC-STATUS-DOC-20261014-001. Baseline Git đã có; AI DATAFIX đã thêm guardrails nhưng hồ sơ release còn BLOCKED. Các số test bên dưới là log lịch sử, không chạy lại trong lượt tài liệu này.

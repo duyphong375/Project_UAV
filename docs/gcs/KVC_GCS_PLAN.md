@@ -2,15 +2,17 @@
 
 - **Mã kế hoạch:** KVC-GCS-PLAN-001
 - **Liên kết task:** KVC-GCS-001
-- **Coder:** Chọn một owner cho mỗi task.
+- **Coder:** Codex hoặc Antigravity, chọn đúng một owner cho mỗi task theo AGENTS.md.
 - **Reviewer:** Codex; nếu Codex cũng là author thì ghi SELF-REVIEW.
-- **Tình trạng:** PLANNING
+- **Tình trạng:** DEPRECATED / HISTORICAL PLAN; các task ứng dụng có thể tham khảo sau khi đối chiếu source, các task USB/STM32 không còn là kiến trúc mục tiêu.
 - **Hệ thống mục tiêu:** Tải nhiệm vụ UAV tìm kiếm cứu nạn bão lũ (SAR Payload), **không phải flight controller**.
-- **Tài liệu căn cứ:** `docs/KVC_ThietKeHeThong.md`.
+- **Tài liệu căn cứ:** `AGENTS.md`, `.agents/rules/kvc.md`, `docs/KVC_AI_WORKFLOW.md`, `docs/KVC_ThietKeHeThong.md`.
 
 ---
 
 ## 1. Hiện trạng và nguồn kế hoạch — cập nhật 14/10/2026
+
+> **Lưu ý cập nhật 15/10/2026:** Tài liệu này được lập theo phương án STM32/CP2102/USB và lịch GCS cũ. Kiến trúc kết nối hiện hành là ESP32-WROOM-32D có nguồn riêng → Wi-Fi SoftAP/WebSocket v1 → dịch vụ GCS trên laptop → Dashboard web. Các task USB/serial, sơ đồ, acceptance và gate bên dưới là **DEPRECATED cho tích hợp phần cứng hiện hành**; không giao hoặc thực hiện theo chúng. Dùng [thiết kế hệ thống](../KVC_ThietKeHeThong.md), [checklist 5 người](../planning/KVC_CONG_VIEC_CHI_TIET_5_NGUOI.md) và [data contract](KVC_GCS_DATA_CONTRACT.md) để lập task mới với owner, files, acceptance và tests cụ thể. RF 32 byte còn là draft; baseline Wi-Fi chưa được triển khai/xác minh. Các task logger/replay/frontend chỉ là tham khảo lịch sử và phải xác minh source hiện tại trước khi tiếp tục.
 
 Snapshot tổng hợp mới tại [KVC_PROJECT_STATUS](../KVC_PROJECT_STATUS.md), KVC-STATUS-DOC-20261014-001: frontend/backend MOCK/logger/replay có source và log tests lịch sử; chưa serial ingress. G1 ABI chưa được duyệt, gate hệ thống còn BLOCKED; G0–G5 không tự PASS. Task/matrix bên dưới mô tả acceptance dự kiến, các dòng NOT RUN không phủ nhận unit tests ứng dụng đã có; cần log đúng candidate để cập nhật từng phép thử. Baseline Git đã tồn tại.
 
@@ -19,7 +21,7 @@ Snapshot 14/10 có **Dashboard/frontend** React/TypeScript/Vite và **Dashboard/
 - **Tiếp tục source frontend hiện hữu**, không tạo lại Vanilla JS hoặc index.html độc lập bỏ qua Vite.
 - Backend MOCK/logger/replay đã triển khai ở tầng ứng dụng; tiếp tục source này. Serial ingress/parser là phần còn thiếu. MOCK LOCAL trong trình duyệt không thay MOCK BACKEND qua WebSocket.
 - RF 32 byte/USB 48 byte tại mục IV.3 thiết kế vẫn là DESIGN, chờ C+D chốt G1. Vector review/KVC-PLAN-002_reference_vectors.json là tham chiếu lịch sử nếu còn; sao chép/xác minh thành fixture task có version/hash trước khi dùng, không phụ thuộc duy nhất thư mục review bị ignore.
-- Telemetry 20 byte là ghi nhận source cũ. MVP hiện không đặt mục tiêu parser legacy; không khôi phục hoặc suy đoán layout 20 byte, không tự đổi giao thức hardware.
+- Telemetry 20 byte trong AGENTS.md là ghi nhận source cũ. MVP hiện không đặt mục tiêu parser legacy; không khôi phục hoặc suy đoán layout 20 byte, không tự đổi giao thức hardware.
 - Bản [thiết kế hệ thống](../KVC_ThietKeHeThong.md) hiện tại không chứa lịch 21 ngày; mục VII là nghiệm thu. Ngày/gate A–E trong kế hoạch này là tham chiếu lịch sử, không tự coi là hạn mới đã chốt. Thịnh phụ trách GCS/MCU đất theo [checklist 5 người](../planning/KVC_CONG_VIEC_CHI_TIET_5_NGUOI.md); Phong/Vững cùng chốt ABI, Cường hỗ trợ lắp/đo.
 - D xác nhận tình trạng từng task bằng evidence mới trước khi sửa: các task frontend có source liên quan không được mặc định là PROPOSED chưa làm hoặc DONE đã đạt. Owner coder là Codex hoặc Antigravity được chọn cho từng task; chỉ một writer trong scope, D chịu trách nhiệm nghiệm thu phân hệ.
 
@@ -282,7 +284,7 @@ flowchart LR
   - `docs/gcs/KVC_GCS_PLAN.md`
   - `docs/gcs/KVC_GCS_DATA_CONTRACT.md`
   - `review/KVC-GCS-001-PLANNING-REPORT.md`
-- **Dependencies / Đầu vào:** `docs/KVC_ThietKeHeThong.md`.
+- **Dependencies / Đầu vào:** `AGENTS.md`, `docs/KVC_AI_WORKFLOW.md`, `docs/KVC_ThietKeHeThong.md`.
 - **Acceptance criteria:**
   1. Ghi snapshot đúng thời điểm: ngày 11/10 source cũ đã xóa; ngày 14/10 có frontend và backend MOCK/logger/replay; phần serial còn thiếu. Không tiếp tục dùng kết luận thiếu toàn bộ Dashboard.
   2. Kế hoạch GCS phân định rõ mục tiêu, kiến trúc, bố cục UI, các giai đoạn và task con.
@@ -503,7 +505,7 @@ Task IDs ở mục 6 là kế hoạch phân rã, không phải chứng nhận đ
 
 ## 8. Ma trận Kiểm thử GCS (Verification Matrix)
 
-Phân loại cấp độ kiểm chứng theo quy ước evidence của dự án. Cột cấp độ dưới đây là **loại bằng chứng cần thu**, không phải kết quả đã đạt; xem cột trạng thái:
+Phân loại cấp độ kiểm chứng theo chuẩn `AGENTS.md`. Cột cấp độ dưới đây là **loại bằng chứng cần thu**, không phải kết quả đã đạt; xem cột trạng thái:
 - `DESIGN`: Đặc tả trên tài liệu thiết kế.
 - `SOURCE-VERIFIED`: Đã kiểm chứng qua mã nguồn và phân tích tĩnh (AST/linter).
 - `SIMULATED`: Đã vượt qua bài kiểm thử mô phỏng tự động (Unit test / Fixture test).
