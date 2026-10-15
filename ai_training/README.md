@@ -6,7 +6,7 @@ Cập nhật 14/10/2026, audit KVC-MAINT-20261014-001. **SOURCE-VERIFIED / kiể
 
 KVC chọn **Ultralytics YOLO11n** cho detection hai lớp: 0=person, 1=lifebuoy. Dùng tên YOLO11 cho họ mô hình và YOLO11n cho cấu hình nano; kiến trúc `yolo11n`, model nền `yolo11n.pt` theo [Ultralytics](https://docs.ultralytics.com/models/yolo11/).
 
-Script train/monitor và release template hiện đã dùng tên run yolo11n. Tuy nhiên script train hiện khởi tạo từ `ai_training/weights/best.pt`; tên best.pt/run không chứng minh kiến trúc. Cần kiểm metadata/graph và hash checkpoint trước train/export hoặc công bố release. File `yolo26n.pt` trên đĩa là artifact cũ, không thuộc lựa chọn hiện hành; không đổi tên file này thành YOLO11n.
+Script train hiện khởi tạo từ `ai_training/weights/yolo11n_2class_best.pt`; tên file/run không chứng minh kiến trúc. Cần kiểm metadata/graph và hash checkpoint trước train/export hoặc công bố release. Model legacy YOLO26 đã được loại khỏi thư mục weights; không dùng hoặc đổi tên checkpoint legacy thành YOLO11n.
 
 Lượt đồng nhất chỉ cập nhật tài liệu và nhãn UI; chưa train lại, nạp weights để xác minh kiến trúc hoặc chứng minh GoAI chạy YOLO11n trên OneKiwi.
 

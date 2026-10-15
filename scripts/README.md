@@ -14,4 +14,4 @@ Script video/webcam không phải unit test: có thể mở camera hoặc nạp 
 
 Đã bỏ script sync_80ep_display.py cũ khỏi công cụ hiện hành: cộng offset epoch không chứng minh lịch sử huấn luyện. Dataset, checkpoint và báo cáo lịch sử trong ai_training/ được giữ để đối chiếu.
 
-Mô hình mục tiêu là YOLO11n hai lớp person/lifebuoy. Video/webcam dùng cùng thứ tự chọn checkpoint: boosted → hardware → weights/best.pt; có thể chỉ định --weights. Tên file/run không xác nhận kiến trúc; không tự nạp yolo26n.pt. Script video và browser lấy đường dẫn theo vị trí dự án để có thể chuyển thư mục.
+Mô hình mục tiêu là YOLO11n hai lớp person/lifebuoy. Video/webcam ưu tiên `ai_training/weights/yolo11n_2class_best.pt`, rồi fallback sang checkpoint trong các run boosted và hardware; video cho phép chỉ định `--weights`. Tên file/run không xác nhận kiến trúc; không tự nạp model legacy. Script video và browser lấy đường dẫn theo vị trí dự án để có thể chuyển thư mục.

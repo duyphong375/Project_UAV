@@ -28,7 +28,7 @@ def main():
     workspace_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
     runs_project_dir = os.path.join(workspace_dir, 'ai_training', 'runs')
     last_checkpoint = os.path.join(runs_project_dir, 'yolo11n_2class_hardware', 'weights', 'last.pt')
-    initial_model = os.path.join(workspace_dir, 'ai_training', 'weights', 'best.pt')
+    initial_model = os.path.join(workspace_dir, 'ai_training', 'weights', 'yolo11n_2class_best.pt')
     data_path = os.path.join(workspace_dir, 'ai_training', 'dataset_4k_yolo', 'data.yaml')
 
     if args.resume:

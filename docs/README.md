@@ -8,11 +8,13 @@
 4. [Thiết kế hệ thống](KVC_ThietKeHeThong.md): kiến trúc, bảng 29 linh kiện kèm chức năng/In/Out, giao thức dự thảo và tiêu chí đo.
 5. [Kịch bản demo](demo/KVC_DEMO.md): hai video và thử trực tiếp không sa bàn.
 6. [Chuẩn Markdown](KVC_MARKDOWN_STANDARD.md): quy tắc cấu trúc, thuật ngữ, trạng thái và tham chiếu.
+7. [Đặc tả giao diện](interfaces/): ma trận giao diện toàn chuỗi (IF-01 UART BBox, IF-02 LoRa RF, IF-03 Wi-Fi WS).
 
 ## Các nhóm tài liệu
 
 | Thư mục/file | Nội dung |
 | --- | --- |
+| interfaces/ | Đặc tả hợp đồng giao diện toàn chuỗi (UART BBox, LoRa RF, Wi-Fi SoftAP/WS) |
 | planning/ | Phân công, checklist, backlog kỹ thuật và phân tích rủi ro |
 | demo/ | Kịch bản trình diễn hiện hành |
 | gcs/ | Kế hoạch, dữ liệu và thiết kế Dashboard |

@@ -54,6 +54,195 @@ Tổng dung lượng SRAM là **160 KB**, được chia nhỏ thành các khối
 *   **SRAM3:** 32 KB, địa chỉ `0x2002_0000`.
 *   **BKPSRAM:** 4 KB tại `0x4005_1000`, có thanh ghi điều khiển riêng (`SCU_BKPSRAMCTRL`). Manual mô tả chế độ sleep/retention/nap và nguồn backup; dữ liệu chỉ được xem là giữ lại khi cấu hình đúng miền nguồn/chế độ hoạt động. Không coi đây là RAM giữ dữ liệu qua mọi loại reset hoặc mất nguồn.
 
+### 3.3 Bảng Phân Bố Địa Chỉ Cơ Sở Ngoại Vi (Peripheral Base Memory Map)
+
+Bảng địa chỉ cơ sở trích xuất trực tiếp từ CMSIS Device Family Pack `SONiX.SN34F7_DFP.2.0.4.pack` (`SN34F780.h` & `SN34F780.svd`) và đối chiếu User Manual v1.7:
+
+| Miền Bus | Khối Ngoại Vi (C/C++ Symbol) | Địa Chỉ Cơ Sở (Base Address) | Tốc Độ Tối Đa | Chức Năng Chính Phục Vụ Hệ Thống |
+| :--- | :--- | :--- | :---: | :--- |
+| **System** | `SN_UC` | `0x0040_0000` | HCLK | Mã định danh thiết bị duy nhất (Unique Device Code / Chip UID) |
+| **System** | `SN_FLASH` | `0x0060_1000` | HCLK | Bộ điều khiển bộ nhớ Flash (Flash Memory Controller - FMC) |
+| **APB0** | `SN_CT16B6` | `0x4000_0000` | 48 MHz | Bộ đếm thời gian cơ bản 16-bit Timer 6 |
+| | `SN_CT16B7` | `0x4000_1000` | 48 MHz | Bộ đếm thời gian cơ bản 16-bit Timer 7 |
+| | `SN_WDT` | `0x4000_B000` | 32 kHz (ILRC) | Watchdog Timer độc lập (chống treo hệ thống) |
+| | `SN_WWDT` | `0x4000_C000` | 48 MHz | Window Watchdog Timer (giám sát cửa sổ thời gian) |
+| | `SN_UART1` | `0x4001_1000` | 48 MHz | Giao diện UART1 (định vị GPS / Telemetry tải) |
+| | `SN_UART2` | `0x4001_2000` | 48 MHz | Giao diện UART2 |
+| | `SN_UART3` | `0x4001_3000` | 48 MHz | Giao diện UART3 |
+| | `SN_UART4` | `0x4001_4000` | 48 MHz | Giao diện UART4 |
+| | `SN_CAN0` | `0x4001_9000` | 48 MHz | Bộ điều khiển mạng CAN 0 (CAN 2.0A/B) |
+| | `SN_CAN1` | `0x4001_A000` | 48 MHz | Bộ điều khiển mạng CAN 1 |
+| | `SN_ALWAYSON` | `0x4001_B000` | 32.768 kHz | Miền Always-On (Quản lý RTC & chế độ đánh thức năng lượng thấp) |
+| | **`SN_SCU`** | **`0x4001_F000`** | 48 MHz | **Khối Điều khiển Hệ thống (System Control Unit: Clock, Reset, Pin Mux AFIO)** |
+| **APB1** | `SN_CT16B0` | `0x4002_0000` | 96 MHz | Bộ Timer nâng cao 16-bit CT16B0 (Hỗ trợ ngắt Break, Dead-band PWM) |
+| | `SN_CT16B1` | `0x4002_1000` | 96 MHz | Bộ Timer đa năng 16-bit CT16B1 |
+| | `SN_CT16B2` | `0x4002_2000` | 96 MHz | Bộ Timer đa năng 16-bit CT16B2 |
+| | `SN_CT16B3` | `0x4002_3000` | 96 MHz | Bộ Timer đa năng 16-bit CT16B3 |
+| | `SN_UART0` | `0x4002_4000` | 96 MHz | Giao diện High-Speed UART0 (giao tiếp tốc độ cao với FPGA) |
+| | `SN_UART5` | `0x4002_5000` | 96 MHz | Giao diện High-Speed UART5 |
+| | `SN_LCM` | `0x4002_6000` | 96 MHz | Bộ điều khiển màn hình LCD song song (Chuẩn 8080/6800) |
+| | **`SN_ADC0`** | **`0x4002_7000`** | 96 MHz | **Bộ chuyển đổi SAR ADC 12-bit 1 MSPS (16 kênh ngoài + VDD/VSS)** |
+| | `SN_CRC` | `0x4002_8000` | 96 MHz | Bộ tăng tốc tính toán CRC phần cứng (CRC-16 / CRC-32) |
+| | **`SN_SPI0`** | **`0x4002_A000`** | 96 MHz | **Bộ điều khiển SPI 0 (Giao tiếp module LoRa Ai-Thinker Ra-02 SX1278)** |
+| | `SN_SPI1` | `0x4002_B000` | 96 MHz | Bộ điều khiển SPI 1 |
+| | `SN_CT16B4` | `0x4002_D000` | 96 MHz | Bộ Timer đa năng 16-bit CT16B4 |
+| | `SN_CT16B5` | `0x4002_E000` | 96 MHz | Bộ Timer đa năng 16-bit CT16B5 |
+| | `SN_CT16B8` | `0x4002_F000` | 96 MHz | Bộ Timer đa năng 16-bit CT16B8 |
+| | `SN_SPI2` | `0x4003_1000` | 96 MHz | Bộ điều khiển SPI 2 |
+| | **`SN_I2C0`** | **`0x4003_3000`** | 96 MHz | **Bộ điều khiển I2C 0 (Giao tiếp cảm biến khí tượng / OLED ngoài)** |
+| | `SN_I2C1` | `0x4003_4000` | 96 MHz | Bộ điều khiển I2C 1 |
+| | `SN_I2C2` | `0x4003_5000` | 96 MHz | Bộ điều khiển I2C 2 |
+| | **`SN_GPIO0`** | **`0x4003_7000`** | 96 MHz | **Cổng xuất/nhập đa năng GPIO Port 0** |
+| | **`SN_GPIO1`** | **`0x4003_8000`** | 96 MHz | **Cổng GPIO Port 1 (Chứa chân BOOT P1.3, LED1/2 Starter-Kit)** |
+| | **`SN_GPIO2`** | **`0x4003_9000`** | 96 MHz | **Cổng GPIO Port 2 (Chứa 16 ngõ vào ADC và chân UART1/2)** |
+| | **`SN_GPIO3`** | **`0x4003_A000`** | 96 MHz | **Cổng GPIO Port 3 (Chứa đường nạp SWD, chân Reset và Thạch anh)** |
+| **AHB** | `SN_BKPSRAM` | `0x4005_1000` | 192 MHz | Bộ nhớ lưu trữ dữ liệu nguồn phụ Backup SRAM (4 KB) |
+| | `SN_SDIO` | `0x4005_2000` | 192 MHz | Giao diện Thẻ nhớ tốc độ cao SDIO 4-bit |
+| | **`SN_DMA0`** | **`0x4005_3000`** | 192 MHz | **Bộ điều khiển truy cập bộ nhớ trực tiếp DMA 0 (8 kênh độc lập)** |
+| | **`SN_DMA1`** | **`0x4005_4000`** | 192 MHz | **Bộ điều khiển truy cập bộ nhớ trực tiếp DMA 1 (8 kênh độc lập)** |
+| | `SN_ETHMAC` | `0x4005_5000` | 192 MHz | Bộ điều khiển Ethernet MAC 10/100 Mbps (RMII/MII) |
+| **ARM Core SCS** | `CORTEX_M4_SCS` | `0xE000_E000` | 192 MHz | Không gian điều khiển hệ thống ARM Cortex-M4F |
+| | `SysTick` | `0xE000_E010` | 192 MHz | Đồng hồ định thời hệ thống SysTick 24-bit |
+| | `NVIC` | `0xE000_E100` | 192 MHz | Bộ điều khiển ngắt lồng nhau đa mức ưu tiên |
+| | `SCB` | `0xE000_ED00` | 192 MHz | Khối điều khiển hệ thống System Control Block (Vector Table, Reset) |
+| | `MPU` | `0xE000_ED90` | 192 MHz | Khối bảo vệ bộ nhớ Memory Protection Unit (8 phân vùng) |
+| | `FPU` | `0xE000_EF30` | 192 MHz | Thanh ghi điều khiển bộ xử lý dấu phẩy động FPU (FPCCR, FPCAR) |
+
+---
+
+### 3.4 Bản Đồ Thanh Ghi Các Khối Ngoại Vi Cốt Lõi (Core Peripheral Register Map)
+
+#### 3.4.1 Khối Điều Khiển Hệ Thống ([`SN_SCU`](file:///d:/Project_UAV_KVC/docs/hardware/CHIP_SONIX_SN34F788_MCU.md) — Địa chỉ cơ sở `0x4001_F000`)
+Khối SCU quản lý toàn bộ hệ thống nguồn, clock, reset và cấu hình chân của MCU:
+
+| Offset | Tên Thanh Ghi | Thuộc Tính | Reset Value | Chức Năng Kỹ Thuật |
+| :---: | :--- | :---: | :---: | :--- |
+| `0x000` | `BTUP_STS` | R/W | `0x0000_0000` | Trạng thái khởi động (Boot-up Status, bit 2 `GPIO_HOLD`) |
+| `0x004` | `BTUP_CTRL` | R/W | `0x0000_0000` | Điều khiển khởi động hệ thống |
+| `0x010` | `CHIPID` | R | Chip Spec | Mã định danh ID vi điều khiển |
+| `0x020` | `PWRMODE` | R/W | `0x0000_0000` | Chế độ nguồn (Normal, Sleep, Deep-Sleep, Deep Power-Down) |
+| `0x02C` | `PERRSTCTL` | R/W | `0x0000_0000` | Điều khiển Reset ngoại vi hệ thống |
+| `0x030` | `PLLCTRL` | R/W | `0x0000_0000` | Điều khiển bộ nhân tần PLL nội lên tới 192 MHz |
+| `0x050` | `AHBCLKG` | R/W | `0x0000_0001` | Cấp xung nhịp (Clock Gating) bus AHB: DMA0/1, SDIO, BKPSRAM, ETHMAC |
+| `0x060` | `APB0CLKG` | R/W | `0x0000_0000` | Cấp xung nhịp bus APB0: UART1~4, CT16B6/7, WDT, CAN0/1 |
+| `0x064` | `APB1CLKG` | R/W | `0x0000_0000` | Cấp xung nhịp bus APB1: UART0/5, SPI0~2, I2C0~2, ADC0, CT16B0~5/8 |
+| `0x200` | `RTC_TIME1` | R/W | `0x0000_0000` | Thanh ghi thời gian RTC 1 (Giây, Phút, Giờ) |
+| `0x204` | `RTC_TIME2` | R/W | `0x0000_0000` | Thanh ghi thời gian RTC 2 (Ngày, Tháng, Năm, Thứ) |
+| `0x800` | `CLKSEL` | R/W | `0x0000_0000` | Chọn nguồn xung nhịp chính (IHRC 12MHz, HXT 10~25MHz, SysPLL) |
+| `0x804` | `CLKPRE` | R/W | `0x0000_0000` | Bộ chia tần xung nhịp hệ thống (HCLK Prescaler) |
+| `0x808` | `IHRCCTRL` | R/W | `0x0000_0000` | Cân chỉnh và bật/tắt bộ dao động RC nội cao tần |
+| `0x80C` | `PLLSTS` | R | `0x0000_0000` | Trạng thái khóa tần PLL (PLL Lock status) |
+| `0x810` | `AHBRST` | R/W | `0x0000_0000` | Reset phần mềm các ngoại vi thuộc ma trận AHB |
+| `0x814` | `APB0RST` | R/W | `0x0000_0000` | Reset phần mềm các ngoại vi bus APB0 |
+| `0x818` | `APB1RST` | R/W | `0x0000_0000` | Reset phần mềm các ngoại vi bus APB1 |
+| `0x900` | `P0STR` | R/W | `0x0000_0000` | Độ mạnh dòng lái/kéo (Drive/Sink Strength) cho `P0.0 ~ P0.15` |
+| `0x904` | `P1STR` | R/W | `0x0000_0000` | Độ mạnh dòng lái/kéo cho `P1.0 ~ P1.15` |
+| `0x908` | `P2STR` | R/W | `0x0000_0000` | Độ mạnh dòng lái/kéo cho `P2.0 ~ P2.15` |
+| `0x90C` | `P3STR` | R/W | `0x0000_0000` | Độ mạnh dòng lái/kéo cho `P3.0 ~ P3.13` |
+| `0xBF0` | `SRAM1CTRL` | R/W | `0x0000_0000` | Cấu hình tín hiệu phụ cho khối bộ nhớ SRAM1 32KB |
+| `0xBF4` | `SRAM2CTRL` | R/W | `0x0000_0000` | Cấu hình tín hiệu phụ cho khối bộ nhớ SRAM2 96KB |
+| `0xBF8` | `SRAM3CTRL` | R/W | `0x0000_0000` | Cấu hình tín hiệu phụ cho khối bộ nhớ SRAM3 32KB |
+| `0xBFC` | `BKPSRAMCTRL`| R/W | `0x0000_0000` | Cấu hình chế độ duy trì dữ liệu cho khối BKPSRAM 4KB |
+
+#### 3.4.2 Khối Xuất Nhập Ngoại Vi GPIO (Port 0 ~ Port 3)
+Địa chỉ cơ sở: Port 0 = `0x4003_7000`, Port 1 = `0x4003_8000`, Port 2 = `0x4003_9000`, Port 3 = `0x4003_A000`:
+
+| Offset | Tên Thanh Ghi | Thuộc Tính | Reset Value | Chức Năng Kỹ Thuật |
+| :---: | :--- | :---: | :---: | :--- |
+| `+0x00` | `DATAOUT` | R/W | `0x0000_0000` | Xuất mức logic ngõ ra cho các chân thuộc Port |
+| `+0x04` | `DATAIN` | R | Logic Chân | Đọc mức logic thực tế trên chân ngõ vào |
+| `+0x08` | `DIR` | R/W | `0x0000_0000` | Hướng chân: bit = `0` là Input (Mặc định), bit = `1` là Output |
+| `+0x10` | `BSET` | W | — | Thiết lập mức HIGH cho chân tương ứng theo bit (Atomic Bit Set) |
+| `+0x14` | `BCLR` | W | — | Thiết lập mức LOW cho chân tương ứng theo bit (Atomic Bit Clear) |
+| `+0x18` | `PULLEN` | R/W | `0x0000_0000` | Cho phép điện trở kéo nội (Pull Resistor Enable) |
+| `+0x1C` | `PUTYPE` | R/W | `0x0000_0000` | Chọn loại trở kéo: bit = `0` là Pull-down, bit = `1` là Pull-up |
+| `+0x20` | `IE` | R/W | `0x0000_0000` | Cho phép kích hoạt cờ ngắt ngõ vào trên chân tương ứng |
+| `+0x2C` | `IMASKEN` | R/W | `0x0000_0000` | Mặt nạ ngắt GPIO (Mask Interrupt) |
+| `+0x30` | `IC` | W | — | Xóa cờ trạng thái ngắt chân (Interrupt Clear) |
+| `+0x34` | `ITRIG` | R/W | `0x0000_0000` | Chọn kiểu kích hoạt ngắt: Mức điện áp (Level) hay Sườn xung (Edge) |
+| `+0x38` | `IBETRIG` | R/W | `0x0000_0000` | Cho phép ngắt kích hoạt ở cả hai sườn xung (Both Edge Trigger) |
+| `+0x3C` | `IRFTRIG` | R/W | `0x0000_0000` | Chọn sườn kích hoạt: Sườn lên (Rising) hay Sườn xuống (Falling) |
+| `+0x40` | `BNEN` | R/W | `0x0000_0000` | Bật mạch lọc chống rung số cho chân ngõ vào (De-bounce Enable) |
+| `+0x44` | `BNCLKPRE` | R/W | `0x0000_0000` | Bộ chia tần xung nhịp cho mạch lọc chống rung ngõ vào |
+
+#### 3.4.3 Khối Truyền Thông Nối Tiếp (UART0 ~ UART5)
+Cấu trúc chuẩn công nghiệp tích hợp Fractional Baud Rate Generator và FIFO 16-byte:
+
+| Offset | Tên Thanh Ghi | Thuộc Tính | Chức Năng Kỹ Thuật Khi Truy Cập |
+| :---: | :--- | :---: | :--- |
+| `+0x00` | `RB` | R | Receiver Buffer: Đọc dữ liệu 8-bit từ đầu hàng đợi RX FIFO |
+| `+0x00` | `TH` | W | Transmit Holding: Ghi dữ liệu 8-bit vào đầu hàng đợi TX FIFO |
+| `+0x00` | `DLL` | R/W | Divisor Latch LSB: 8-bit thấp của bộ chia tốc độ Baud (chỉ truy cập khi bit `DLAB = 1` trong thanh ghi `LC`) |
+| `+0x04` | `DLM` | R/W | Divisor Latch MSB: 8-bit cao của bộ chia tốc độ Baud (khi `DLAB = 1`) |
+| `+0x04` | `IE` | R/W | Interrupt Enable: Cho phép ngắt nhận dữ liệu (RDAIE), trống đệm phát (THREIE), lỗi đường truyền (RLSIE) |
+| `+0x08` | `II` | R | Interrupt Identification: Nhận diện nguyên nhân ngắt phần cứng đang xảy ra |
+| `+0x08` | `FIFOCTRL` | W | FIFO Control: Bật/tắt FIFO, xóa hàng đợi RX/TX FIFO, cấu hình ngưỡng ngắt FIFO trigger |
+| `+0x08` | `PRE` | R/W | Fractional Baud Prescaler: Bộ chia tần số thập phân giúp tinh chỉnh sai số Baud về xấp xỉ 0% |
+| `+0x0C` | `LC` | R/W | Line Control: Thiết lập độ dài ký tự (5/6/7/8-bit), bit dừng (Stop bits), chẵn lẻ (Parity), và chốt `DLAB` |
+| `+0x10` | `MC` | R/W | Modem Control: Điều khiển tín hiệu RTS, DTR và kích hoạt Auto-Flow Control phần cứng |
+| `+0x14` | `LS` | R | Line Status: Cờ trạng thái đường truyền (DR - Data Ready, THRE - TX Empty, OE - Overrun, FE - Frame Error) |
+| `+0x18` | `MS` | R | Modem Status: Trạng thái các chân bắt tay ngoài (CTS, DSR, RI, DCD) |
+| `+0x1C` | `SP` | R/W | Scratch Pad: Thanh ghi nháp 8-bit lưu trữ tạm |
+| `+0x20` | `MD` | R/W | Mode Definition: Cấu hình chế độ mở rộng (RS-485 Auto-Direction DE/RE, IrDA, ISO7816 Smartcard) |
+| `+0x5C` | `RXFFCNT` | R | RX FIFO Count: Số byte thực tế đang sẵn sàng trong bộ đệm nhận RX FIFO |
+
+#### 3.4.4 Khối Giao Tiếp Đồng Bộ SPI / SSP (SPI0 ~ SPI2)
+Phục vụ giao tiếp trực tiếp với chip LoRa Semtech SX1278 (trên module Ai-Thinker Ra-02):
+
+| Offset | Tên Thanh Ghi | Thuộc Tính | Reset Value | Chức Năng Kỹ Thuật |
+| :---: | :--- | :---: | :---: | :--- |
+| `+0x00` | `CTRL0` | R/W | `0x0000_0000` | Thiết lập độ dài từ truyền (4-bit đến 16-bit), định dạng khung (SPI / SSI / Microwire), pha và cực tính xung (`CPOL`, `CPHA`) |
+| `+0x04` | `CTRL1` | R/W | `0x0000_0000` | Bật khối SPI (`SPI_EN`), chọn Master/Slave mode, Loopback test, bộ chia xung nhịp SCK (`CLKDIV`) |
+| `+0x08` | `CTRL2` | R/W | `0x0000_0000` | Cấu hình bật bộ đệm FIFO truyền/nhận và kích hoạt luồng DMA (`DMA_TX_EN`, `DMA_RX_EN`) |
+| `+0x0C` | `STATUS` | R | `0x0000_0003` | Cờ trạng thái: `BUSY` (Đang truyền nhận), `TFE` (TX FIFO Empty), `TNF` (TX Not Full), `RNE` (RX Not Empty), `RFF` (RX Full) |
+| `+0x10` | `ICTRL` | R/W | `0x0000_0000` | Cho phép các nguồn ngắt phần cứng SPI (RX Overflow, RX Timeout, RX/TX FIFO Threshold) |
+| `+0x14` | `RIS` | R | `0x0000_0000` | Trạng thái cờ ngắt thô (Raw Interrupt Status) |
+| `+0x18` | `DATA` | R/W | `0x0000_0000` | Cổng dữ liệu 16-bit: ghi vào để phát qua MOSI, đọc ra để nhận từ MISO |
+
+#### 3.4.5 Khối Giao Tiếp I2C (I2C0 ~ I2C2)
+Hỗ trợ tốc độ Standard (100 kbps), Fast (400 kbps), Fast-plus (1 Mbps):
+
+| Offset | Tên Thanh Ghi | Thuộc Tính | Reset Value | Chức Năng Kỹ Thuật |
+| :---: | :--- | :---: | :---: | :--- |
+| `+0x00` | `CTRL` | R/W | `0x0000_0000` | Điều khiển I2C: Bật giao tiếp (`I2C_EN`), phát tín hiệu `START`, `STOP`, `ACK`, chọn chế độ Master/Slave |
+| `+0x04` | `STATUS` | R | `0x0000_00F8` | Trạng thái máy trạng thái I2C (Mã trạng thái bus theo chuẩn công nghiệp) |
+| `+0x08` | `CLKDIV` | R/W | `0x0000_0000` | Bộ chia tốc độ xung nhịp SCL (Tính toán cho 100 kHz hoặc 400 kHz) |
+| `+0x0C` | `DATA` | R/W | `0x0000_0000` | Thanh ghi dữ liệu 8-bit truyền và nhận trên đường SDA |
+| `+0x10` | `ADDR` | R/W | `0x0000_0000` | Thiết lập địa chỉ Slave 7-bit hoặc 10-bit của MCU |
+| `+0x14` | `TGS` | R/W | `0x0000_0000` | Thiết lập thời gian Set/Hold và mạch lọc chống xung nhiễu (Glitch Suppression) |
+| `+0x18` | `BM` | R | `0x0000_0000` | Giám sát đường bus vật lý SDA/SCL (Bus Monitor) |
+
+#### 3.4.6 Khối Bộ Chuyển Đổi Tương Tự - Số ([`SN_ADC0`](file:///d:/Project_UAV_KVC/docs/hardware/CHIP_SONIX_SN34F788_MCU.md) — Địa chỉ cơ sở `0x4002_7000`)
+12-bit SAR ADC tốc độ 1 MSPS với 18 nguồn kênh đo:
+
+| Offset | Tên Thanh Ghi | Thuộc Tính | Chức Năng Kỹ Thuật |
+| :---: | :--- | :---: | :--- |
+| `+0x000 ~ +0x044` | `DATA0 ~ DATA17` | R | Dữ liệu chuyển đổi 12-bit của 18 kênh (Kênh `0~15` ngoài, kênh `16` đo VDD, kênh `17` đo VSS) |
+| `+0x100` | `CTRL` | R/W | Bật bộ ADC (`ADC_EN`), kích hoạt chuyển đổi (Software / Timer trigger), chọn chế độ quét Single/Continuous |
+| `+0x110` | `TPARM` | R/W | Tham số định thời cho bộ chuyển đổi SAR nội |
+| `+0x114` | `SMPR` | R/W | Chu kỳ lấy mẫu kênh ADC (Sampling Time Parameter) |
+| `+0x11C` | `PRE` | R/W | Bộ chia tần số xung nhịp cho ADC (đảm bảo f_ADC ≤ 16 MHz) |
+| `+0x120 ~ +0x130`| `SQR0 ~ SQR4` | R/W | Thanh ghi trình tự chuyển đổi đa kênh liên tục (Scan Sequence Registers) |
+| `+0x140` | `EOCIE` | R/W | Cho phép ngắt khi hoàn thành chuyển đổi mẫu (End Of Conversion Interrupt Enable) |
+| `+0x150` | `EOCIS` | R/W | Cờ trạng thái ngắt kết thúc chuyển đổi (End Of Conversion Interrupt Status) |
+| `+0x200 ~ +0x23C`| `DMA0DAT ~ DMA3IS`| R/W | Cổng truyền nhận dữ liệu kết nối trực tiếp với 4 kênh DMA |
+| `+0x300 ~ +0x38C`| `THRHOLD0 ~ 35` | R/W | Cấu hình ngưỡng bảo vệ Analog Window Watchdog (High/Low Threshold Detect) |
+
+#### 3.4.7 Khối Điều Khiển DMA ([`SN_DMA0`](file:///d:/Project_UAV_KVC/docs/hardware/CHIP_SONIX_SN34F788_MCU.md) / [`SN_DMA1`](file:///d:/Project_UAV_KVC/docs/hardware/CHIP_SONIX_SN34F788_MCU.md) — Base `0x4005_3000` / `0x4005_4000`)
+Mỗi bộ điều khiển DMA quản lý 8 kênh phần cứng độc lập. Các thanh ghi chung của bộ điều khiển:
+* `+0x00` (`INT`): Trạng thái ngắt tổng thể của bộ DMA.
+* `+0x04` (`INT_TC`): Trạng thái ngắt hoàn thành truyền toàn bộ khối (Terminal Count).
+* `+0x08` (`INT_TC_CLR`): Xóa cờ ngắt Terminal Count.
+* `+0x1C` (`CH_EN`): Cờ trạng thái cho phép của 8 kênh DMA.
+* `+0x20` (`CH_BUSY`): Cờ báo kênh DMA đang bận truyền dữ liệu.
+
+Các thanh ghi điều khiển riêng cho từng Kênh $n$ ($n = 0 \dots 7$, mỗi kênh chiếm khối $0x20$ byte, bắt đầu từ địa chỉ `+0x100 + n * 0x20`):
+* `+0x100 + n*0x20` (`Cn_CSR`): Điều khiển và trạng thái của Kênh $n$ (Bật/tắt kênh, ưu tiên mức kênh).
+* `+0x104 + n*0x20` (`Cn_CFG`): Cấu hình loại nguồn/đích (Memory/Peripheral), kích thước gói dữ liệu (8/16/32-bit), bước tăng địa chỉ.
+* `+0x108 + n*0x20` (`Cn_SRCADDR`): Địa chỉ ô nhớ nguồn (Source Memory / Peripheral Data Register).
+* `+0x10C + n*0x20` (`Cn_DSTADDR`): Địa chỉ ô nhớ đích (Destination Memory / Peripheral Data Register).
+* `+0x114 + n*0x20` (`Cn_SIZE`): Số lượng dữ liệu (Transfer Length) cần chuyển giao trước khi dừng.
+
 ---
 
 ## 4. Điện áp Hoạt động, Miền Nguồn & Tiêu Thụ Năng Lượng
@@ -314,13 +503,13 @@ Toàn bộ hồ sơ kỹ thuật, gói cài đặt và tài liệu gốc đượ
 
 ## 11. Mức độ bao phủ tài liệu và giới hạn tra cứu
 
-User Manual v1.7 là datasheet/reference manual đầy đủ nhất có trong thư mục. Bản Markdown này đã tóm tắt nhận dạng/đóng gói, core, memory map, nguồn, clock, ngoại vi, AFIO/pinout và starter-kit. Nó không chép toàn bộ register map, timing diagram, bảng giá trị điện, trình tự hiệu chuẩn, hay mọi điều kiện operating/absolute-maximum; khi thiết kế mạch hoặc firmware cần đối chiếu trực tiếp chương tương ứng của PDF.
+User Manual v1.7 là datasheet/reference manual đầy đủ nhất có trong thư mục kết hợp gói CMSIS DFP 2.0.4. Bản Markdown này đã tóm tắt nhận dạng/đóng gói, core, memory map, nguồn, clock, ngoại vi, AFIO/pinout, bảng địa chỉ cơ sở toàn bộ 40 khối ngoại vi (Peripheral Base Memory Map) và bản đồ thanh ghi chi tiết của các khối ngoại vi cốt lõi (SCU, GPIO, UART, SPI, I2C, ADC, DMA). Các cấu hình thanh ghi chi tiết chuyên sâu khác (như bit-field chi tiết của CAN, ETHMAC, SDIO) hoặc timing diagram, bảng giá trị điện, trình tự hiệu chuẩn khi thiết kế mạch/firmware nâng cao cần đối chiếu trực tiếp chương tương ứng của User Manual PDF và CMSIS header `SN34F780.h`.
 
 | Nguồn có trong workspace | Phạm vi dùng | Giới hạn |
 | :--- | :--- | :--- |
 | `SN34F780_V1.7.pdf` | Đặc tính họ chip, bảng biến thể, pin/package, clock, memory map, điện học và register/peripheral reference | Một số mục là đặc tính chung họ SN34F780; xác minh đúng biến thể SN34F788FG và revision trước khi áp dụng. |
 | `SN34F780_QuickStart_V1.1R_EN.pdf` | Quy trình cài Keil/DFP và khởi động starter-kit | Không thay cho datasheet chip hoặc phép đo firmware. |
 | `SN34F780_STARTKIT_V1.1.pdf` | Sơ đồ nguồn, jumper, debugger và nối chân trên kit | Chỉ mô tả revision V1.1; không suy ra pinout module khác. |
-| DFP 2.0.4 và công cụ SN-Link | Header/register definitions và toolchain support | Có file trong thư mục không chứng minh compiler/pack/SN-Link đã được kiểm thử với chip đang cầm. |
+| DFP 2.0.4 và công cụ SN-Link | Header/register definitions (`SN34F780.h`, `SN34F780.svd`) và toolchain support | Đã trích xuất toàn bộ bảng địa chỉ cơ sở ngoại vi và thanh ghi cốt lõi vào Mục 3.3 & 3.4. |
 
-**Các điểm đã đối chiếu với User Manual v1.7:** SRAM1/2/3 lần lượt 32/96/32 KB tại `0x2000_0000`, `0x2000_8000`, `0x2002_0000`; ADC có 16 ngõ ngoài cùng hai nguồn nội VDD/VSS; timer có ba nhóm khả năng khác nhau. Các nội dung cũ trái với các thông tin này đã được sửa.
+**Các điểm đã đối chiếu với User Manual v1.7 & DFP 2.0.4:** SRAM1/2/3 lần lượt 32/96/32 KB tại `0x2000_0000`, `0x2000_8000`, `0x2002_0000`; ADC có 16 ngõ ngoài cùng hai nguồn nội VDD/VSS; địa chỉ cơ sở 40 ngoại vi thuộc APB0, APB1 và AHB đã được định danh và đối chiếu đầy đủ.

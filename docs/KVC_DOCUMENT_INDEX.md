@@ -11,7 +11,6 @@ Rà soát 15/10/2026 (Asia/Saigon), KVC-MD-UNIFY-20261015-001; owner: Codex; SEL
 | [README](../README.md) | Điểm vào dự án, cấu trúc và lệnh chạy | Hướng dẫn software; giới hạn hardware được nêu riêng |
 | [Phân công 5 người](planning/KVC_PHAN_CONG_5_NGUOI.md) | Nhiệm vụ chính từng người | Kế hoạch, chưa xác nhận hoàn thành |
 | [Checklist 5 người](planning/KVC_CONG_VIEC_CHI_TIET_5_NGUOI.md) | Việc triển khai, kiểm thử và demo | Danh sách việc cần làm |
-| [Backlog kỹ thuật](planning/KVC_TODO_FROM_NOW.md) | Tham khảo task và phụ thuộc kỹ thuật | Vai A–E/kịch bản cũ phải đối chiếu kế hoạch hiện hành |
 | [Tiến độ dự án](KVC_PROJECT_STATUS.md) | Tiến độ phân hệ, gates, bằng chứng và công việc còn thiếu | Snapshot 14/10; không phải kết quả đo mới |
 | [Chuẩn Markdown](KVC_MARKDOWN_STANDARD.md) | Cấu trúc, trạng thái, liên kết và cách ghi evidence trong tài liệu | Accepted; quy ước biên tập, không phải quyết định kỹ thuật |
 | [Thiết kế hệ thống](KVC_ThietKeHeThong.md) | Kiến trúc, BOM mục III, giao thức draft mục IV, nghiệm thu mục VII | OneKiwi V1.1 đã có; camera/bộ nhớ/AI và ABI cần chốt |
@@ -20,6 +19,7 @@ Rà soát 15/10/2026 (Asia/Saigon), KVC-MD-UNIFY-20261015-001; owner: Codex; SEL
 | [Kế hoạch GCS](gcs/KVC_GCS_PLAN.md) | Tài liệu phân rã task GCS lịch sử | Các task USB/STM32 đã superseded; không dùng làm backlog hiện hành |
 | [Data contract](gcs/KVC_GCS_DATA_CONTRACT.md) | Semantics JSON ứng dụng và wire draft | Đọc mục semantics source hiện hành; wire chưa duyệt |
 | [Thiết kế GCS](gcs/KVC_GCS_DESIGN_SPEC.md) | UI/UX và hành vi mục tiêu | Spec phải đối chiếu frontend hiện có |
+| [Đặc tả giao diện](interfaces/README.md) | Ma trận luồng dữ liệu, IF-01 UART, IF-02 LoRa, IF-03 Wi-Fi WS | Quản lý hợp đồng kết nối toàn chuỗi; ABI draft |
 | [Backend README](../Dashboard/backend/README.md) | Cài/chạy MOCK, API, SQLite, replay và test | SOURCE-VERIFIED hướng dẫn; không REAL ingress |
 | [Frontend README](../Dashboard/frontend/README.md) | LOCAL/BACKEND, Vite và scripts kiểm thử | Source hiện hành; offline/browser cần nghiệm thu |
 | [AI data preparation](ai/KVC_AI_DATA_PREPARATION.md) | Ontology, split, manifests và QA | DATA_PROVENANCE_PENDING |
@@ -38,6 +38,10 @@ Rà soát 15/10/2026 (Asia/Saigon), KVC-MD-UNIFY-20261015-001; owner: Codex; SEL
 | [README frontend](../Dashboard/frontend/README.md) | Lập trình viên GCS frontend | Lệnh chạy/test và giới hạn UI; theo contract và kiến trúc |
 | [README AI](../ai_training/README.md) | Người phụ trách dữ liệu/model AI | Mô tả adapter, dataset, scripts và giới hạn PC_REFERENCE |
 | [README scripts](../scripts/README.md) | Người chạy tooling dự án | Danh mục script; phải đọc tác dụng trước khi chạy |
+| [README FPGA](../fpga/README.md) | Người phụ trách OneKiwi/FPGA | Ghi chú phân hệ và interface; camera/bo/RTL chưa xác minh |
+| [README MCU](../firmware/mcu_uav/README.md) | Người phụ trách MCU tải | Ghi chú toolchain và interface; RF ABI còn draft |
+| [README Gateway](../firmware/gateway_esp32/README.md) | Người phụ trách ESP32-C3 | Cấu hình PlatformIO và transport mục tiêu; chưa có firmware ingress |
+| [README weights AI](../ai_training/weights/README.md) | Người quản lý checkpoint AI cục bộ | Chính sách giữ và giới hạn evidence của weights |
 | [Báo cáo eval 2 lớp](../ai_training/runs/eval_2class_hardware/EVAL_REPORT.md) | Nhóm AI/reviewer | Kết quả lịch sử theo chính candidate trong báo cáo; không phải bằng chứng FPGA |
 | [Báo cáo eval boosted](../ai_training/runs/eval_boosted/EVAL_REPORT_BOOSTED.md) | Nhóm AI/reviewer | Kết quả lịch sử; không ghi đè bằng metric mới |
 | [Báo cáo eval demo](../ai_training/runs/eval_demo1_boosted/EVAL_REPORT_DEMO1.md) | Nhóm AI/reviewer | Kết quả lịch sử của candidate demo; xem provenance riêng |

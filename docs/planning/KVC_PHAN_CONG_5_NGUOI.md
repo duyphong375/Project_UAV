@@ -10,7 +10,7 @@ Chưa có bằng chứng toàn chuỗi phần cứng FPGA → MCU tải → LoRa
 
 **Camera → FPGA OneKiwi → MCU Sonix trên UAV + cảm biến → LoRa metadata → ESP32 trạm đất có nguồn riêng → Wi-Fi SoftAP/WebSocket → dịch vụ GCS và Dashboard web trên laptop.**
 
-LoRa không truyền video. ESP32 trạm đất nhận LoRa độc lập với laptop; laptop đảm nhiệm dịch vụ GCS nhận/lưu/replay dữ liệu và giao diện Dashboard web. Thiết kế chọn ESP32-WROOM-32D DevKit V1 với Wi-Fi SoftAP/WebSocket v1; đây là baseline triển khai chưa có bằng chứng chạy. RF 32 byte vẫn là dự thảo ABI chưa duyệt; source telemetry 20 byte là hiện trạng lịch sử, không được tự ý đổi giao thức phần cứng. Bluetooth không phải transport mục tiêu hiện hành.
+LoRa không truyền video. ESP32 trạm đất nhận LoRa độc lập với laptop; laptop đảm nhiệm dịch vụ GCS nhận/lưu/replay dữ liệu và giao diện Dashboard web. Thiết kế chọn họ SoC ESP32-C3 với Wi-Fi SoftAP/WebSocket v1; mã kit/board, module, flash và pinout còn phải xác minh trên phần cứng thực tế. Đây là baseline thiết kế, chưa có bằng chứng chạy. RF 32 byte vẫn là dự thảo ABI chưa duyệt; source telemetry 20 byte là hiện trạng lịch sử, không được tự ý đổi giao thức phần cứng. Bluetooth không phải transport mục tiêu hiện hành.
 
 ## 3. Nhiệm vụ chính của từng người
 

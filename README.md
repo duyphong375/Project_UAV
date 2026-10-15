@@ -44,6 +44,15 @@ KVC/
 ├── AGENTS.md                         # Quy tắc task, sửa code, review và bằng chứng
 ├── .gitignore                        # Loại môi trường, artifact và dữ liệu cục bộ
 ├── Phancongviec.docx                 # Tài liệu phân công tại root
+├── fpga/                             # Phân hệ FPGA OneKiwi Primer 20K (Vững)
+│   ├── tb/                           # Testbench mô phỏng RTL riêng biệt
+│   └── README.md                     # Hướng dẫn project Gowin EDA và link IF-01
+├── firmware/                         # Mã nguồn vi điều khiển
+│   ├── mcu_uav/                      # Firmware MCU Sonix SN34F788 trên UAV (Phong)
+│   │   └── README.md                 # Hướng dẫn project Keil MDK, link IF-01 và IF-02
+│   └── gateway_esp32/                # Firmware Gateway trạm đất ESP32 (Thịnh)
+│       ├── platformio.ini            # Cấu hình PlatformIO (framework = arduino)
+│       └── README.md                 # Hướng dẫn và link IF-02, IF-03
 ├── Dashboard/
 │   ├── frontend/                     # Giao diện React + TypeScript + Vite
 │   │   ├── src/
@@ -92,6 +101,12 @@ KVC/
 ├── tests/                             # Test adapter và công cụ dữ liệu AI
 ├── docs/
 │   ├── KVC_ThietKeHeThong.md           # Kiến trúc, BOM, giao thức draft, nghiệm thu
+│   ├── interfaces/                     # Quản lý tập trung hợp đồng giao diện toàn hệ thống
+│   │   ├── README.md                   # Ma trận luồng dữ liệu toàn chuỗi và topology
+│   │   ├── IF_MCU_SENSORS.md           # [IF-00] Cảm biến định vị tải UAV (LiDAR, IMU, GNSS)
+│   │   ├── IF_FPGA_MCU_UART.md         # [IF-01] UART BBox: FPGA (Vững) ➔ MCU Sonix (Phong)
+│   │   ├── IF_MCU_LORA_RF.md           # [IF-02] LoRa Telemetry: MCU Sonix (Phong) ➔ ESP32 (Thịnh)
+│   │   └── IF_ESP32_GCS_WS.md          # [IF-03] Wi-Fi WS: ESP32 (Thịnh) ➔ Backend GCS Laptop
 │   ├── KVC_PROJECT_STATUS.md           # Trạng thái theo bằng chứng và việc còn thiếu
 │   ├── KVC_DOCUMENT_INDEX.md           # Danh mục tài liệu chuẩn
 │   ├── KVC_AI_WORKFLOW.md              # Workflow phát triển/review AI
@@ -107,6 +122,14 @@ KVC/
 ├── media/                              # Tư liệu minh họa cục bộ, không mặc định commit
 └── review/                             # Log/evidence review cục bộ, Git ignored
 ```
+
+> 🔗 **Lối tắt truy cập nhanh (Bấm để mở trực tiếp):**
+> - [📂 **fpga/** — Phân hệ FPGA OneKiwi Primer 20K (Vững)](fpga/README.md)
+> - [📂 **firmware/mcu_uav/** — Phân hệ MCU Sonix SN34F788 trên UAV (Phong)](firmware/mcu_uav/README.md)
+> - [📂 **firmware/gateway_esp32/** — Phân hệ Gateway ESP32 Trạm Đất (Thịnh)](firmware/gateway_esp32/README.md)
+> - [📑 **docs/interfaces/** — Trung tâm quản lý đặc tả giao diện toàn chuỗi](docs/interfaces/README.md)
+> - [💻 **Dashboard/** — Trạm mặt đất GCS (Frontend & Backend)](Dashboard/frontend/README.md)
+> - [🧠 **ai_training/** — Huấn luyện & Đánh giá mô hình AI](ai_training/README.md)
 
 **Các thư mục cục bộ có thể không nằm trong Git:** `.venv/` là môi trường Python; `Dashboard/frontend/node_modules/` là dependency npm; `media/`, `review/`, model, dataset và kết quả chạy có thể bị `.gitignore` loại khỏi commit. Vì vậy cây trên mô tả vị trí và vai trò trong workspace, không đảm bảo mọi file dữ liệu được phân phối cùng repository.
 
@@ -199,7 +222,8 @@ Các test adapter dùng dữ liệu giả. `scripts/test_webcam.py` có thể m�
 5. [Tài liệu GCS](docs/gcs/) — kế hoạch, data contract và thiết kế frontend/backend.
 6. [Tài liệu AI](ai_training/README.md) và [chuẩn bị dữ liệu](docs/ai/KVC_AI_DATA_PREPARATION.md).
 7. [Tài liệu phần cứng](docs/hardware/) — OneKiwi, Gowin và Sonix; cần phân biệt tài liệu thiết kế với phép đo thực tế.
-8. [Tài liệu Dashboard](Dashboard/frontend/README.md), [Backend](Dashboard/backend/README.md), [scripts](scripts/README.md) và [docs/README.md](docs/README.md).
+8. [Đặc tả giao diện toàn chuỗi](docs/interfaces/) — ma trận kết nối UART BBox, LoRa RF và Wi-Fi WebSocket.
+9. [Tài liệu Dashboard](Dashboard/frontend/README.md), [Backend](Dashboard/backend/README.md), [scripts](scripts/README.md) và [docs/README.md](docs/README.md).
 
 ---
 

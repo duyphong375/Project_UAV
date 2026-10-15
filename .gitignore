@@ -17,6 +17,7 @@ coverage/
 *.log
 
 # Hardware outputs (keep source, constraints and project files)
+.pio/
 impl/
 Objects/
 Listings/
@@ -76,3 +77,4 @@ Listings/
 /docs/KVC_AI_WORKFLOW.md
 /scripts/kvc-review.ps1
 /Phancongviec.docx
+/KVC_AI_MODEL_NOTES.md

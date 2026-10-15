@@ -41,9 +41,9 @@ def adapt_result_box(box, orig_w, orig_h, detection_id):
 
 def get_default_weights():
     candidates = [
+        os.path.join(WORKSPACE_DIR, "ai_training", "weights", "yolo11n_2class_best.pt"),
         os.path.join(WORKSPACE_DIR, "ai_training", "runs", "yolo11n_2class_boosted", "weights", "best.pt"),
         os.path.join(WORKSPACE_DIR, "ai_training", "runs", "yolo11n_2class_hardware", "weights", "best.pt"),
-        os.path.join(WORKSPACE_DIR, "ai_training", "weights", "best.pt"),
     ]
     for c in candidates:
         if os.path.exists(c):

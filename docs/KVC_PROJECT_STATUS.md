@@ -4,7 +4,7 @@ Cập nhật **14/10/2026, Asia/Saigon**. Task: **KVC-STATUS-DOC-20261014-001**;
 
 > Đồng bộ nội dung trong **KVC-DOC-CONSISTENCY-20261014-001**, owner Codex, 14/10/2026. Các kết quả test phía dưới là lịch sử; lượt này đối chiếu source/tài liệu và sửa Markdown, chưa chạy phần cứng. Xem [báo cáo cập nhật](../review/KVC-DOC-CONSISTENCY-20261014-001/REPORT.md).
 
-> **Cập nhật kiến trúc 15/10/2026:** Thiết kế hiện hành chọn ESP32-WROOM-32D trạm đất có nguồn riêng, Wi-Fi SoftAP/WebSocket tới dịch vụ GCS trên laptop và Dashboard web trong browser. Snapshot/status, test và log bên dưới giữ nguyên mốc 14/10; các chỗ ghi USB/CP2102 hoặc STM32 là lịch sử, không phải cấu hình mục tiêu mới. RF 32 byte vẫn draft; transport Wi-Fi chưa được xác minh trên thiết bị.
+> **Cập nhật kiến trúc 15/10/2026:** Thiết kế hiện hành chọn họ SoC ESP32-C3 cho gateway trạm đất có nguồn riêng, Wi-Fi SoftAP/WebSocket tới dịch vụ GCS trên laptop và Dashboard web trong browser. Mã kit/board, module, flash và pinout còn chờ xác minh; ingress trên phần cứng chưa được kiểm tra. Snapshot/status, test và log bên dưới giữ nguyên mốc 14/10; các chỗ ghi USB/CP2102 hoặc STM32 là lịch sử, không phải cấu hình mục tiêu mới. RF 32 byte vẫn draft; transport Wi-Fi chưa được xác minh trên thiết bị.
 
 ## Kết luận hiện tại
 
@@ -48,7 +48,7 @@ Bản thiết kế hiện tại không còn lịch 21 ngày; bảng G0–G5 gi�
 ## Những điểm chặn cần quyết định
 
 1. **Board/camera:** nhóm xác nhận đang có OneKiwi Primer 20K V1.1; thiết kế/BOM đã thống nhất dùng bo này, mua thêm 0. Camera/cáp và RX pipeline chưa chốt; không mặc định DVP 24 chân hoặc HDMI cắm là chạy.
-2. **Điện và nối FPGA–SONiX:** UART, DATA_READY/IRQ, reset, VCCIO/I/O standard và mapping hai board chưa có phê duyệt đủ dùng. Không còn lấy 128/512 MB làm cấu hình chắc chắn: DDR3 fitted part/density/map và controller chưa được xác minh trên bo. Manual cũng có số Flash không thống nhất; cần đối chiếu revision và mã chip. Các chi tiết này là câu hỏi tích hợp, chưa phải phép đo.
+2. **Điện và nối FPGA–SONiX:** UART, DATA_READY/IRQ, reset, VCCIO/I/O standard và mapping hai board chưa có phê duyệt đủ dùng. Hardware notes cho biết OneKiwi V1.1 không hàn DDR3 ngoài; cần đối chiếu board thực trước khi chốt memory map/frame buffer. SPI Flash khác nhau giữa User Guide (64 Mbit) và schematic W25Q128JVSIQ (128 Mbit); xác minh revision/marking. Các chi tiết này là câu hỏi tích hợp, chưa phải phép đo.
 3. **Wire ABI:** RF32 vẫn là draft chưa duyệt; USB48 thuộc kiến trúc cũ. Wi-Fi SoftAP/WebSocket v1 là baseline thiết kế chưa có REAL ingress. Parser telemetry20 không có trong đường ingress hiện tại. UART FPGA có đặc tả riêng, không phải gói telemetry20. Chốt endian/CRC/framing/wrap/session/timeout/status rồi tạo golden vectors C/Python. Giữ nguyên baud/layout/CRC/IRQ/pinout khi chưa được giao thay đổi.
 4. **AI release:** guardrails đã sửa cách tạo/kiểm evidence, nhưng không làm dữ liệu release-ready. Cần nguồn/license/consent, session có hash, QA độc lập, test khóa theo phiên và calibration hợp lệ. Không công bố INT8/FPS/GoAI support từ metrics PC hoặc tên file weights.
 

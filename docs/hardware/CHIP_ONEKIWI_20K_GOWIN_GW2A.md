@@ -31,6 +31,11 @@ Chip FPGA **GW2A-LV18** thuộc thế hệ đầu của Arora theo User Guide On
 *   **Số lượng I/O Banks:** **8 I/O Banks** (Bank 0, Bank 1, Bank 2, Bank 3, Bank 4, Bank 5, Bank 6, Bank 7).
 *   **Chuẩn I/O:** họ GW2A có nhiều chuẩn I/O đơn cực/vi sai; danh sách chuẩn, VCCIO, mức điện áp, drive strength và chân hỗ trợ phải tra datasheet Gowin cùng pinout đúng part. Trên bo này các rail VCCIO được thiết kế theo schematic; không suy từ danh sách khả năng của họ chip ra pinout cụ thể.
 
+> [!NOTE]
+> **Đặc thù thanh ghi trên FPGA (So sánh với MCU):**
+> Khác với vi điều khiển (như Sonix SN34F788 có các thanh ghi ngoại vi cố định trên bus APB/AHB), FPGA Gowin GW2A là chip logic lập trình được (SRAM-based LUT/FF). Các thanh ghi phục vụ nhiệm vụ (như thanh ghi điều khiển camera, bộ đếm đối tượng phát hiện, tọa độ Bounding Box X/Y/W/H, cờ ngắt báo MCU) **không có địa chỉ phần cứng cố định sẵn** mà được tổng hợp trực tiếp từ mã nguồn RTL (Verilog/VHDL) bằng tài nguyên Flip-Flop hoặc Block SRAM. Khi thiết kế bus giao tiếp coprocessor giữa FPGA và MCU (qua SPI hoặc UART), kỹ sư RTL sẽ tự định nghĩa bản đồ thanh ghi tùy biến (Custom Register Map).
+
+
 ---
 
 ## 3. Hệ thống Nguồn & Phân bố Điện áp trên Bo
@@ -79,17 +84,43 @@ Bo mạch tích hợp sẵn bộ nạp USB-JTAG sử dụng vi điều khiển g
     *   **FPGA_TMS:** Chân `B8` (Bank 1).
     *   **FPGA_TDI:** Chân `A6` (Bank 1).
     *   **FPGA_TDO:** Chân `C6` (Bank 1).
+*   **Thông số thanh ghi JTAG phần cứng của FPGA GW2A-LV18:**
+    *   **Chiều dài thanh ghi lệnh (JTAG IR Length):** **8 bits**.
+    *   **Mã định danh thiết bị phần cứng (JTAG IDCODE):** **`0x01009EF8`** (chuẩn Gowin GW2A-18 Series; Manufacturer ID: `0xEF8`, Part Number: GW2A-18).
+    *   **Các mã lệnh JTAG chuẩn:**
+        *   `0x11`: Đọc IDCODE thiết bị.
+        *   `0x13`: Đọc mã người dùng USERCODE.
+        *   `0xFF`: Lệnh BYPASS (bỏ qua chuỗi quét JTAG).
 *   Người dùng kết nối máy tính qua phần mềm **Gowin Programmer** (hỗ trợ cáp Gowin USB Cable tích hợp sẵn) để nạp bitstream.
 
 ### 4.3 Bộ nhớ Flash nạp cấu hình ngoài (Winbond W25Q128)
-*   FPGA GW2A kết nối với chip SPI Flash **W25Q128JVSIQ (128 Mbit / 16 MByte)** ở chế độ Master SPI (MSPI):
-    *   **MSPI_MCLK:** Chân `L10` (Bank 3).
-    *   **MSPI_CS:** Chân `M9` (Bank 3).
-    *   **MSPI_MOSI:** Chân `R10` (Bank 3).
-    *   **MSPI_MISO:** Chân `P10` (Bank 3).
-*   **Chế độ nạp:**
+FPGA GW2A kết nối với chip SPI Flash **W25Q128JVSIQ (128 Mbit / 16 MByte)** ở chế độ Master SPI (MSPI):
+*   **MSPI_MCLK:** Chân `L10` (Bank 3).
+*   **MSPI_CS:** Chân `M9` (Bank 3).
+*   **MSPI_MOSI:** Chân `R10` (Bank 3).
+*   **MSPI_MISO:** Chân `P10` (Bank 3).
+*   **Chế độ nạp cấu hình:**
     1.  **SRAM Mode:** Nạp trực tiếp vào bộ nhớ cấu hình SRAM của FPGA qua JTAG để chạy thử nghiệm tức thời (mất chương trình khi mất điện).
     2.  **External Flash Mode:** Nạp tệp cấu hình `.bin` vào Flash W25Q128 qua JTAG; khi khởi động lại, FPGA tự động đọc bitstream từ Flash vào SRAM.
+
+#### Thanh ghi trạng thái & Bảng mã lệnh của Flash W25Q128JV
+
+Khi thiết kế logic RTL trên FPGA để đọc/ghi dữ liệu tĩnh hoặc nạp cấu hình, FPGA giao tiếp với Flash qua các thanh ghi trạng thái (Status Registers) và bảng mã lệnh (Opcode) chuẩn:
+
+| Tên Thanh Ghi / Lệnh | Mã Lệnh (Opcode) | Thuộc Tính | Chức Năng Kỹ Thuật |
+| :--- | :---: | :---: | :--- |
+| **Status Register 1 (SR1)** | `0x05` (Đọc) / `0x01` (Ghi) | R/W | Bit 0: `BUSY` (Đang xóa/ghi), Bit 1: `WEL` (Cho phép ghi), Bit 2~4: `BP0~BP2` (Bảo vệ khối), Bit 7: `SRP0` |
+| **Status Register 2 (SR2)** | `0x35` (Đọc) / `0x31` (Ghi) | R/W | Bit 1: `QE` (Quad SPI Enable), Bit 3~5: `LB1~LB3` (Khóa bảo mật OTP), Bit 7: `SUS` (Tạm dừng xóa/ghi) |
+| **Status Register 3 (SR3)** | `0x15` (Đọc) / `0x11` (Ghi) | R/W | Cấu hình dòng lái ngõ ra (Driver Strength) và chức năng HOLD/RESET |
+| **Write Enable (WREN)** | `0x06` | Lệnh | Bật chốt cho phép ghi dữ liệu (`WEL = 1`) trước khi ghi/xóa |
+| **Read Data** | `0x03` | Lệnh | Đọc tuần tự dữ liệu Flash từ địa chỉ 24-bit (Tần số tối đa 50 MHz) |
+| **Fast Read** | `0x0B` | Lệnh | Đọc dữ liệu tốc độ cao kèm dummy clock byte (Tần số tối đa 133 MHz) |
+| **Page Program** | `0x02` | Lệnh | Ghi dữ liệu vào Flash (tối đa 256 bytes trong một trang) |
+| **Sector Erase (4 KB)** | `0x20` | Lệnh | Xóa phân vùng nhỏ 4 KBytes (thời gian xóa ~45 ms) |
+| **Block Erase (64 KB)** | `0xD8` | Lệnh | Xóa khối lớn 64 KBytes (thời gian xóa ~150 ms) |
+| **Chip Erase** | `0xC7` / `0x60` | Lệnh | Xóa toàn bộ dung lượng 128 Mbits của chip Flash |
+| **Read JEDEC ID** | `0x9F` | Lệnh | Đọc ID nhà sản xuất và loại thiết bị (Trả về `0xEF 0x40 0x18`) |
+
 
 ---
 

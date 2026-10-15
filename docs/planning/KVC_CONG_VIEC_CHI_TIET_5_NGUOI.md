@@ -107,7 +107,8 @@ Việc còn lại là xây phần FPGA/MCU, nối thiết bị thật, đo kiể
 
 ### 3.2. Viết firmware gateway ESP32 trạm đất
 
-- [ ] Xác nhận bo ESP32-WROOM-32D DevKit V1 theo thiết kế và mẫu thực có; chốt module LoRa, nguồn riêng, chân SPI/IRQ/reset và OLED theo sơ đồ được nhóm duyệt; không tự thay pinout.
+- [ ] Xác minh đúng kit/module ESP32-C3 sẽ dùng; chọn board ID PlatformIO theo mã bo thực tế. PlatformIO + Arduino là toolchain mục tiêu. Kiểm flash, nguồn riêng và GPIO khả dụng trước khi chốt module LoRa, chân SPI/IRQ/reset và OLED; pinout phải theo sơ đồ được nhóm duyệt.
+- [ ] ESP32-C3 là CPU đơn nhân: thiết kế các tác vụ LoRa RX, OLED và Wi-Fi SoftAP/WebSocket không chặn nhau; kiểm RAM/heap, độ trễ và mất gói khi chạy đồng thời. Không dùng giả định phân chia Core 0/Core 1; kết quả chỉ được đánh dấu BUILT hoặc HARDWARE-VERIFIED sau khi có phép thử tương ứng.
 - [ ] Viết phần nhận LoRa, kiểm CRC phần cứng và đọc RSSI/SNR theo module/cấu hình đã chọn; giữ giao thức RF ở trạng thái draft cho tới khi được duyệt.
 - [ ] Thiết kế trạng thái boot, packet counter, timeout và hành vi khi laptop mất kết nối; ESP32 vẫn tiếp tục nhận LoRa khi laptop tắt.
 - [ ] Triển khai và kiểm framing/schema, session/sequence, timestamp, integrity, xác thực và reconnect theo baseline Wi-Fi SoftAP/WebSocket v1 trong mục IV.4 thiết kế; các giá trị mục tiêu vẫn cần thử nghiệm.

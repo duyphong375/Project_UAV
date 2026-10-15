@@ -4,7 +4,7 @@
 *Dự án:* **Hệ thống tích hợp cho UAV hỗ trợ phát hiện, theo dõi và định vị người bị cuốn trôi trong bão lũ sử dụng FPGA và MCU (KVC)**<br>
 ---
 
-> Cập nhật nội dung: **15/10/2026**. Bo đã có: **OneKiwi Primer 20K V1.1** theo xác nhận của nhóm. Tài liệu mô tả **thiết kế mục tiêu**, không xác nhận các khối phần cứng đã chạy. Trạm đất dùng **ESP32-WROOM-32D DevKit V1** với Wi-Fi SoftAP/WebSocket; ESP32 có nguồn riêng. Hiện trạng xem [báo cáo tiến độ](KVC_PROJECT_STATUS.md); công việc xem [phân công](planning/KVC_PHAN_CONG_5_NGUOI.md) và [checklist](planning/KVC_CONG_VIEC_CHI_TIET_5_NGUOI.md).
+> Cập nhật nội dung: **15/10/2026**. Bo đã có: **OneKiwi Primer 20K V1.1** theo xác nhận của nhóm. Tài liệu mô tả **thiết kế mục tiêu**, không xác nhận các khối phần cứng đã chạy. Gateway trạm đất chọn họ SoC **ESP32-C3** để chạy Wi-Fi SoftAP/WebSocket và dùng nguồn riêng; mã kit/board, module, flash và pinout cụ thể còn chờ xác minh phần cứng. Hiện trạng xem [báo cáo tiến độ](KVC_PROJECT_STATUS.md); công việc xem [phân công](planning/KVC_PHAN_CONG_5_NGUOI.md) và [checklist](planning/KVC_CONG_VIEC_CHI_TIET_5_NGUOI.md).
 >
 > Cách đọc: mục III là linh kiện/cấu hình cần xác minh; mục IV là nhiệm vụ và **giao thức dự thảo chưa duyệt**; mục VII là nghiệm thu; mục VIII là nguồn tham chiếu. Bản này không chứa lịch 21 ngày; ngày/gate trong kế hoạch cũ là tham chiếu lịch sử.
 
@@ -31,7 +31,7 @@ Kiến trúc mục tiêu sử dụng **xử lý tại biên**. Các khối dư�
 - **Phát hiện tại chỗ trên UAV:** Camera quang học thu hình ảnh mặt nước → FPGA OneKiwi Primer 20K tiền xử lý và chạy mạng nơ-ron tích chập (CNN) tăng tốc phần cứng để phát hiện người trôi dạt (`person`) và phao cứu sinh (`lifebuoy`).
 - **Định vị không gian:** MCU Sonix SN34F788 nhận kết quả Bounding Box từ FPGA qua UART, đọc đồng bộ các cảm biến đo đạc (TF-Luna LiDAR, GY-87 IMU 10-DOF, GNSS NEO-M8N) và giải bài toán giao điểm tia quang học với mặt phẳng nước để xác định tọa độ thực tế.
 - **Truyền tin vô tuyến tầm xa:** Thay vì truyền video, hệ thống chỉ đóng gói các thông tin cứu nạn quan trọng thành các gói tin nhị phân siêu nhỏ (**32 byte/gói**) và truyền metadata qua **LoRa 433 MHz**. RF 32 byte là dự thảo; cự ly, tỷ lệ nhận và độ trễ chưa được xác nhận bằng phép đo.
-- **Trạm giám sát mặt đất (GCS):** ESP32-WROOM-32D trạm đất giải mã gói LoRa, đọc RSSI/SNR và gửi dữ liệu sang laptop qua **Wi-Fi SoftAP/WebSocket**. ESP32 có nguồn riêng và hoạt động độc lập với laptop. Laptop chạy Dashboard web và dịch vụ GCS để nhận dữ liệu, hiển thị, lưu log và replay; không tham gia xử lý nhiệm vụ trên UAV hay điều khiển ESP32.
+- **Trạm giám sát mặt đất (GCS):** ESP32-C3 trạm đất giải mã gói LoRa, đọc RSSI/SNR và gửi dữ liệu sang laptop qua **Wi-Fi SoftAP/WebSocket**. ESP32 có nguồn riêng và hoạt động độc lập với laptop. Laptop chạy Dashboard web và dịch vụ GCS để nhận dữ liệu, hiển thị, lưu log và replay; không tham gia xử lý nhiệm vụ trên UAV hay điều khiển ESP32.
 
 #### 2. Ranh giới kỹ thuật và phạm vi nghiệm thu PoC
 - **Bản chất hệ thống:** KVC là **tải nhiệm vụ (payload)** gắn trên UAV, độc lập với bộ điều khiển bay an toàn (flight controller). MCU không can thiệp điều khiển cân bằng bay hay cánh lái.
@@ -41,7 +41,7 @@ Kiến trúc mục tiêu sử dụng **xử lý tại biên**. Các khối dư�
   - `MOCK`: Dữ liệu giả lập. Source hiện có sinh MOCK trong trình duyệt hoặc backend PC; MOCK từ FPGA/MCU là bước tích hợp dự kiến.
   - `REPLAY`: Dữ liệu phát lại từ log SQLite trên máy tính phục vụ phân tích sau chuyến bay.
 - **Ngoài phạm vi PoC:** Chế tạo khung bay UAV, chứng nhận hàng không DO-254/DO-178C, chứng nhận chống nước IP67.
-- **Kết nối GCS:** Thiết kế chọn ESP32-WROOM-32D DevKit V1 thay STM32F103 ở trạm đất. ESP32 tạo Wi-Fi SoftAP nội bộ, và laptop chạy client WebSocket qua mạng này. Transport v1, reconnect và buffer mục IV.4 là baseline để triển khai; chúng chưa phải bằng chứng phần mềm hoặc phần cứng đã chạy. Bluetooth và USB chỉ dùng cho nạp/debug khi cần, không là đường telemetry mục tiêu.
+- **Kết nối GCS:** Thiết kế chọn họ SoC ESP32-C3 làm gateway trạm đất. Kit phát triển/module cụ thể cần được xác minh trước khi khóa board ID, nguồn, flash và pinout. ESP32 tạo Wi-Fi SoftAP nội bộ, backend GCS trên laptop chạy WebSocket client qua mạng này, browser Dashboard chỉ kết nối backend local. Transport v1, reconnect và buffer mục IV.4 là baseline để triển khai; chúng chưa phải bằng chứng phần mềm hoặc phần cứng đã chạy. Bluetooth và USB chỉ dùng cho nạp/debug khi cần, không là đường telemetry mục tiêu.
 
 #### 3. Hình thức trình diễn tại cuộc thi: hai video và một phần test trực tiếp
 
@@ -87,10 +87,10 @@ Sơ đồ mô tả luồng tín hiệu, bus vật lý và sự phân định ran
 ```mermaid
 flowchart TB
     subgraph AIR["TẢI NHIỆM VỤ TRÊN UAV (AIR UNIT PAYLOAD)"]
-        CAM["Camera OV2640 DVP 2MP<br/>(Chuẩn DVP 8-bit — Ảnh quang học mặt nước)"]
+        CAM["Camera quang học<br/>(model / giao diện TBD)"]
         subgraph FPGA_BOX["FPGA OneKiwi Primer 20K (GW2A-LV18PG256)"]
             RX["Camera RX & Tiền xử lý<br/>(Letterbox / Resize 640×640)"]
-            MEM["Bộ nhớ DDR3 128MB + BSRAM 828 Kb<br/>(Lưu Frame Buffer & Weights INT8)"]
+            MEM["BSRAM nội 828 Kbit<br/>(khả năng đệm frame cần đánh giá)"]
             AI["Hardware Accelerator<br/>(GoAI YOLO11n INT8 / Fallback: HSV Morphology)"]
             TX["Bộ đệm FIFO & UART TX<br/>(Ứng viên BBox: X, Y, W, H, Conf, Class)"]
             RX --- MEM
@@ -110,20 +110,20 @@ flowchart TB
             GNSS["GNSS u-blox NEO-M8N<br/>(Tọa độ WGS-84 — UART 38400 bps UBX/NMEA, 5Hz)"]
         end
         RF1["LoRa Ra-02 (Air TX)<br/>SX1278 433 MHz (SPI)"]
-        OLED_AIR["OLED SSD1306 0.96 inch<br/>(Chẩn đoán trạng thái tại chỗ)"]
+        LED_STATUS["LED Chỉ báo Trạng thái (PWR / GNSS / Ready)<br/>& Serial Debug (SN-LINK Lite)"]
 
-        CAM -->|DVP 8-bit + PCLK/VSYNC/HREF| RX
+        CAM -->|Giao diện theo camera/board đã xác minh| RX
         TX -->|UART 115200 bps + GPIO DATA_READY| FUSION
         LIDAR -->|UART 115200 bps| FUSION
         IMU -->|I2C1 400 kHz| FUSION
         GNSS -->|UART 38400 bps UBX/NMEA| FUSION
         PACKET -->|SPI Bus + DIO0| RF1
-        FUSION -.->|I2C2 @ 2Hz| OLED_AIR
+        FUSION -.->|GPIO / UART| LED_STATUS
     end
 
     subgraph GROUND["TRẠM ĐIỀU KHIỂN MẶT ĐẤT (GROUND STATION)"]
         RF2["LoRa Ra-02 (Ground RX)<br/>SX1278 433 MHz (SPI)"]
-        MCU_GND["ESP32-WROOM-32D Gateway<br/>(Core 1: LoRa RX + OLED / Core 0: Wi-Fi SoftAP Server)"]
+        MCU_GND["ESP32-C3 Gateway<br/>(CPU RISC-V đơn nhân, tối đa 160 MHz; LoRa RX + OLED + Wi-Fi SoftAP/WebSocket cùng chia sẻ một lõi)"]
         OLED_GND["OLED SSD1306 0.96 inch<br/>(Hiển thị RSSI/SNR & Tọa độ độc lập tại hiện trường)"]
         PWR["Nguồn Pin 5V độc lập<br/>(+ Tụ lọc hóa 220µF chống sụt áp)"]
 
@@ -195,15 +195,15 @@ Kênh truyền LoRa (Long Range) đóng vai trò là xương sống thông tin l
 
 | Phân hệ / Khối chức năng | Linh kiện chuẩn hóa được chọn | Thông số kỹ thuật cốt lõi | Vai trò cụ thể trong dự án |
 | :--- | :--- | :--- | :--- |
-| **Tải UAV — Khối Xử lý Ảnh & AI** | **OneKiwi Primer 20K V1.1** | Gowin GW2A-LV18PG256, 20.736 LUTs, 828 Kb BSRAM, DDR3 128MB tích hợp, chip nạp GWU2X | Thu nhận ảnh số DVP, đệm khung hình DDR3, tăng tốc phần cứng mô hình YOLO11n INT8, xuất BBox qua UART. |
-| **Tải UAV — Camera Quang học** | **OV2640 DVP 2MP** | Cảm biến CMOS 2 Megapixel, chuẩn giao tiếp DVP 8-bit (PCLK, VSYNC, HREF), cáp FPC 24-pin chuyển header | Thu nhận hình ảnh mặt nước ban ngày, cung cấp luồng pixel trực tiếp cho FPGA tiền xử lý. |
+| **Tải UAV — Khối Xử lý Ảnh & AI** | **OneKiwi Primer 20K V1.1** | Gowin GW2A-LV18PG256, 20.736 LUTs, 828 Kbit BSRAM, chip nạp GWU2X; hardware notes cho biết không có DDR3 ngoài trên board | Candidate nhận ảnh qua giao diện sẽ xác minh; đánh giá khả năng đệm bằng tài nguyên có thật, khả thi AI và xuất BBox qua UART. |
+| **Tải UAV — Camera Quang học** | **Camera quang học — model TBD** | Sensor, giao diện, connector/cáp và rail cấp nguồn chưa chốt; không mặc định OV2640/OV5640, DVP/MIPI hay FPC trên OneKiwi | Thu nhận hình ảnh mặt nước sau khi xác minh camera, board, cáp, nguồn và pin map thực tế. |
 | **Tải UAV — MCU Điều khiển & Dung hợp** | **Sonix STK SN34F788** | ARM Cortex-M4F 192 MHz, Flash 512 KB, SRAM 160 KB, FPU phần cứng, tích hợp SN-LINK Lite | Giải mã BBox từ UART, đọc và lọc cảm biến AHRS/LiDAR/GNSS, giải bài toán giao điểm chiếu tia 3D, đóng gói LoRa 32-byte. |
 | **Tải UAV — LiDAR Đo cự ly** | **Benewake TF-Luna** | ToF LiDAR 850nm, dải 0,2–8 m, tần số 50–100 Hz, UART 115200 bps, nguồn 5V logic 3,3V | Đo khoảng cách thẳng đứng từ UAV xuống mặt nước để xác định độ cao mặt phẳng phục vụ chiếu tia. |
 | **Tải UAV — IMU 10-DOF** | **GY-87** | Tích hợp MPU6050 (3-axis Accel + 3-axis Gyro), HMC5883L (3-axis Compass), BMP180 (Áp suất), I2C 400 kHz | Cung cấp gia tốc, vận tốc góc và hướng từ trường để ước lượng ma trận xoay tư thế $\mathbf{R}_{\text{camera}}$. |
 | **Tải UAV — GNSS Định vị** | **u-blox NEO-M8N** | Thu đồng thời GPS + GLONASS, cập nhật tối đa 5 Hz, UART 38400 bps UBX/NMEA, anten gốm active | Xác định tọa độ vị trí toàn cầu WGS-84 của UAV ngoài trời khi đạt 3D fix (`GPS_VALID = 1`). |
 | **Tải UAV — Module phát LoRa (TX)** | **Ai-Thinker Ra-02 (SX1278)** | Dải 410–525 MHz, SPI, nguồn 3,3V; datasheet V1.1: công suất tối đa 18 ± 1 dBm tại 433 MHz | Phát metadata dự thảo 32 byte xuống trạm đất theo chu kỳ được đo/duyệt. |
-| **Tải UAV — Màn hình Debug tại chỗ** | **OLED SSD1306 0.96 inch I2C** | Độ phân giải 128×64 pixel, giao tiếp I2C2 400 kHz (cập nhật 2 Hz), nguồn 3,3V | Hiển thị trạng thái khởi động, số lượng BBox, trạng thái fix GNSS và số gói LoRa đã phát trên tải. |
-| **Trạm Mặt Đất — Gateway MCU** | **ESP32-WROOM-32D DevKit V1** | Dual-Core Tensilica Xtensa LX6 240 MHz, 520 KB SRAM, 4 MB Flash, Wi-Fi 802.11 b/g/n, BT 4.2 | Thu gói LoRa qua SPI, đọc RSSI/SNR, phát Wi-Fi SoftAP và WebSocket telemetry tới dịch vụ GCS trên laptop. |
+| **Tải UAV — Chỉ báo & Debug tại chỗ** | **LED Trạng thái & UART Debug (SN-LINK Lite)** | LED GPIO (Power, GNSS Fix, Ready/Error) + Cổng UART Debug ảo (VCOM) tích hợp | Chỉ báo trực quan trạng thái tải trước bay; in log chẩn đoán chi tiết qua terminal PC khi debug bàn lab (lược bỏ OLED trên tải để tối ưu khối lượng và chống rung lắc). |
+| **Trạm Mặt Đất — Gateway MCU** | **ESP32-C3 DevKit (mã kit TBD)** | CPU RISC-V đơn nhân tối đa 160 MHz, 400 KB SRAM (16 KB cache), Wi-Fi 2.4 GHz 802.11 b/g/n, Bluetooth LE 5; flash/GPIO khả dụng theo module và kit | Thu gói LoRa qua SPI, đọc RSSI/SNR, phát Wi-Fi SoftAP và WebSocket telemetry tới dịch vụ GCS trên laptop. Đây là cấu hình mục tiêu; cần xác minh tài nguyên, nguồn và GPIO trên đúng kit trước khi tích hợp. |
 | **Trạm Mặt Đất — Module thu LoRa (RX)** | **Ai-Thinker Ra-02 (SX1278)** | Dải 410–525 MHz, SPI, nguồn 3,3V; datasheet V1.1: độ nhạy tới -141 dBm tại 433 MHz, SF12, BW 125 kHz | Thu payload RF dự thảo 32 byte, kiểm CRC và đo chất lượng liên kết RF. |
 | **Trạm Mặt Đất — Màn hình hiện trường** | **OLED SSD1306 0.96 inch I2C** | Độ phân giải 128×64 pixel, giao tiếp I2C 400 kHz, nguồn 3,3V | Hiển thị tức thời RSSI/SNR, số gói nhận được và tọa độ nạn nhân độc lập ngoài trời không cần laptop. |
 | **Trạm Mặt Đất — Khối nguồn độc lập** | **Pin Li-ion 18650 2S (7.4V) + Buck MP1584** | Mạch hạ áp Buck DC-DC MP1584 hạ về rail 5V ổn định + Tụ hóa 220 µF chống sụt áp tức thời | Cung cấp nguồn riêng biệt cho trạm đất, đảm bảo vận hành liên tục khi laptop tắt hoặc mất kết nối. |
@@ -218,25 +218,25 @@ Danh mục dưới đây phân loại chính xác linh kiện theo 5 phân hệ 
 ##### A. Phân hệ 1: Trạm Tải trên UAV (Air Unit) — Khối Xử lý Ảnh & AI trên FPGA
 | STT | Tên linh kiện cụ thể | Số lượng | Điện áp / Bus | Chức năng trong KVC | In — Đầu vào | Out — Đầu ra | Yêu cầu kỹ thuật thực tế |
 | :---: | :--- | :---: | :---: | :--- | :--- | :--- | :--- |
-| **A1** | **OneKiwi Primer 20K V1.1** | 1 bo | 5V vào bo / 3.3V I/O | Bo mạch chính FPGA xử lý ảnh số và chạy mô hình AI tăng tốc phần cứng. | Nguồn 5V Type-C; Bitstream JTAG; Luồng pixel DVP từ camera. | Ứng viên BBox qua UART (115200 bps); Chân GPIO `DATA_READY`. | Dùng bo đang có sẵn; nạp và debug qua GWU2X trên bo; DDR3 128MB trên bo dùng đệm frame. |
-| **A2** | **Camera OV2640 DVP 2MP** | 1 module | 3.3V (DVP 8-bit) | Thu nhận hình ảnh quang học bề mặt nước. | Ánh sáng; Nguồn 3.3V; Xung XCLK từ FPGA; Cấu hình I2C/SCCB. | DVP 8-bit (D0–D7), PCLK, VSYNC, HREF. | Chọn ống kính tiêu cự cố định, góc nhìn (FOV) ~65–70°; dùng cáp chuyển FPC 24-pin sang header FPGA. |
-| **A3** | **Cáp chuyển FPC–Header OneKiwi** | 1 bộ | 3.3V CMOS | Nối bus tín hiệu DVP giữa Camera OV2640 và header chân của bo OneKiwi. | Chân FPC 24-pin từ module camera. | Chân cắm header 2.54mm tương thích FPGA. | Chiều dài cáp ngắn (<10 cm) để bảo đảm tính toàn vẹn tín hiệu xung nhịp PCLK. |
+| **A1** | **OneKiwi Primer 20K V1.1** | 1 bo | Nguồn/IO theo schematic và board thực tế | Bo FPGA hiện có; khả năng pipeline camera/AI cần kiểm tra. | Nguồn và cấu hình theo board; đầu vào camera chưa chốt. | Ứng viên BBox qua UART và `DATA_READY` sau khi duyệt IF-01. | Không có DDR3 ngoài theo hardware notes; đánh giá BSRAM nội 828 Kbit. Dung lượng SPI Flash cần xác minh vì tài liệu nguồn khác nhau. |
+| **A2** | **Camera quang học (model TBD)** | 1 module | Rail và logic theo camera thực tế | Thu nhận hình ảnh quang học bề mặt nước. | Ánh sáng; nguồn và clock theo candidate đã chọn. | Giao diện/pixel bus theo camera và board đã xác minh. | Chưa chốt sensor, FOV, connector, cáp, voltage hoặc pin map; xác minh trước đặt mua/đấu nối. |
+| **A3** | **Cáp/adapter Camera–OneKiwi (TBD)** | 1 bộ | Theo camera/board đã chốt | Nối camera đã chọn với board FPGA sau khi xác nhận interface. | Connector phía camera và board thực tế. | Tín hiệu theo pin map được duyệt. | Không mặc định FPC 24-pin hay header 2.54 mm; xác minh chiều dài và signal integrity theo candidate. |
 
 ##### B. Phân hệ 2: Trạm Tải trên UAV (Air Unit) — Khối Điều khiển Sonix MCU, Cảm biến & LoRa TX
 | STT | Tên linh kiện cụ thể | Số lượng | Điện áp / Bus | Chức năng trong KVC | In — Đầu vào | Out — Đầu ra | Yêu cầu kỹ thuật thực tế |
 | :---: | :--- | :---: | :---: | :--- | :--- | :--- | :--- |
-| **B1** | **Sonix STK SN34F788** | 1 kit | 5V vào kit / 3.3V VDD | MCU tải chính: Dung hợp cảm biến, tính toán chiếu tia định vị và đóng gói LoRa. | Nguồn 5V qua ổn áp; UART từ FPGA; UART từ LiDAR/GNSS; I2C từ IMU. | Bus SPI điều khiển LoRa Ra-02; I2C2 tới OLED chẩn đoán. | Cortex-M4F 192 MHz có FPU; nạp qua SN-LINK Lite tích hợp; kiểm tra đúng sơ đồ nguồn VDD 3.3V. |
+| **B1** | **Sonix STK SN34F788** | 1 kit | 5V vào kit / 3.3V VDD | MCU tải chính: Dung hợp cảm biến, tính toán chiếu tia định vị và đóng gói LoRa. | Nguồn 5V qua ổn áp; UART từ FPGA; UART từ LiDAR/GNSS; I2C từ IMU. | Bus SPI điều khiển LoRa Ra-02; GPIO điều khiển LED trạng thái; UART Debug qua SN-LINK Lite. | Cortex-M4F 192 MHz có FPU; nạp qua SN-LINK Lite tích hợp; kiểm tra đúng sơ đồ nguồn VDD 3.3V. |
 | **B2** | **Benewake TF-Luna LiDAR** | 1 bộ | 5V nguồn / 3.3V UART | Đo cự ly thẳng đứng từ UAV xuống mặt nước (hỗ trợ giải mặt phẳng $Z=0$). | Nguồn 5V DC; Ánh sáng laser phản xạ từ mặt nước; Lệnh UART. | Dữ liệu cự ly (cm) và cường độ phản xạ (amp) qua UART 115200 bps. | Hoạt động dải 0.2–8 m; kiểm tra cờ amp và góc nghiêng; tránh đọc giá trị rác khi mặt nước xao động. |
 | **B3** | **Module IMU 10-DOF GY-87** | 1 module | 3.3V / I2C1 400 kHz | Đo gia tốc 3 trục, vận tốc góc và từ trường để ước lượng góc nghiêng Roll/Pitch/Yaw. | Nguồn 3.3V; Chuyển động cơ học và từ trường Trái Đất. | Dữ liệu thô Accel, Gyro, Mag qua I2C1 (địa chỉ 0x68 và 0x1E). | Gắn cố định trên gá 3D cùng camera; hiệu chuẩn offset cảm biến tĩnh trước khi bay. |
 | **B4** | **GNSS u-blox NEO-M8N** | 1 bộ | 3.3V–5V / UART 38400 | Cung cấp tọa độ WGS-84 toàn cầu ngoài trời và đồng bộ thời gian vệ tinh. | Nguồn cấp; Tín hiệu vệ tinh RF từ anten gốm active. | Tọa độ Lat, Lon, Alt, Fix status qua UART (cấu hình 5 Hz, giao thức UBX/NMEA). | Sử dụng anten gốm active 25×25 mm đặt hướng lên trời; chỉ dùng dữ liệu khi đạt 3D Fix (`GPS_VALID=1`). |
 | **B5** | **Module LoRa Ai-Thinker Ra-02** | 1 module | 3.3V / SPI Bus | Phát gói tin nhị phân 32-byte chứa metadata cứu nạn từ tải xuống trạm đất. | Nguồn 3.3V; Lệnh cấu hình và dữ liệu gói qua SPI; Chân Reset. | Sóng vô tuyến RF 433 MHz qua cổng anten U.FL/IPEX; Chân ngắt DIO0. | Sử dụng chip Semtech SX1278; gắn tụ hóa 220 µF sát chân VCC/GND; hàn bo chuyển breakout 2.54mm. |
 | **B6** | **Anten râu LoRa 433 MHz + Cáp IPEX** | 1 bộ | RF 433 MHz | Bức xạ sóng vô tuyến 433 MHz từ module Ra-02 ra không gian. | Tín hiệu RF từ module Ra-02 qua đầu cắm IPEX. | Sóng điện từ bức xạ trong không gian (Polarization dọc). | Anten râu omni 433 MHz chuẩn SMA đực, gain 3 dBi; cáp chuyển IPEX sang SMA cái dài 10–15 cm. |
-| **B7** | **OLED SSD1306 0.96" I2C (Air)** | 1 module | 3.3V / I2C2 400 kHz | Hiển thị thông số chẩn đoán tại chỗ trên tải UAV (Debug link, số BBox, Uptime). | Nguồn 3.3V; Dữ liệu hiển thị qua I2C2 từ Sonix MCU (tần suất cập nhật 2 Hz). | Hình ảnh hiển thị trên màn hình đơn sắc 128×64 pixel. | Tách riêng bus I2C2 với bus cảm biến IMU I2C1 để tránh xung đột và trễ chu kỳ đọc cảm biến. |
+| **B7** | **LED Chỉ báo Trạng thái (Air)** | 2–3 chiếc | 3.3V GPIO (kèm trở 1 kΩ) | Chỉ báo trực quan trạng thái trước khi bay (Nguồn, GNSS 3D-Fix, Sẵn sàng / Lỗi). | Mức logic điều khiển từ chân GPIO Sonix MCU. | Đèn LED phát sáng (Đỏ / Vàng / Xanh). | Thay thế màn hình OLED trên tải UAV để giảm trọng lượng, tránh nứt vỡ do rung chấn và loại bỏ nguy cơ treo bus I2C. Debug chi tiết sử dụng Serial Console qua SN-LINK Lite. |
 
 ##### C. Phân hệ 3: Trạm Mặt Đất (Ground Station Gateway)
 | STT | Tên linh kiện cụ thể | Số lượng | Điện áp / Bus | Chức năng trong KVC | In — Đầu vào | Out — Đầu ra | Yêu cầu kỹ thuật thực tế |
 | :---: | :--- | :---: | :---: | :--- | :--- | :--- | :--- |
-| **C1** | **ESP32-WROOM-32D DevKit V1** | 1 bo | 5V Vin / 3.3V logic | MCU trạm đất: Thu LoRa, đọc RSSI/SNR, hiển thị OLED và làm Wi-Fi SoftAP Server. | Nguồn 5V từ pin riêng; Dữ liệu gói qua SPI từ Ra-02; Chân ngắt DIO0. | Dữ liệu hiển thị I2C tới OLED; Luồng WebSocket Wi-Fi SoftAP tới Laptop GCS. | Chạy Dual-Core: Core 1 chuyên trách LoRa SPI + OLED; Core 0 chuyên trách mạng Wi-Fi SoftAP. |
+| **C1** | **ESP32-C3 DevKit (mã bo TBD)** | 1 bo | Nguồn theo kit được chọn / logic 3.3V | MCU trạm đất: Thu LoRa, đọc RSSI/SNR, hiển thị OLED và làm Wi-Fi SoftAP Server. | Nguồn riêng đã xác minh; dữ liệu gói qua SPI từ Ra-02; chân ngắt DIO0 theo pinout được duyệt. | Dữ liệu hiển thị I2C tới OLED; luồng WebSocket Wi-Fi SoftAP tới Laptop GCS. | CPU đơn nhân; xác minh flash, GPIO được đưa ra, nguồn và khả năng chạy đồng thời LoRa/OLED/Wi-Fi trên đúng kit. Không giả định phân công hai core hoặc tự khóa pinout. |
 | **C2** | **Module LoRa Ai-Thinker Ra-02** | 1 module | 3.3V / SPI Bus | Thu sóng LoRa 433 MHz từ tải UAV và cung cấp thanh ghi chất lượng liên kết RSSI/SNR. | Sóng vô tuyến 433 MHz từ anten; Lệnh điều khiển SPI từ ESP32. | Gói tin nhị phân 32-byte; Thanh ghi Packet RSSI & SNR qua bus SPI. | Cấu hình trùng khớp tham số RF với module phát (433 MHz, BW 125 kHz, SF7/8, CR 4/5); có tụ lọc sát chân. |
 | **C3** | **Anten râu LoRa 433 MHz + Cáp IPEX** | 1 bộ | RF 433 MHz | Thu nhận tín hiệu sóng điện từ 433 MHz tại trạm mặt đất. | Sóng điện từ từ tải UAV truyền tới. | Tín hiệu RF dẫn vào chân anten module Ra-02 qua cáp IPEX. | Anten râu 433 MHz gain 3 dBi, đặt thẳng đứng ở vị trí thoáng, không bị che chắn bởi kim loại. |
 | **C4** | **OLED SSD1306 0.96" I2C (Ground)**| 1 module | 3.3V / I2C 400 kHz | Hiển thị tức thời RSSI, SNR, tần số gói nhận và tọa độ mục tiêu ngay ngoài hiện trường. | Nguồn 3.3V; Dữ liệu hiển thị từ ESP32 qua I2C. | Màn hình hiển thị 128×64 pixel. | Giúp đội cứu nạn theo dõi được kết quả ngay cả khi laptop bị hết pin hoặc chưa kịp mở ứng dụng. |
@@ -246,7 +246,7 @@ Danh mục dưới đây phân loại chính xác linh kiện theo 5 phân hệ 
 | STT | Tên thành phần | Số lượng | Giao tiếp | Chức năng trong KVC | In — Đầu vào | Out — Đầu ra | Yêu cầu kỹ thuật thực tế |
 | :---: | :--- | :---: | :---: | :--- | :--- | :--- | :--- |
 | **D1** | **Laptop cá nhân (GCS)** | 1 máy | Wi-Fi 802.11 | Thiết bị giám sát, hiển thị bản đồ trực quan, quản lý cảnh báo và ghi log dữ liệu. | Wi-Fi SoftAP/WebSocket từ ESP32. | Dashboard web và file cơ sở dữ liệu SQLite. | Chạy hệ điều hành Windows/Linux; cài sẵn trình duyệt Chrome/Edge và môi trường Python 3.10+. |
-| **D2** | **Web Dashboard KVC (Offline App)**| 1 bản | WebSocket Local | Giao diện trực quan hóa: Radar BBox, Bản đồ Leaflet WGS-84, đồ thị LiDAR, bảng mục tiêu. | Gói tin JSON/Binary từ WebSocket Server (`ws://192.168.4.1:...`). | Trực quan hóa dữ liệu cứu nạn trên màn hình; phát âm thanh cảnh báo. | Đóng gói toàn bộ assets thư viện offline (Leaflet JS/CSS, fonts local); không gọi API từ CDN Internet. |
+| **D2** | **Web Dashboard KVC (Offline App)**| 1 bản | WebSocket Local | Giao diện trực quan hóa: Radar BBox, Bản đồ Leaflet WGS-84, đồ thị LiDAR, bảng mục tiêu. | Backend GCS local (`ws://127.0.0.1:8000/ws`); backend ingress ESP32 được mô tả riêng tại IF-03. | Trực quan hóa dữ liệu cứu nạn trên màn hình; phát âm thanh cảnh báo. | Đóng gói toàn bộ assets thư viện offline (Leaflet JS/CSS, fonts local); không gọi API từ CDN Internet. |
 | **D3** | **Backend Python & SQLite Logger** | 1 gói | Localhost / WAL | Dịch vụ tiếp nhận luồng dữ liệu, lưu trữ bền vững vào SQLite và phát lại phiên (Replay). | Luồng dữ liệu telemetry từ Ingress. | File log `kvc_telemetry.db` chế độ WAL (`PRAGMA synchronous=FULL`). | Chạy ngầm trên laptop; đảm bảo commit dữ liệu tức thời, chống hỏng file khi mất nguồn đột ngột. |
 
 ##### E. Phân hệ 5: Khối Nguồn, Gá Cơ Khí & Linh Kiện Kết Nối Phụ Trợ Dùng Chung
@@ -255,8 +255,8 @@ Danh mục dưới đây phân loại chính xác linh kiện theo 5 phân hệ 
 | **E1** | **Mạch hạ áp Buck DC-DC MP1584** | 3 mạch | Vin 4.5–28V, Vout chỉnh được, dòng liên tục 2A (đỉnh 3A) | Hạ áp từ pin chính (UAV 3S/4S hoặc pin trạm đất 2S) xuống rail 5V (LiDAR, Vin bo) và rail 3.3V (LoRa, cảm biến). | Hiệu chỉnh biến trở đo chuẩn điện áp bằng đồng hồ vạn năng trước khi gắn tải; cố định keo biến trở. |
 | **E2** | **Tụ hóa nhôm 220 µF / 16V** | 4 chiếc | 220 µF, chịu áp 16V, Low ESR | Lọc nguồn và đệm năng lượng tức thời chống sụt áp khi module LoRa Ra-02 phát. | Bắt buộc hàn trực tiếp sát chân VCC và GND của module Ra-02 (cả trên tải và dưới trạm đất). |
 | **E3** | **Tụ gốm 100 nF (0.1 µF)** | 8 chiếc | 100 nF, chịu áp 50V | Lọc nhiễu xung cao tần trên các đường nguồn 3.3V và 5V gần chân IC. | Mắc song song với tụ hóa, đặt càng gần chân nguồn của MCU và module RF càng tốt. |
-| **E4** | **Điện trở kéo 4.7 kΩ** | 4 chiếc | 4.7 kΩ, công suất 1/4W, sai số 1% | Trở kéo Pull-up cho đường truyền bus I2C (SDA, SCL) về mức logic 3.3V. | Dùng cho bus I2C1 (GY-87) và I2C2 (OLED) nếu trên module chưa có trở kéo hoặc đường dây dài. |
-| **E5** | **Gá in 3D cụm Camera – LiDAR – IMU** | 1 bộ | Nhựa PLA/PETG chịu lực, in 3D chính xác | Giữ cố định mối quan hệ hình học (Extrinsic Calibration) giữa Camera OV2640, LiDAR TF-Luna và IMU GY-87. | Thiết kế trục quang học camera và trục phát laser LiDAR song song; góc đặt IMU trùng hướng trục tọa độ camera. |
+| **E4** | **Điện trở kéo 4.7 kΩ** | 2–4 chiếc | 4.7 kΩ, công suất 1/4W, sai số 1% | Trở kéo Pull-up cho đường truyền bus I2C (SDA, SCL) về mức logic 3.3V. | Dùng cho bus I2C1 (GY-87 trên tải) và I2C (OLED trên trạm đất) nếu module chưa có sẵn trở kéo hoặc dây dài; tải UAV không còn dùng bus I2C2 cho màn hình. |
+| **E5** | **Gá in 3D cụm Camera – LiDAR – IMU** | 1 bộ | Nhựa PLA/PETG chịu lực, in 3D chính xác | Giữ cố định mối quan hệ hình học (Extrinsic Calibration) giữa camera được chọn, TF-Luna và GY-87. | Kích thước/góc gá chốt sau khi camera và pose thực tế được xác minh. |
 | **E6** | **Cáp USB Type-C & Micro-USB** | 3 sợi | Cáp đồng có đủ 4 lõi nguồn và data | Nối nạp code/debug cho OneKiwi (Type-C), Sonix (Mini/Type-C) và ESP32 (Micro-USB). | Dùng cáp truyền dữ liệu chất lượng tốt; không dùng cáp sạc 2 lõi chỉ cấp nguồn. |
 | **E7** | **Dây nối Dupont & Header 2.54mm** | 2 tép | Dupont cái-cái, đực-cái dài 10–20 cm; header chân mạ thiếc | Đấu nối tín hiệu thử nghiệm trên bàn test giữa các module và kit phát triển. | Khi đóng gói bay thật, thay thế các mối cắm lỏng bằng cách hàn cố định lên protoboard để chống rung. |
 | **E8** | **Protoboard & Bộ trụ ốc M2/M3** | 1 bộ | Bo đồng lỗ 2.54mm; ốc trụ đồng M2/M3 cách điện | Làm đế hàn module Ra-02 + tụ lọc; cố định chắc chắn các bo mạch vào khung tải bay UAV. | Dùng đệm cao su hoặc silicon chống rung cơ học từ cánh quạt UAV tác động lên IMU và mối hàn. |
@@ -277,7 +277,7 @@ Danh mục dưới đây phân loại chính xác linh kiện theo 5 phân hệ 
 | :--- | :--- | :--- |
 | **FPGA** | Camera RX, bộ đệm theo bộ nhớ đã xác minh, tiền xử lý ảnh (Resize/Letterbox), accelerator AI sau kiểm khả thi, bộ đệm FIFO và UART TX đóng gói ứng viên BBox; có chế độ BBox giả (Mock) phục vụ kiểm thử. | Tối ưu xung nhịp FPS, chuyển toàn bộ thuật toán NMS sang RTL, thiết kế pipeline song song kép. |
 | **MCU Tải (Sonix)**| Bộ giải mã UART từ FPGA, thu thập cảm biến có timestamp (LiDAR, IMU, GNSS), thuật toán chiếu tia định vị mục tiêu, theo dõi (tracking) 1 mục tiêu ở mức thiết kế, đóng gói và điều khiển phát LoRa 32 byte, watchdog an toàn. | Lọc Kalman nâng cao, theo dõi đa mục tiêu đồng thời, lưu trữ flash bền vững khi mất sóng dài ngày. |
-| **MCU Trạm đất** | Driver SPI điều khiển Ra-02 ở chế độ nhận, kiểm CRC, đọc RSSI/SNR và xuất telemetry qua Wi-Fi SoftAP/WebSocket v1. ESP32-WROOM-32D có nguồn riêng. | Bổ sung cơ chế phát gói ACK phản hồi khi đường truyền rảnh. |
+| **MCU Trạm đất** | Driver SPI điều khiển Ra-02 ở chế độ nhận, kiểm CRC, đọc RSSI/SNR và xuất telemetry qua Wi-Fi SoftAP/WebSocket v1. ESP32-C3 có nguồn riêng; kiểm thử tài nguyên khi các tác vụ chạy đồng thời. | Bổ sung cơ chế phát gói ACK phản hồi khi đường truyền rảnh. |
 | **Dashboard GCS** | Ingress nhận dữ liệu từ ESP32 qua transport được chốt, kiểm tra session và giải mã RF v1, bộ quản lý trạng thái (Reducer), giao diện Radar local và Bản đồ WGS-84, SQLite logger (WAL), Replay phiên. | Hiển thị lớp bản đồ vệ tinh ngoại tuyến (Tile map), thống kê nâng cao. |
 
 Ghi chú về thuật ngữ: “sa bàn” trong các mô tả field local/origin ở dự thảo wire dưới đây là tên gọi lịch sử của hệ tọa độ local đã hiệu chuẩn, không phải yêu cầu có mô hình sa bàn tại nơi thi. Có thể áp dụng tại khu vực bể bơi khi origin/pose/đơn vị được xác lập; giữ nguyên các field, bits và layout dự thảo, C+D vẫn phải chốt ABI.
@@ -335,7 +335,7 @@ Gói Status dùng chung Sync (0–1), Version (2), Type `0x03` (3), Sequence (4�
 
 #### 4. Giao diện dữ liệu ESP32 trạm đất → laptop (Wi-Fi SoftAP/WebSocket v1)
 
-Dự thảo USB Ground Envelope 48 byte trước đây thuộc kiến trúc STM32F103 + CP2102 và **không còn là giao diện mục tiêu**. V1 dùng ESP32-WROOM-32D làm Wi-Fi SoftAP `KVC_GCS_AP` với WPA2-PSK cấu hình khi triển khai; không ghi mật khẩu vào source, log hoặc tài liệu. ESP32 mở endpoint `ws://192.168.4.1:8080/telemetry`; backend GCS trên laptop kết nối như WebSocket client. Dashboard trong browser chỉ nhận dữ liệu từ backend local, không kết nối trực tiếp ESP32.
+Dự thảo USB Ground Envelope 48 byte trước đây thuộc kiến trúc STM32F103 + CP2102 và **không còn là giao diện mục tiêu**. V1 dùng ESP32-C3 làm Wi-Fi SoftAP `KVC_GCS_AP` với WPA2-PSK cấu hình khi triển khai; không ghi mật khẩu vào source, log hoặc tài liệu. ESP32 mở endpoint `ws://192.168.4.1:8080/telemetry`; backend GCS trên laptop kết nối như WebSocket client. Dashboard trong browser chỉ nhận dữ liệu từ backend local, không kết nối trực tiếp ESP32. Mã kit/board và pinout cần xác minh theo phần cứng thực tế; thay SoC không tự thay đổi schema transport v1.
 
 Mỗi message WebSocket là một JSON UTF-8 có đủ các trường sau:
 
