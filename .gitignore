@@ -37,6 +37,8 @@ Listings/
 *.pth
 *.onnx
 *.tflite
+!/ai_training/weights/yolo11n_2class_best.onnx
+!/ai_training/weights/yolo11n_2class_best.pt
 
 # Credentials / local environment (examples can be versioned)
 .env
