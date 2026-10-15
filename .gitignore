@@ -60,8 +60,8 @@ Listings/
 /ai_training/dataset_4k_yolo/images/
 /ai_training/dataset_4k_yolo/labels/
 /ai_training/dataset_4k_yolo/labels_5class_backup/
-/ai_training/calibration_images/
-/ai_training/manifests/
+/ai_training/manifests/*
+!/ai_training/manifests/calibration_manifest.csv
 /ai_training/runs/
 /media/
 ~$*.docx
