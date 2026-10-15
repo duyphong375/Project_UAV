@@ -46,12 +46,14 @@ KVC/
 │   ├── tb/                           # Testbench mô phỏng RTL riêng biệt
 │   └── README.md                     # Hướng dẫn project Gowin EDA và link IF-01
 ├── firmware/                         # Mã nguồn vi điều khiển
+│   ├── README.md                     # Tổng quan phân hệ nhúng, phân định Sonix vs ESP32
 │   ├── mcu_uav/                      # Firmware MCU Sonix SN34F788 trên UAV (Phong)
 │   │   └── README.md                 # Hướng dẫn project Keil MDK, link IF-01 và IF-02
 │   └── gateway_esp32/                # Firmware Gateway trạm đất ESP32 (Thịnh)
 │       ├── platformio.ini            # Cấu hình PlatformIO (framework = arduino)
 │       └── README.md                 # Hướng dẫn và link IF-02, IF-03
 ├── Dashboard/
+│   ├── README.md                     # Tổng quan trạm mặt đất GCS, kiến trúc 2 tầng (ESP32 -> Backend -> Frontend)
 │   ├── frontend/                     # Giao diện React + TypeScript + Vite
 │   │   ├── src/
 │   │   │   ├── app/                  # Khung ứng dụng và điều hướng
@@ -92,12 +94,18 @@ KVC/
 │   ├── runs/                         # Kết quả train/đánh giá cục bộ
 │   └── README.md                     # Hướng dẫn và giới hạn evidence AI
 ├── scripts/
+│   ├── README.md                     # Tổng quan các công cụ huấn luyện, thẩm định và review
 │   ├── ai/                           # Script train, monitor và export_onnx.py
 │   ├── data/                         # prepare_calibration_dataset, remap, augment
 │   ├── test_video.py                 # Thử pipeline video trên PC
 │   └── test_webcam.py                # Thử webcam trên PC
-├── tests/                            # Test adapter và công cụ dữ liệu AI
+├── tests/                            # Bộ kiểm thử cấp hệ thống trên PC
+│   ├── README.md                     # Hướng dẫn bộ test tự động pytest và ranh giới kiểm thử
+│   ├── test_ai_data_tools.py         # Test công cụ dữ liệu AI
+│   ├── test_inference_adapter.py     # Test adapter suy luận
+│   └── test_inference_integration.py # Test tích hợp chuỗi AI
 ├── docs/
+│   ├── README.md                     # Mục lục điều hướng tài liệu toàn dự án
 │   ├── KVC_ThietKeHeThong.md         # Kiến trúc, BOM, giao thức draft, nghiệm thu
 │   ├── interfaces/                   # Quản lý tập trung hợp đồng giao diện toàn hệ thống
 │   │   ├── README.md                 # Ma trận luồng dữ liệu toàn chuỗi và topology

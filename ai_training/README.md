@@ -12,6 +12,21 @@ Lượt đồng nhất chỉ cập nhật tài liệu và nhãn UI; chưa train 
 
 ## Thành phần và dữ liệu hiện có
 
+```text
+ai_training/
+├── inference_adapter.py      # Module adapter mapping lớp (0: person, 1: lifebuoy) & tọa độ BBox
+├── ontology.yaml             # Đặc tả ontology phân lớp dữ liệu cứu hộ KVC
+├── dataset_4k_yolo/          # Tập dữ liệu ảnh & nhãn định dạng YOLO (train/val 2 lớp)
+├── manifests/                # Manifests quản lý collection, session, hash SHA-256 ảnh
+├── weights/                  # Checkpoints trọng số mô hình tham chiếu (best.pt, best.onnx)
+├── runs/                     # Nhật ký huấn luyện và biểu đồ đánh giá (yolo11n_rtx4060_80ep...)
+├── releases/                 # Template phát hành phiên bản mô hình (model_release_template.json)
+├── raw_images/               # (Git ignored) Thư mục chứa ảnh thô trước tiền xử lý
+├── raw_videos/               # (Git ignored) Thư mục chứa video nguồn
+├── dataset_exports/          # (Git ignored) Dữ liệu xuất phục vụ kiểm thử
+└── README.md                 # Tài liệu chỉ dẫn này
+```
+
 - inference_adapter.py: mapping lớp/confidence, tọa độ original-image hoặc letterbox, provenance PC_REFERENCE và NOT_TRACKED.
 - dataset_4k_yolo/: ảnh, nhãn 2 lớp và labels_5class_backup. Script remap dùng nhãn gốc swimmer/boat/jetski/life_saving_appliances/buoy; backup này không phải pc_reference_profile trong ontology.
 - manifests/: collection/session/image/calibration manifests. Đây là hồ sơ cần kiểm lại provenance, không mặc định là dữ liệu đã QA.
