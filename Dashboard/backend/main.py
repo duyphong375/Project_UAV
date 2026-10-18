@@ -9,7 +9,8 @@ import anyio
 from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 
-from .config import Settings
+from .config import Settings, _env_bool, _env_str
+from .esp32_ingress import inject_envelope, parse_rf_payload, run_esp32_ingress
 from .mock_source import run_mock
 from .replay_engine import ReplayEngine
 from .schemas import ReplaySeekRequest, ReplaySpeedRequest, ReplayStartRequest
@@ -64,6 +65,35 @@ def create_app(
         )}
         return hub.publish("SNAPSHOT", **payload)
 
+    async def check_session_inactivity(hub: Hub, timeout_sec: float = 60.0) -> bool:
+        store = hub.store
+        if store.original_source_mode == "REAL" and store.times.get("rx") is not None:
+            now = store.now_ms()
+            rx_time = store.times["rx"]
+            if rx_time is not None and (now - rx_time) >= (timeout_sec * 1000):
+                old_session = store.session_id
+                hub.rotate_session()
+                hub.publish(
+                    "ALERT_EVENT",
+                    alert={
+                        "level": "INFO",
+                        "code": "SESSION_AUTO_CLOSED",
+                        "message": f"Phiên bay [{old_session}] đã kết thúc sau 60 giây mất tín hiệu và được lưu trữ thành công.",
+                    },
+                )
+                return True
+        return False
+
+    async def session_inactivity_watchdog(hub: Hub, timeout_sec: float = 60.0, check_interval_sec: float = 2.0) -> None:
+        while True:
+            try:
+                await asyncio.sleep(check_interval_sec)
+                await check_session_inactivity(hub, timeout_sec=timeout_sec)
+            except asyncio.CancelledError:
+                break
+            except Exception:
+                pass
+
     @asynccontextmanager
     async def lifespan(app):
         logger = None
@@ -78,10 +108,25 @@ def create_app(
             sleeper=replay_sleeper, hardware=hardware,
         )
         app.state.replay = replay
+        ingress_task = None
+        if settings.enable_esp32_ingress:
+            ingress_task = asyncio.create_task(
+                run_esp32_ingress(hub, settings.esp32_ws_url), name="kvc-esp32-ingress"
+            )
+        watchdog_task = asyncio.create_task(
+            session_inactivity_watchdog(hub, timeout_sec=60.0), name="session-inactivity-watchdog"
+        )
+        app.state.check_session_inactivity = check_session_inactivity
         await start_mock_source(hub)
         try:
             yield
         finally:
+            if watchdog_task:
+                watchdog_task.cancel()
+                await asyncio.gather(watchdog_task, return_exceptions=True)
+            if ingress_task:
+                ingress_task.cancel()
+                await asyncio.gather(ingress_task, return_exceptions=True)
             if replay:
                 await replay.shutdown()
             await stop_mock_source(hub)
@@ -97,6 +142,29 @@ def create_app(
         allow_origins=["http://127.0.0.1:5173", "http://localhost:5173"],
         allow_methods=["GET", "POST"], allow_headers=["Accept", "Content-Type"],
     )
+
+    @app.post("/api/ingress/envelope")
+    async def ingress_envelope(payload: dict):
+        hub = app.state.hub
+        await stop_mock_source(hub)
+        try:
+            parsed = inject_envelope(hub, payload)
+            return {"status": "ok", "parsed": parsed}
+        except Exception as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    @app.post("/api/ingress/telemetry")
+    async def ingress_telemetry(payload: dict):
+        hub = app.state.hub
+        hub.store.original_source_mode = "REAL"
+        await stop_mock_source(hub)
+        hub.publish("LINK_STATUS", hardware_link={"status": "CONNECTED", "port": "HTTP_INGRESS"})
+        if "telemetry" in payload:
+            hub.publish("TELEMETRY_UPDATE", telemetry=payload["telemetry"])
+        if "target" in payload:
+            has_target = payload.get("has_target", payload["target"] is not None)
+            hub.publish("TARGET_UPDATE", has_target=has_target, target=payload["target"])
+        return {"status": "ok"}
 
     @app.get("/api/health")
     async def health():
@@ -268,6 +336,50 @@ def create_app(
 app = create_app()
 
 if __name__ == "__main__":
+    import argparse
+    import sys
     import uvicorn
-    settings = Settings()
-    uvicorn.run(app, host=settings.host, port=settings.port)
+    if hasattr(sys.stdout, "reconfigure"):
+        try:
+            sys.stdout.reconfigure(encoding="utf-8")
+        except Exception:
+            pass
+
+    parser = argparse.ArgumentParser(description="KVC SAR Ground Station Backend")
+    parser.add_argument("--mock", action="store_true", help="Bat bo sinh Mock gia lap (mac dinh la TAT de chay REAL)")
+    parser.add_argument("--no-mock", action="store_true", help="Tat bo sinh Mock ngam cua Backend")
+    parser.add_argument("--real", action="store_true", help="Chay che do REAL thuan tuy")
+    parser.add_argument("--no-esp32", action="store_true", help="Khong ket noi Ingress ESP32")
+    parser.add_argument("--esp32-url", type=str, default=None, help="Dia chi WebSocket Gateway ESP32 (vd: ws://192.168.1.15:8080/telemetry)")
+    args, _ = parser.parse_known_args()
+
+    # MẶC ĐỊNH HỆ THỐNG: CHẠY REAL THUẦN TÚY (MOCK = OFF, ESP32 INGRESS = ON)
+    # Tắt hoàn toàn bộ sinh Mock ngầm; chỉ bật nếu người dùng truyền tường minh --mock
+    want_mock = bool(args.mock and not (args.no_mock or args.real))
+    enable_mock = True if want_mock else False
+    if not enable_mock:
+        import os
+        os.environ["KVC_ENABLE_MOCK"] = "0"
+    enable_esp32 = False if args.no_esp32 else _env_bool("KVC_ENABLE_ESP32", True)
+    esp32_url = args.esp32_url or _env_str("KVC_ESP32_WS_URL", "ws://192.168.1.175:8080/telemetry")
+
+    settings_kwargs = {
+        "enable_mock": enable_mock,
+        "enable_esp32_ingress": enable_esp32,
+        "esp32_ws_url": esp32_url,
+    }
+
+    runtime_settings = Settings(**settings_kwargs)
+    runtime_app = create_app(runtime_settings)
+
+    print("\n=======================================================")
+    print("   KVC SAR GCS - BACKEND SERVICE (PORT 8000)          ")
+    print("=======================================================")
+    print(f"[*] Che do Mock tu sinh : {'BAT (ON)' if runtime_settings.enable_mock else 'TAT (OFF - REAL MODE)'}")
+    print(f"[*] Ingress ESP32       : {'BAT (ON)' if runtime_settings.enable_esp32_ingress else 'TAT (OFF)'}")
+    if runtime_settings.enable_esp32_ingress:
+        print(f"[*] Dia chi ESP32       : {runtime_settings.esp32_ws_url}")
+    print(f"[*] Local WebSocket     : ws://{runtime_settings.host}:{runtime_settings.port}/ws/telemetry")
+    print("=======================================================\n")
+
+    uvicorn.run(runtime_app, host=runtime_settings.host, port=runtime_settings.port)

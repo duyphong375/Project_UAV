@@ -145,4 +145,17 @@ describe('TelemetryClient transport ownership', () => {
     expect(fetchMock.mock.calls[2][1].body).toBe(JSON.stringify({ timestamp_ms: 2000 }))
     expect(fetchMock.mock.calls[3][1].body).toBe(JSON.stringify({ speed: 2 }))
   })
+
+  it('accepts backend snapshot when connected in REAL mode and normalizes source_mode', () => {
+    const client = new TelemetryClient()
+    const packets = vi.fn()
+    client.onPacket(packets)
+    client.connect('REAL')
+    const ws = FakeSocket.instances[0]
+    ws.open()
+    ws.message(snapshot())
+    expect(packets).toHaveBeenCalledTimes(1)
+    expect(packets.mock.calls[0][0].source_mode).toBe('REAL')
+    client.disconnect()
+  })
 })

@@ -28,6 +28,8 @@ export const ModeContextBar: React.FC = () => {
 
   const currentScenario = MOCK_SCENARIOS.find((s) => s.id === selectedScenarioId)
 
+  const isLive = state.hardware_link.status === 'CONNECTED' && !is_stale && rx_age_ms <= 3000
+
   return (
     <div
       className={`border-b px-3 sm:px-4 py-1.5 transition-colors flex flex-wrap items-center justify-between gap-2 text-xs select-none ${
@@ -35,7 +37,9 @@ export const ModeContextBar: React.FC = () => {
           ? 'bg-purple-950/15 border-purple-500/20 text-purple-900 dark:text-purple-200'
           : isReplay
           ? 'bg-cyan-950/15 border-cyan-500/20 text-cyan-900 dark:text-cyan-200'
-          : 'bg-emerald-950/15 border-emerald-500/20 text-emerald-900 dark:text-emerald-200'
+          : isLive
+          ? 'bg-emerald-950/15 border-emerald-500/20 text-emerald-900 dark:text-emerald-200'
+          : 'bg-rose-950/15 border-rose-500/30 text-rose-900 dark:text-rose-200'
       }`}
     >
       {/* 1. Bên trái: Huy hiệu chế độ & Thông tin kịch bản */}
@@ -63,7 +67,7 @@ export const ModeContextBar: React.FC = () => {
             </span>
             <span className="text-muted-foreground hidden sm:inline">•</span>
           </div>
-        ) : (
+        ) : isLive ? (
           <div className="flex items-center gap-1.5">
             <span className="relative flex h-2 w-2">
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
@@ -72,6 +76,17 @@ export const ModeContextBar: React.FC = () => {
             <span className="font-bold tracking-tight text-emerald-600 dark:text-emerald-400 uppercase text-[11px] flex items-center gap-1">
               <Radio className="h-3.5 w-3.5" />
               Trực tiếp từ thiết bị (Live)
+            </span>
+            <span className="text-muted-foreground hidden sm:inline">•</span>
+          </div>
+        ) : (
+          <div className="flex items-center gap-1.5">
+            <span className="relative flex h-2 w-2">
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-rose-500"></span>
+            </span>
+            <span className="font-bold tracking-tight text-rose-600 dark:text-rose-400 uppercase text-[11px] flex items-center gap-1">
+              <Radio className="h-3.5 w-3.5" />
+              Chưa kết nối ESP32 (Chế độ Real)
             </span>
             <span className="text-muted-foreground hidden sm:inline">•</span>
           </div>
@@ -118,8 +133,8 @@ export const ModeContextBar: React.FC = () => {
           </div>
         ) : (
           <div className="flex items-center gap-2 text-xs font-mono">
-            <span className="text-muted-foreground hidden md:inline">Cổng:</span>
-            <span className="text-foreground font-semibold">ws://127.0.0.1:8765</span>
+            <span className="text-muted-foreground hidden md:inline">Gateway ESP32:</span>
+            <span className="text-foreground font-semibold">{state.hardware_link.port || 'ws://192.168.1.15:8080/telemetry'}</span>
             <span className="text-muted-foreground hidden lg:inline">•</span>
             <span className="hidden lg:inline text-muted-foreground">
               Độ trễ:{' '}
@@ -132,7 +147,7 @@ export const ModeContextBar: React.FC = () => {
                     : 'text-emerald-500'
                 }`}
               >
-                {rx_age_ms}ms
+                {Math.round(rx_age_ms ?? 0)}ms
               </span>
             </span>
           </div>
@@ -181,20 +196,27 @@ export const ModeContextBar: React.FC = () => {
           <>
             <div
               className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold border ${
-                ws_connected
+                !ws_connected
+                  ? 'bg-red-500/10 border-red-500/30 text-red-600 dark:text-red-400'
+                  : isLive
                   ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-600 dark:text-emerald-400'
-                  : 'bg-red-500/10 border-red-500/30 text-red-600 dark:text-red-400'
+                  : 'bg-rose-500/10 border-rose-500/30 text-rose-600 dark:text-rose-400'
               }`}
             >
-              {ws_connected ? (
+              {!ws_connected ? (
+                <>
+                  <AlertTriangle className="h-3.5 w-3.5 animate-pulse" />
+                  <span>MẤT BACKEND WS</span>
+                </>
+              ) : isLive ? (
                 <>
                   <CheckCircle2 className="h-3.5 w-3.5" />
-                  <span>KẾT NỐI TỐT</span>
+                  <span>ESP32 LIVE</span>
                 </>
               ) : (
                 <>
-                  <AlertTriangle className="h-3.5 w-3.5 animate-pulse" />
-                  <span>MẤT KẾT NỐI</span>
+                  <AlertTriangle className="h-3.5 w-3.5" />
+                  <span>CHƯA KẾT NỐI ESP32</span>
                 </>
               )}
             </div>

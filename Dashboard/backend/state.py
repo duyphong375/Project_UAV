@@ -135,7 +135,8 @@ class MissionStore:
                 self.times["target"] = None
             else:
                 merged = {**(self.target or Target().model_dump()), **data["target"]}
-                merged["class_name"] = ("unknown", "person", "lifebuoy")[merged["class_id"]]
+                if merged.get("class_name") not in ("person", "lifebuoy", "boat"):
+                    merged["class_name"] = ("unknown", "person", "boat")[merged["class_id"]]
                 if not merged["pos_valid"] or merged["coordinate_frame"] == "NONE":
                     for key in ("local_x_cm", "local_y_cm", "latitude", "longitude"):
                         merged[key] = None

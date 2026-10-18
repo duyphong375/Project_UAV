@@ -82,8 +82,8 @@ export const AppShell: React.FC = () => {
           onOpenMobileMenu={() => setMobileMenuOpen(true)}
         />
 
-        {/* Thanh ngữ cảnh MOCK / REAL (dùng chung cho mọi page) */}
-        <ModeContextBar />
+        {/* Thanh ngữ cảnh MOCK / REAL (ẩn trên /mission để giải phóng chiều dọc bản đồ tối đa theo Phương án 1) */}
+        {currentPath !== '/mission' && <ModeContextBar />}
 
         {/* Nội dung trang theo Router - trang Mission được mở rộng tràn viền trên màn hình 1920x1080 */}
         <main className="flex-1 min-h-0 overflow-y-auto lg:overflow-hidden relative flex flex-col bg-background">
@@ -96,8 +96,8 @@ export const AppShell: React.FC = () => {
           </div>
         </main>
 
-        {/* Thanh trạng thái Telemetry dùng chung chân trang */}
-        <PositionSummary />
+        {/* Thanh trạng thái Telemetry chân trang (ẩn trên /mission vì đã có BottomTacticalDock chuyên sâu) */}
+        {currentPath !== '/mission' && <PositionSummary />}
       </div>
 
       {/* 5. Toaster thông báo thao tác */}

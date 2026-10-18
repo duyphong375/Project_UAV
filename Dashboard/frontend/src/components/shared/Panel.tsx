@@ -1,9 +1,11 @@
 import React from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { InfoTip } from '@/components/shared/InfoTip'
 
 interface PanelProps {
-  title?: string
+  title?: React.ReactNode
   icon?: React.ReactNode
+  infoTip?: string
   headerRight?: React.ReactNode
   children: React.ReactNode
   className?: string
@@ -15,6 +17,7 @@ interface PanelProps {
 export const Panel: React.FC<PanelProps> = ({
   title,
   icon,
+  infoTip,
   headerRight,
   children,
   className = '',
@@ -29,8 +32,9 @@ export const Panel: React.FC<PanelProps> = ({
           <div className="flex items-center gap-2">
             {icon && <span className="text-muted-foreground">{icon}</span>}
             {title && (
-              <CardTitle className="text-xs sm:text-sm font-semibold tracking-wide text-foreground">
+              <CardTitle className="text-xs sm:text-sm font-semibold tracking-wide text-foreground flex items-center gap-1.5">
                 {title}
+                {infoTip && <InfoTip text={infoTip} />}
               </CardTitle>
             )}
           </div>

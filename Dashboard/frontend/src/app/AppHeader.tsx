@@ -10,6 +10,8 @@ import {
   WifiOff,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { InfoTip } from '@/components/shared/InfoTip'
+import { getEsp32PhysicalStatus } from '@/lib/connectionStatus'
 import { GnssSatelliteSheet } from '@/features/telemetry/GnssSatelliteSheet'
 import { ThemeToggle } from '@/features/theme/ThemeToggle'
 import { useMission } from '@/state/MissionProvider'
@@ -48,34 +50,70 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
     switchSourceMode(targetMode)
   }
 
-  // Màu trạng thái rx_age_ms
+  // Màu và nhãn độ trễ tín hiệu (rx_age_ms)
   const getAgeStatus = (age: number, stale: boolean) => {
     if (stale || age > 3000) {
       return {
         color: 'text-red-500 bg-red-500/10 border-red-500/30',
         dot: 'bg-red-500',
-        label: `${(age / 1000).toFixed(1)}s (STALE)`,
+        label: `${(age / 1000).toFixed(1)}s (MẤT SÓNG)`,
       }
     }
     if (age > 1000) {
       return {
         color: 'text-amber-500 bg-amber-500/10 border-amber-500/30',
         dot: 'bg-amber-500',
-        label: `${(age / 1000).toFixed(1)}s`,
+        label: `${(age / 1000).toFixed(1)}s (Trễ)`,
       }
     }
     return {
       color: 'text-emerald-500 bg-emerald-500/10 border-emerald-500/30',
       dot: 'bg-emerald-500',
-      label: `${age}ms`,
+      label: `${age}ms (Tốt)`,
     }
   }
 
   const ageStatus = getAgeStatus(rx_age_ms, is_stale)
 
-  // Nhãn trạng thái phần cứng khi chọn REAL
-  const isHardwareConnected = hardware_link.status === 'CONNECTED'
-  const realStatusLabel = isHardwareConnected ? 'REAL (Thiết bị OK)' : 'REAL (Chờ thiết bị)'
+  // Xác định tình trạng kết nối vật lý thật của Gateway ESP32 với Backend GCS
+  const esp32Status = getEsp32PhysicalStatus(source_mode, ws_connected, hardware_link, is_stale, rx_age_ms)
+
+  // Cấu hình nút REAL phản ánh đúng tình trạng thật
+  const getRealButtonConfig = () => {
+    switch (esp32Status.status) {
+      case 'LIVE':
+        return {
+          btnClass: 'bg-emerald-600 text-white shadow-[0_0_12px_rgba(16,185,129,0.4)]',
+          label: 'REAL (ESP32 Live)',
+          ping: 'bg-emerald-300',
+          dot: 'bg-white',
+        }
+      case 'LOST_SIGNAL':
+        return {
+          btnClass: 'bg-rose-600 text-white animate-pulse shadow-[0_0_12px_rgba(244,63,94,0.4)]',
+          label: 'REAL (Mất sóng ESP32)',
+          ping: 'bg-rose-300',
+          dot: 'bg-white',
+        }
+      case 'BACKEND_DOWN':
+        return {
+          btnClass: 'bg-rose-950/70 text-rose-300 border border-rose-500/50',
+          label: 'REAL (Mất Backend)',
+          ping: null,
+          dot: 'bg-rose-500',
+        }
+      case 'WAITING':
+      default:
+        return {
+          btnClass: 'bg-rose-600/90 text-white border border-rose-500/60 shadow-xs animate-pulse',
+          label: 'CHƯA KẾT NỐI ESP32',
+          ping: null,
+          dot: 'bg-white',
+        }
+    }
+  }
+
+  const realBtnConfig = getRealButtonConfig()
 
   return (
     <header className="h-14 bg-card border-b border-border px-3 sm:px-4 flex items-center justify-between gap-3 shrink-0 select-none">
@@ -101,62 +139,61 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
         </div>
       </div>
 
-      {/* 2. Ở giữa: Bộ chuyển chế độ MOCK vs REAL (Touch target 36px, phân biệt rõ chọn nguồn vs trạng thái thiết bị) */}
-      <div className="flex items-center p-1 rounded-xl border border-border/80 bg-muted/50 dark:bg-[#111622] shadow-2xs">
-        <button
-          type="button"
-          onClick={() => handleSwitchSourceMode('MOCK')}
-          className={`flex items-center gap-1.5 px-3 py-1.5 min-h-[32px] rounded-lg text-xs font-bold transition-all cursor-pointer focus-visible:ring-2 focus-visible:ring-primary ${
-            source_mode === 'MOCK'
-              ? 'bg-purple-600 text-white shadow-[0_0_12px_rgba(168,85,247,0.35)]'
-              : 'text-muted-foreground hover:text-foreground'
-          }`}
-          title="Chuyển sang chế độ giả lập mô phỏng MOCK"
-          aria-label="Chế độ Mô phỏng MOCK"
-        >
-          <FlaskConical className="h-4 w-4" />
-          <span>MOCK</span>
-        </button>
-        <button
-          type="button"
-          onClick={() => handleSwitchSourceMode('REAL')}
-          className={`flex items-center gap-1.5 px-3 py-1.5 min-h-[32px] rounded-lg text-xs font-bold transition-all cursor-pointer focus-visible:ring-2 focus-visible:ring-primary ${
-            source_mode === 'REAL'
-              ? isHardwareConnected
-                ? 'bg-emerald-600 text-white shadow-[0_0_12px_rgba(16,185,129,0.35)]'
-                : 'bg-emerald-700/80 text-white border border-emerald-400/40'
-              : 'text-muted-foreground hover:text-foreground'
-          }`}
-          title={
-            source_mode === 'REAL'
-              ? isHardwareConnected
-                ? 'Đang nhận telemetry trực tiếp từ phần cứng'
-                : 'Đang ở chế độ REAL nhưng chưa phát hiện cổng phần cứng kết nối'
-              : 'Chuyển sang chế độ nhận Telemetry thực tế REAL'
-          }
-          aria-label="Chế độ Thực tế REAL"
-        >
-          <Radio className="h-4 w-4" />
-          <span>{source_mode === 'REAL' ? realStatusLabel : 'REAL'}</span>
-          {source_mode === 'REAL' && isHardwareConnected && (
-            <span className="relative flex h-2 w-2 ml-0.5">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-300 opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-white"></span>
-            </span>
-          )}
-        </button>
+      {/* 2. Ở giữa: Bộ chuyển chế độ MOCK vs REAL (Touch target 36px, cập nhật tình trạng thật của ESP32 với backend) */}
+      <div className="flex items-center gap-1.5">
+        <div className="flex items-center p-1 rounded-xl border border-border/80 bg-muted/50 dark:bg-[#111622] shadow-2xs">
+          <button
+            type="button"
+            onClick={() => handleSwitchSourceMode('MOCK')}
+            className={`flex items-center gap-1.5 px-3 py-1.5 min-h-[32px] rounded-lg text-xs font-bold transition-all cursor-pointer focus-visible:ring-2 focus-visible:ring-primary ${
+              source_mode === 'MOCK'
+                ? 'bg-purple-600 text-white shadow-[0_0_12px_rgba(168,85,247,0.35)]'
+                : 'text-muted-foreground hover:text-foreground'
+            }`}
+            title="Chuyển sang chế độ giả lập mô phỏng MOCK"
+            aria-label="Chế độ Mô phỏng MOCK"
+          >
+            <FlaskConical className="h-4 w-4" />
+            <span>MOCK</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => handleSwitchSourceMode('REAL')}
+            className={`flex items-center gap-1.5 px-3 py-1.5 min-h-[32px] rounded-lg text-xs font-bold transition-all cursor-pointer focus-visible:ring-2 focus-visible:ring-primary ${
+              source_mode === 'REAL'
+                ? realBtnConfig.btnClass
+                : 'text-muted-foreground hover:text-foreground'
+            }`}
+            title={
+              source_mode === 'REAL'
+                ? `Chế độ REAL: ${esp32Status.description}`
+                : 'Chuyển sang chế độ nhận Telemetry thực tế REAL từ Gateway ESP32'
+            }
+            aria-label="Chế độ Thực tế REAL"
+          >
+            <Radio className="h-4 w-4" />
+            <span>{source_mode === 'REAL' ? realBtnConfig.label : 'REAL'}</span>
+            {source_mode === 'REAL' && realBtnConfig.ping && (
+              <span className="relative flex h-2 w-2 ml-0.5">
+                <span className={`animate-ping absolute inline-flex h-full w-full rounded-full ${realBtnConfig.ping} opacity-75`}></span>
+                <span className={`relative inline-flex rounded-full h-2 w-2 ${realBtnConfig.dot}`}></span>
+              </span>
+            )}
+          </button>
+        </div>
+        <InfoTip text="Chuyển đổi nguồn dữ liệu: MOCK (sử dụng kịch bản giả lập mô phỏng) hoặc REAL (nhận trực tiếp Telemetry 32-byte từ Gateway ESP32 qua Wi-Fi / WebSocket). Ở chế độ REAL, hệ thống tự động kiểm tra tình trạng kết nối vật lý thực tế của ESP32." />
       </div>
 
       {/* 3. Bên phải: Chỉ số hệ thống tóm tắt & Công cụ */}
       <div className="flex items-center gap-2 sm:gap-3 shrink-0">
-        {/* Kết nối WebSocket */}
+        {/* Kết nối WebSocket Trình duyệt ↔ Backend GCS */}
         <div
           className={`hidden sm:flex items-center gap-1.5 px-2.5 py-1 min-h-[32px] rounded-lg border text-xs font-semibold ${
             ws_connected
               ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-600 dark:text-emerald-400'
               : 'bg-red-500/10 border-red-500/30 text-red-600 dark:text-red-400'
           }`}
-          title={ws_connected ? 'WebSocket đang kết nối' : 'Mất kết nối WebSocket'}
+          title={ws_connected ? 'WebSocket Trình duyệt ↔ Backend GCS đang kết nối' : 'Mất kết nối WebSocket tới Backend GCS'}
         >
           {ws_connected ? (
             <Wifi className="h-4 w-4 shrink-0" />
@@ -168,11 +205,28 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
           </span>
         </div>
 
+        {/* Tình trạng kết nối thật Gateway ESP32 ↔ Backend GCS (chế độ REAL) */}
+        {source_mode === 'REAL' && (
+          <div
+            className={`hidden md:flex items-center gap-1.5 px-2.5 py-1 min-h-[32px] rounded-lg border text-xs font-semibold ${esp32Status.badgeColorClass}`}
+            title={esp32Status.description}
+          >
+            <Radio className="h-3.5 w-3.5 shrink-0" />
+            <span className="font-mono font-bold">{esp32Status.label}</span>
+            {esp32Status.pingClass && (
+              <span className="relative flex h-2 w-2 ml-0.5">
+                <span className={`animate-ping absolute inline-flex h-full w-full rounded-full ${esp32Status.pingClass} opacity-75`} />
+                <span className={`relative inline-flex rounded-full h-2 w-2 ${esp32Status.dotColorClass}`} />
+              </span>
+            )}
+          </div>
+        )}
 
-        {/* Tuổi dữ liệu telemetry (rx_age) */}
+
+        {/* Độ trễ tín hiệu telemetry (rx_age) */}
         <div
           className={`flex items-center gap-1.5 px-2 py-1 rounded-md border text-xs font-mono font-medium ${ageStatus.color}`}
-          title="Tuổi dữ liệu gói tin nhận gần nhất"
+          title="Độ trễ tín hiệu gói tin gần nhất từ tải UAV"
         >
           <Clock className="h-3.5 w-3.5 shrink-0 opacity-80" />
           <span>{ageStatus.label}</span>

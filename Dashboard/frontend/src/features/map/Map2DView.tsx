@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
-import { LocateFixed, WifiOff } from 'lucide-react'
+import { ChevronDown, ChevronUp, LocateFixed, WifiOff } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { APP_CONFIG } from '@/config/appConfig'
 import {
@@ -169,6 +169,8 @@ export const Map2DView: React.FC<Map2DViewProps> = ({
   const [tileError, setTileError] = useState(false)
   const [newPositionOutsideView, setNewPositionOutsideView] = useState(false)
   const [isSatellite, setIsSatellite] = useState(false)
+  // Cho phép thu gọn cảnh báo Mất Fix GNSS thành thanh chip nổi để tăng diện tích hiển thị bản đồ
+  const [isGnssAlertCollapsed, setIsGnssAlertCollapsed] = useState<boolean>(true)
   const lastMarkerUpdateRef = useRef<number>(0)
   const tileLayerRef = useRef<L.TileLayer | null>(null)
 
@@ -478,21 +480,45 @@ export const Map2DView: React.FC<Map2DViewProps> = ({
         </div>
       )}
 
-      {/* Cảnh báo Mất Fix / Giữ vị trí cuối */}
+      {/* Cảnh báo Mất Fix / Giữ vị trí cuối dạng thanh thu để tăng diện tích hiển thị bản đồ */}
       {!hasGpsFix && (
-        <div className="absolute inset-0 z-10 pointer-events-none flex items-center justify-center p-4">
-          <div className="pointer-events-auto max-w-sm bg-card/95 backdrop-blur-md border border-amber-500/40 p-3.5 rounded-2xl shadow-lg text-center">
-            <WifiOff className="h-6 w-6 text-amber-500 mx-auto mb-1.5" />
-            <h4 className="text-xs font-semibold text-foreground mb-1">Mất Khóa Vệ Tinh (GNSS)</h4>
-            <p className="text-[11px] text-muted-foreground mb-1.5">
-              {cameraPosition.last_updated_iso
-                ? `Vị trí cuối nhận: ${formatCoordinates(cameraPosition.latitude, cameraPosition.longitude)} (${formatTimeAgo(cameraPosition.last_updated_iso)})`
-                : 'Chưa nhận được gói tin tọa độ hợp lệ từ tải nhiệm vụ.'}
-            </p>
-            <div className="text-[10px] text-amber-600 dark:text-amber-400 font-medium">
-              Vị trí marker làm mờ để tránh nhầm lẫn với dữ liệu trực tiếp.
+        <div className="absolute top-14 left-1/2 -translate-x-1/2 z-[405] pointer-events-auto">
+          {isGnssAlertCollapsed ? (
+            <button
+              type="button"
+              onClick={() => setIsGnssAlertCollapsed(false)}
+              className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-950/85 backdrop-blur-md border border-amber-500/50 shadow-xl text-amber-300 hover:text-amber-200 hover:bg-slate-900/90 transition-all text-xs cursor-pointer animate-in fade-in"
+              title="Nhấp để xem chi tiết cảnh báo mất khóa GNSS"
+              aria-label="Xem chi tiết cảnh báo mất khóa GNSS"
+            >
+              <WifiOff className="h-3.5 w-3.5 text-amber-400 animate-pulse" />
+              <span className="font-semibold">Mất Khóa Vệ Tinh (GNSS)</span>
+              <span className="text-[10px] text-amber-400/80 hidden sm:inline">• Giữ vị trí cuối</span>
+              <ChevronDown className="h-3 w-3 text-amber-400 ml-0.5" />
+            </button>
+          ) : (
+            <div className="max-w-sm bg-slate-950/95 backdrop-blur-md border border-amber-500/50 p-3 rounded-2xl shadow-2xl text-center relative animate-in fade-in zoom-in-95 text-slate-100">
+              <button
+                type="button"
+                onClick={() => setIsGnssAlertCollapsed(true)}
+                className="absolute top-2 right-2 text-slate-400 hover:text-white p-1 rounded-lg hover:bg-white/10 cursor-pointer"
+                title="Thu nhỏ cảnh báo để xem bản đồ"
+                aria-label="Thu nhỏ cảnh báo GNSS"
+              >
+                <ChevronUp className="h-4 w-4" />
+              </button>
+              <WifiOff className="h-5 w-5 text-amber-500 mx-auto mb-1.5" />
+              <h4 className="text-xs font-semibold text-white mb-1">Mất Khóa Vệ Tinh (GNSS)</h4>
+              <p className="text-[11px] text-slate-300 mb-1.5">
+                {cameraPosition.last_updated_iso
+                  ? `Vị trí cuối nhận: ${formatCoordinates(cameraPosition.latitude, cameraPosition.longitude)} (${formatTimeAgo(cameraPosition.last_updated_iso)})`
+                  : 'Chưa nhận được gói tin tọa độ hợp lệ từ tải nhiệm vụ.'}
+              </p>
+              <div className="text-[10px] text-amber-400 font-medium">
+                Vị trí marker làm mờ để tránh nhầm lẫn với dữ liệu trực tiếp.
+              </div>
             </div>
-          </div>
+          )}
         </div>
       )}
 

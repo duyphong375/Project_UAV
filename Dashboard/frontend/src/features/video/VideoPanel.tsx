@@ -56,6 +56,7 @@ export const VideoPanel: React.FC = () => {
   return (
     <Panel
       title="Video tham chiếu"
+      infoTip="Luồng hình ảnh trực tiếp từ camera quang học trên tải UAV kèm khung nhận diện bounding box từ mô hình AI YOLO."
       icon={<Video className="h-4 w-4 text-primary" />}
       noPadding
       className="h-full flex flex-col min-h-0 border-border bg-card shadow-xs"

@@ -15,12 +15,13 @@ import { useAppRouter } from '@/app/routes'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
+import { InfoTip } from '@/components/shared/InfoTip'
 import { useMission } from '@/state/MissionProvider'
 
 interface DetectionItem {
   id: number
   label: string
-  rawType: 'person' | 'buoy' | 'debris'
+  rawType: 'person' | 'boat' | 'buoy' | 'debris'
   confidence: number
   lat: number
   lon: number
@@ -66,18 +67,18 @@ export const RecentDetectionsTable: React.FC<{ className?: string }> = ({
 
     // 1. Live target từ KVC payload
     if (has_target && target && target.pos_valid && target.latitude !== null && target.longitude !== null) {
-      const isBuoy = target.class_name === 'lifebuoy'
+      const isBoat = target.class_name === 'boat' || target.class_name === 'lifebuoy'
       list.push({
         id: target.track_id || 101,
-        label: isBuoy ? 'Lifebuoy (Phao cứu sinh)' : 'Person (Người gặp nạn)',
-        rawType: isBuoy ? 'buoy' : 'person',
+        label: isBoat ? 'Tàu thuyền (Boat / Vessel)' : 'Người gặp nạn (Person)',
+        rawType: isBoat ? 'boat' : 'person',
         confidence: target.confidence ? Math.round(target.confidence * 10) / 10 : 94.2,
         lat: target.latitude,
         lon: target.longitude,
         distanceM: computeDistanceMeters(uavLat, uavLon, target.latitude, target.longitude, 82.4),
         time: last_rx_iso ? last_rx_iso.slice(11, 19) : '14:32:05',
-        actionLabel: isBuoy ? 'Thả phao #1' : 'Đã gửi Ca nô #02',
-        actionIcon: isBuoy ? 'buoy' : 'boat',
+        actionLabel: isBoat ? 'Theo dõi tàu' : 'Đã gửi Ca nô #02',
+        actionIcon: 'boat',
       })
     }
 
@@ -86,20 +87,20 @@ export const RecentDetectionsTable: React.FC<{ className?: string }> = ({
       bounding_boxes.forEach((box, idx) => {
         const id = box.track_id || 102 + idx
         if (!list.some((item) => item.id === id)) {
-          const isBuoy = box.label?.toLowerCase().includes('buoy') || idx % 2 === 1
+          const isBoat = box.label?.toLowerCase().includes('boat') || box.label?.toLowerCase().includes('buoy') || idx % 2 === 1
           const boxLat = (target?.latitude ?? 21.028420) + 0.0003 * (idx + 1)
           const boxLon = (target?.longitude ?? 105.854090) + 0.0004 * (idx + 1)
           list.push({
             id,
-            label: isBuoy ? 'Lifebuoy (Phao cứu sinh)' : 'Person (Người gặp nạn)',
-            rawType: isBuoy ? 'buoy' : 'person',
+            label: isBoat ? 'Tàu thuyền (Boat / Vessel)' : 'Người gặp nạn (Person)',
+            rawType: isBoat ? 'boat' : 'person',
             confidence: Math.round((box.confidence || 0.885) * 1000) / 10,
             lat: boxLat,
             lon: boxLon,
             distanceM: computeDistanceMeters(uavLat, uavLon, boxLat, boxLon, 76.1 + idx * 12),
             time: '14:32:01',
-            actionLabel: isBuoy ? 'Thả phao #1' : 'Đã gửi Ca nô #02',
-            actionIcon: isBuoy ? 'buoy' : 'boat',
+            actionLabel: isBoat ? 'Theo dõi tàu' : 'Đã gửi Ca nô #02',
+            actionIcon: 'boat',
           })
         }
       })
@@ -188,11 +189,14 @@ export const RecentDetectionsTable: React.FC<{ className?: string }> = ({
             <Radar className="h-5 w-5" />
           </div>
           <div>
-            <h3 className="text-sm font-bold text-foreground uppercase tracking-tight">
-              LỊCH SỬ NHẬN DIỆN THỜI GIAN THỰC (DETECTION LOG)
-            </h3>
+            <div className="flex items-center gap-1.5">
+              <h3 className="text-sm font-bold text-foreground uppercase tracking-tight">
+                LỊCH SỬ NHẬN DIỆN THỜI GIAN THỰC (DETECTION LOG)
+              </h3>
+              <InfoTip text="Bảng ghi nhận các mục tiêu Người và Tàu thuyền phát hiện từ AI camera kèm tọa độ GPS và khoảng cách để lực lượng cứu hộ tiếp cận." />
+            </div>
             <p className="text-xs text-muted-foreground">
-              Mục tiêu YOLO11n • Nguồn dữ liệu theo chế độ phiên
+              Mục tiêu YOLO11n (Người / Tàu thuyền) • Nguồn dữ liệu thời gian thực
             </p>
           </div>
         </div>

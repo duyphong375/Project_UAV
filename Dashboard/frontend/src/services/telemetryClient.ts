@@ -175,14 +175,50 @@ export class TelemetryClient {
           let raw: unknown
           try { raw = JSON.parse(event.data) } catch { return }
           const packet = adaptApplicationPacket(raw)
-          if (packet && packet.source_mode === this.expectedSource) {
-            if (packet.event_type === 'SNAPSHOT') this.snapshotSession = packet.session_id ?? null
-            else if (!this.snapshotSession || packet.session_id !== this.snapshotSession) return
-            for (const listener of this.onPacketListeners) {
-              try {
-                listener(packet)
-              } catch (err) {
-                console.error('[TelemetryClient] Lỗi listener packet:', err)
+          if (packet) {
+            // Khi ở chế độ REAL:
+            // 1. Tuyệt đối không cho phép các gói tin Telemetry/Target giả tạo từ MOCK đi vào state
+            if (this.expectedSource === 'REAL') {
+              if (packet.original_source_mode === 'MOCK' && (packet.event_type === 'TELEMETRY_UPDATE' || packet.event_type === 'TARGET_UPDATE')) {
+                return
+              }
+              if (packet.event_type === 'SNAPSHOT' && packet.original_source_mode !== 'REAL') {
+                packet.telemetry = {
+                  battery_pct: null,
+                  lidar_range_cm: null,
+                  gps_valid: false,
+                  lidar_valid: false,
+                  imu_valid: false,
+                  ai_detected: false,
+                  packet_rssi_dbm: null,
+                  packet_snr_db: null,
+                }
+                packet.has_target = false
+                packet.target = null
+                packet.alerts = []
+              }
+            }
+
+            const matchesExpected = packet.source_mode === this.expectedSource
+            // Khi ở chế độ REAL: kết nối tới backend để nhận tình trạng phần cứng thật.
+            // Nếu backend đang chạy MOCK slice hoặc chuyển tiếp ESP32, chuẩn hóa về REAL để Dashboard cập nhật đúng tình trạng.
+            const allowRealFromBackend =
+              this.expectedSource === 'REAL' && (packet.source_mode === 'REAL' || packet.source_mode === 'MOCK')
+
+            if (matchesExpected || allowRealFromBackend) {
+              const adaptedPacket =
+                this.expectedSource === 'REAL' && packet.source_mode === 'MOCK'
+                  ? { ...packet, source_mode: 'REAL' as const }
+                  : packet
+
+              if (adaptedPacket.event_type === 'SNAPSHOT') this.snapshotSession = adaptedPacket.session_id ?? null
+              else if (!this.snapshotSession || adaptedPacket.session_id !== this.snapshotSession) return
+              for (const listener of this.onPacketListeners) {
+                try {
+                  listener(adaptedPacket)
+                } catch (err) {
+                  console.error('[TelemetryClient] Lỗi listener packet:', err)
+                }
               }
             }
           }

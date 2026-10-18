@@ -12,7 +12,7 @@ export type InferenceDevice = 'FPGA_GW2A' | 'PC_REFERENCE' | 'SIMULATED' | 'UNKN
 
 export type CoordinateFrame = 'LOCAL_GRID' | 'WGS84' | 'NONE'
 
-export type TargetObjectClass = 'unknown' | 'person' | 'lifebuoy'
+export type TargetObjectClass = 'unknown' | 'person' | 'lifebuoy' | 'boat'
 
 export function formatTargetAgeLabel(
   ageMs: number | undefined,

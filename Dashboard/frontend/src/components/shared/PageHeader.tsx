@@ -1,9 +1,11 @@
 import React from 'react'
+import { InfoTip } from '@/components/shared/InfoTip'
 
 interface PageHeaderProps {
   breadcrumb?: string
   title: string
   subtitle?: string
+  infoTip?: string
   badge?: React.ReactNode
   actions?: React.ReactNode
   className?: string
@@ -13,6 +15,7 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
   breadcrumb,
   title,
   subtitle,
+  infoTip,
   badge,
   actions,
   className = '',
@@ -29,6 +32,7 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
           <h1 className="text-lg sm:text-xl font-bold tracking-tight text-foreground">
             {title}
           </h1>
+          {infoTip && <InfoTip text={infoTip} />}
           {badge}
         </div>
         {subtitle && (
@@ -45,3 +49,4 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
     </div>
   )
 }
+

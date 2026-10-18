@@ -24,7 +24,8 @@ describe('MissionPage - Giám sát định vị tải nhiệm vụ UAV', () => {
     expect(screen.getByText('Giám sát định vị tải nhiệm vụ')).toBeDefined()
     expect(screen.getByText(/Nguồn: MOCK/i)).toBeDefined()
     expect(screen.getAllByText('MẤT KẾT NỐI').length).toBeGreaterThan(0)
-    expect(screen.getByRole('region', { name: 'Điều khiển phát lại' })).toBeDefined()
+    // ReplayControls đã được chuyển hoàn toàn sang /history theo yêu cầu người dùng
+    expect(screen.queryByRole('region', { name: 'Điều khiển phát lại' })).toBeNull()
 
     // 2. Nút "Đặt lại khung nhìn" có mặt
     expect(screen.getAllByRole('button', { name: /Đặt lại khung nhìn/i }).length).toBeGreaterThan(0)
@@ -52,7 +53,7 @@ describe('MissionPage - Giám sát định vị tải nhiệm vụ UAV', () => {
     // Tiêu đề "Vị trí hiện tại"
     expect(screen.getByText('Vị trí hiện tại')).toBeDefined()
     expect(screen.getByText('Hệ quy chiếu:')).toBeDefined()
-    expect(screen.getByText('Tuổi dữ liệu:')).toBeDefined()
+    expect(screen.getByText('Độ trễ tín hiệu:')).toBeDefined()
     expect(screen.getByRole('button', { name: /Đặt lại khung nhìn/i })).toBeDefined()
   })
 
@@ -70,7 +71,7 @@ describe('MissionPage - Giám sát định vị tải nhiệm vụ UAV', () => {
     expect(screen.getByText('Alt:')).toBeDefined()
     expect(screen.getByText('LiDAR:')).toBeDefined()
     expect(screen.getByText('LoRa:')).toBeDefined()
-    expect(screen.getByText('Tuổi:')).toBeDefined()
+    expect(screen.getByText('Trễ:')).toBeDefined()
   })
 
   it('cho phép chuyển đổi giữa Bản đồ WGS-84 và Radar Sa Bàn', () => {
@@ -109,7 +110,9 @@ describe('MissionPage - Giám sát định vị tải nhiệm vụ UAV', () => {
     )
 
     const focusTargetBtn = screen.getByRole('button', { name: /Tâm mục tiêu/i })
-    const focusUavBtn = screen.getAllByRole('button', { name: /Đặt lại khung nhìn/i })[0]
+    const focusUavBtn = screen
+      .getAllByRole('button', { name: /Đặt lại khung nhìn/i })
+      .find((btn) => btn.closest('[aria-label="Cụm điều khiển khung nhìn nổi"]'))!
 
     fireEvent.click(focusTargetBtn)
     expect(focusTargetSpy).toHaveBeenCalledTimes(1)
@@ -133,16 +136,45 @@ describe('MissionPage - Giám sát định vị tải nhiệm vụ UAV', () => {
     )
 
     // Mặc định video phụ ở trạng thái thu gọn
-    const toggleVideoBtn = screen.getByRole('button', { name: /Bật tắt Video phụ/i })
+    const toggleVideoBtn = screen.getAllByRole('button', { name: /Bật tắt Video phụ/i })[0]
     expect(toggleVideoBtn).toBeDefined()
 
     // Bấm mở video
     fireEvent.click(toggleVideoBtn)
-    expect(screen.getByText('Video tham chiếu')).toBeDefined()
+    expect(screen.getAllByText('Video tham chiếu').length).toBeGreaterThanOrEqual(1)
 
     // Bấm thu gọn video trở lại
     fireEvent.click(toggleVideoBtn)
     expect(screen.queryByText('Video tham chiếu')).toBeNull()
+  })
+
+  it('hỗ trợ chuyển đổi dạng thanh thu gọn (collapsible top bar) để tối đa diện tích bản đồ', () => {
+    render(
+      <TooltipProvider>
+        <MissionProvider>
+          <AppRouterProvider>
+            <MissionPage />
+          </AppRouterProvider>
+        </MissionProvider>
+      </TooltipProvider>
+    )
+
+    // Ban đầu thanh điều khiển ở dạng mở rộng
+    expect(screen.getByText('Giám sát định vị tải nhiệm vụ')).toBeDefined()
+    const collapseBtn = screen.getByRole('button', { name: /Thu gọn thanh điều khiển/i })
+    expect(collapseBtn).toBeDefined()
+
+    // Bấm nút Thu gọn để chuyển sang dạng thanh thu
+    fireEvent.click(collapseBtn)
+
+    // Ở dạng thanh thu, tiêu đề đầy đủ được ẩn đi để giải phóng diện tích bản đồ
+    expect(screen.queryByText('Giám sát định vị tải nhiệm vụ')).toBeNull()
+    const expandBtn = screen.getByRole('button', { name: /Mở rộng thanh điều khiển/i })
+    expect(expandBtn).toBeDefined()
+
+    // Bấm nút Mở rộng để khôi phục thanh điều khiển đầy đủ
+    fireEvent.click(expandBtn)
+    expect(screen.getByText('Giám sát định vị tải nhiệm vụ')).toBeDefined()
   })
 
   it('TargetDetailsPanel hiển thị thông tin bàn giao SAR và hỗ trợ thao tác đánh dấu sự kiện', () => {

@@ -58,8 +58,14 @@ function transportReducer(state: MissionState, action: MissionAction): MissionSt
 }
 
 export const MissionProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const initialMode: SourceMode =
+    (typeof window !== 'undefined' && (localStorage.getItem('kvc_source_mode') as SourceMode)) ||
+    (import.meta.env.MODE === 'test' ? 'MOCK' : 'REAL')
+
   const [state, dispatch] = useReducer(transportReducer, {
     ...INITIAL_MISSION_STATE,
+    source_mode: initialMode,
+    original_source_mode: initialMode === 'MOCK' ? 'MOCK' : 'REAL',
     diagnostics: { ...INITIAL_MISSION_STATE.diagnostics, logger_status: 'LOG_DEGRADED' },
   })
   const lastAgeTickRef = useRef(monotonicNow())
@@ -76,6 +82,9 @@ export const MissionProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
   // Chuyển chế độ nguồn
   const switchSourceMode = (mode: SourceMode) => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('kvc_source_mode', mode)
+    }
     dispatch({ type: 'SET_SOURCE_MODE', payload: mode })
   }
 

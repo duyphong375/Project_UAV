@@ -1,7 +1,17 @@
-"""Explicit settings for the loopback-only development slice."""
-
-from dataclasses import dataclass
+import os
+from dataclasses import dataclass, field
 from pathlib import Path
+
+
+def _env_bool(name: str, default: bool) -> bool:
+    val = os.getenv(name)
+    if val is None:
+        return default
+    return val.strip().lower() not in {"0", "false", "no", "off", "disable", "disabled"}
+
+
+def _env_str(name: str, default: str) -> str:
+    return os.getenv(name, default)
 
 
 @dataclass(frozen=True)
@@ -12,10 +22,12 @@ class Settings:
     send_timeout_sec: float = 1.0
     mock_interval_sec: float = 1.0
     stale_threshold_ms: int = 3000
-    enable_mock: bool = True
+    enable_mock: bool = field(default_factory=lambda: _env_bool("KVC_ENABLE_MOCK", True))
     storage_dir: Path | None = Path("data/sessions")
     logger_queue_capacity: int = 1024
     logger_flush_timeout_sec: float = 5.0
+    esp32_ws_url: str = field(default_factory=lambda: _env_str("KVC_ESP32_WS_URL", "ws://192.168.1.175:8080/telemetry"))
+    enable_esp32_ingress: bool = field(default_factory=lambda: _env_bool("KVC_ENABLE_ESP32", False))
 
     def __post_init__(self):
         if self.host not in {"127.0.0.1", "::1"}:

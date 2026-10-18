@@ -46,7 +46,8 @@ def test_lifespan_cancels_source_and_no_owned_workers_survive():
         with client.websocket_connect("/ws/telemetry") as ws:
             assert ws.receive_json()["event_type"] == "SNAPSHOT"
         async def owned():
-            return [t.get_name() for t in asyncio.all_tasks() if t.get_name().startswith("kvc-")]
+            await asyncio.sleep(0.05)
+            return [t.get_name() for t in asyncio.all_tasks() if t.get_name().startswith("kvc-") and not t.done()]
         assert client.portal.call(owned) == ["kvc-mock-source"]
     assert app.state.hub.source_task is None or app.state.hub.source_task.done()
     assert not app.state.hub.clients
@@ -90,6 +91,9 @@ def test_actual_websocket_overflow_closes_1008_without_blocking_peer(monkeypatch
             assert closed.value.code == 1008
             assert [fast.receive_json()["event_type"] for _ in range(3)] == ["LINK_STATUS"] * 3
             assert app.state.hub.client_drops == 3
+        async def wait_cleanup():
+            await asyncio.sleep(0.05)
+        client.portal.call(wait_cleanup)
         assert not app.state.hub.clients
 
 

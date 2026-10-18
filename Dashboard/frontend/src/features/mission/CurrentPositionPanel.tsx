@@ -12,6 +12,7 @@ import {
 } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { InfoTip } from '@/components/shared/InfoTip'
 import { useMission } from '@/state/MissionProvider'
 
 interface CurrentPositionPanelProps {
@@ -102,9 +103,12 @@ export const CurrentPositionPanel: React.FC<CurrentPositionPanelProps> = ({
             <MapPin className="h-4 w-4" />
           </div>
           <div className="flex flex-col min-w-0">
-            <span className="text-sm font-bold tracking-tight text-foreground truncate">
-              Vị trí hiện tại
-            </span>
+            <div className="flex items-center gap-1.5">
+              <span className="text-sm font-bold tracking-tight text-foreground truncate">
+                Vị trí hiện tại
+              </span>
+              <InfoTip text="Tọa độ WGS-84, độ cao thực tế LiDAR mặt nước và hướng la bàn của tải UAV thời gian thực." />
+            </div>
             <span className="text-xs text-muted-foreground truncate">
               Tải nhiệm vụ UAV (Payload)
             </span>
@@ -204,16 +208,19 @@ export const CurrentPositionPanel: React.FC<CurrentPositionPanelProps> = ({
             </div>
           </div>
 
-          {/* Hệ quy chiếu & Tuổi dữ liệu */}
+          {/* Hệ quy chiếu & Độ trễ tín hiệu */}
           <div className="grid grid-cols-2 gap-2 text-xs">
             <div className="flex items-center justify-between p-2 rounded-lg bg-muted/20 border border-border/30">
               <span className="text-xs text-muted-foreground">Hệ quy chiếu:</span>
               <span className="font-mono font-bold text-foreground">WGS-84</span>
             </div>
             <div className="flex items-center justify-between p-2 rounded-lg bg-muted/20 border border-border/30">
-              <span className="text-xs text-muted-foreground">Tuổi dữ liệu:</span>
+              <span className="text-xs text-muted-foreground flex items-center gap-1">
+                Độ trễ tín hiệu:
+                <InfoTip text="Thời gian trôi qua từ gói tin gần nhất của tải UAV: Dưới 1s (Xanh) là trực tiếp, 1-3s (Vàng) là nghẽn sóng, trên 3s (Đỏ) là mất tín hiệu." />
+              </span>
               <span
-                className={`font-mono font-bold ${
+                className={`font-mono font-bold flex items-center gap-1.5 ${
                   rx_age_ms > 3000
                     ? 'text-destructive'
                     : rx_age_ms > 1000
@@ -221,7 +228,16 @@ export const CurrentPositionPanel: React.FC<CurrentPositionPanelProps> = ({
                     : 'text-emerald-600 dark:text-emerald-400'
                 }`}
               >
-                {rx_age_ms} ms
+                <span
+                  className={`h-2 w-2 rounded-full shrink-0 ${
+                    rx_age_ms > 3000
+                      ? 'bg-destructive animate-pulse'
+                      : rx_age_ms > 1000
+                      ? 'bg-amber-500'
+                      : 'bg-emerald-500'
+                  }`}
+                />
+                {rx_age_ms > 3000 ? `${(rx_age_ms / 1000).toFixed(1)}s (Mất tín hiệu)` : `${rx_age_ms} ms`}
               </span>
             </div>
           </div>

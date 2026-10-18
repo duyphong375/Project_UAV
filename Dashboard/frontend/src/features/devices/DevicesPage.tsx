@@ -11,6 +11,8 @@ import {
   Server,
 } from 'lucide-react'
 import { PageHeader } from '@/components/shared/PageHeader'
+import { InfoTip } from '@/components/shared/InfoTip'
+import { getEsp32PhysicalStatus } from '@/lib/connectionStatus'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -40,12 +42,15 @@ export const DevicesPage: React.FC = () => {
     is_stale,
   } = state
 
+  const esp32Status = getEsp32PhysicalStatus(source_mode, ws_connected, hardware_link, is_stale, rx_age_ms)
+
   return (
     <div className="flex-1 flex flex-col p-3 sm:p-5 gap-4 overflow-y-auto max-w-7xl mx-auto w-full select-none">
       {/* 1. Header Trang Thiết Bị */}
       <PageHeader
         breadcrumb="Hệ thống · Chẩn đoán thiết bị"
         title="Thiết bị & kết nối phần cứng"
+        infoTip="Trang chẩn đoán chi tiết phần cứng: Gateway ESP32-C3, vi điều khiển MCU STM32 tải bay, FPGA, cụm cảm biến LiDAR/GNSS và liên kết RF LoRa."
         subtitle="Theo dõi tình trạng liên kết truyền thông, cụm cảm biến và thiết bị suy luận AI trên trạm giám sát GCS."
         badge={
           <Badge
@@ -89,6 +94,7 @@ export const DevicesPage: React.FC = () => {
               <div className="flex items-center gap-2">
                 <Server className="h-4 w-4 text-cyan-500" />
                 <span>Trình duyệt ↔ Backend GCS</span>
+                <InfoTip text="Kênh truyền WebSocket hai chiều kết nối giao diện trình duyệt Web với dịch vụ Backend FastAPI." />
               </div>
               <Badge
                 variant={ws_connected ? 'default' : 'destructive'}
@@ -117,9 +123,9 @@ export const DevicesPage: React.FC = () => {
               </Badge>
             </div>
             <div className="flex items-center justify-between py-1 border-b border-border/40">
-              <span className="text-muted-foreground">Tuổi gói tin nhận (rx_age):</span>
+              <span className="text-muted-foreground">Độ trễ tín hiệu (rx_age):</span>
               <span className={`font-mono font-semibold ${is_stale ? 'text-red-500' : 'text-emerald-600 dark:text-emerald-400'}`}>
-                {rx_age_ms} ms {is_stale ? '(STALE)' : ''}
+                {rx_age_ms} ms {is_stale ? '(MẤT TÍN HIỆU)' : ''}
               </span>
             </div>
             <div className="flex items-center justify-between py-1">
@@ -131,34 +137,59 @@ export const DevicesPage: React.FC = () => {
           </CardContent>
         </Card>
 
-        {/* Card: Backend GCS <-> Thiết Bị / Tải Nhiệm Vụ */}
+        {/* Card: Backend GCS <-> Gateway ESP32-C3 Trạm Đất */}
         <Card className="border-border bg-card shadow-xs">
           <CardHeader className="py-3 px-4 border-b border-border/60 bg-muted/20">
             <CardTitle className="text-xs font-semibold text-foreground uppercase tracking-wider flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Radio className="h-4 w-4 text-primary" />
-                <span>Backend GCS ↔ Tải nhiệm vụ</span>
+                <span>Backend GCS ↔ Gateway ESP32-C3</span>
+                <InfoTip text="Liên kết Wi-Fi SoftAP (SSID: KVC_GCS_AP tại 192.168.4.1:8080) hoặc HTTP Ingress giữa Backend FastAPI và Gateway ESP32 thu nhận gói tin 32-byte từ tải UAV." />
               </div>
-              <Badge variant="outline" className="text-[10px] py-0 px-1.5 font-mono">
-                {hardware_link.status}
+              <Badge
+                variant={esp32Status.badgeVariant}
+                className={`text-[10px] py-0 px-1.5 font-mono ${esp32Status.badgeColorClass}`}
+              >
+                {esp32Status.shortLabel}
               </Badge>
             </CardTitle>
           </CardHeader>
           <CardContent className="p-4 flex flex-col gap-2.5 text-xs">
             <div className="flex items-center justify-between py-1 border-b border-border/40">
-              <span className="text-muted-foreground">Cổng kết nối phần cứng:</span>
+              <span className="text-muted-foreground">Cổng kết nối / Endpoint:</span>
               <span className="font-mono text-foreground font-semibold">
-                {hardware_link.port || (source_mode === 'MOCK' ? 'Virtual Serial / Mock Bus' : 'Chưa có dữ liệu')}
+                {hardware_link.port || (source_mode === 'MOCK' ? 'Virtual Serial / Mock Bus' : 'ws://192.168.4.1:8080/telemetry')}
+              </span>
+            </div>
+            <div className="flex items-start justify-between py-1 border-b border-border/40 gap-2">
+              <span className="text-muted-foreground shrink-0">Tình trạng kết nối thật:</span>
+              <span className="text-right font-medium">
+                <span className={`inline-block mr-1.5 h-2 w-2 rounded-full ${esp32Status.dotColorClass}`} />
+                <span className={
+                  esp32Status.status === 'LIVE'
+                    ? 'text-emerald-600 dark:text-emerald-400 font-semibold'
+                    : esp32Status.status === 'WAITING'
+                    ? 'text-amber-600 dark:text-amber-400 font-semibold'
+                    : 'text-red-600 dark:text-red-400 font-semibold'
+                }>
+                  {esp32Status.description}
+                </span>
               </span>
             </div>
             <div className="flex items-center justify-between py-1 border-b border-border/40">
-              <span className="text-muted-foreground">Chất lượng RSSI / SNR:</span>
+              <span className="text-muted-foreground">Độ trễ tín hiệu ESP32 (rx_age):</span>
+              <span className={`font-mono font-semibold ${is_stale ? 'text-red-500' : 'text-emerald-600 dark:text-emerald-400'}`}>
+                {rx_age_ms} ms {is_stale ? (source_mode === 'REAL' ? '(MẤT SÓNG >3s)' : '(MẤT TÍN HIỆU)') : '(HOẠT ĐỘNG)'}
+              </span>
+            </div>
+            <div className="flex items-center justify-between py-1 border-b border-border/40">
+              <span className="text-muted-foreground">Chất lượng RSSI / SNR LoRa:</span>
               <span className="font-mono text-foreground">
                 {telemetry.packet_rssi_dbm !== null
                   ? `${telemetry.packet_rssi_dbm} dBm / ${telemetry.packet_snr_db ?? 'N/A'} dB`
                   : source_mode === 'MOCK'
                   ? '-82 dBm / 7.5 dB (Mô phỏng)'
-                  : 'Chưa có dữ liệu'}
+                  : 'Chưa có dữ liệu sóng'}
               </span>
             </div>
             <div className="flex items-center justify-between py-1 border-b border-border/40">
@@ -179,9 +210,12 @@ export const DevicesPage: React.FC = () => {
 
       {/* 3. Nhóm 2: Bảng Trạng Thái Cảm Biến & Khí Tài Đo Lường */}
       <div className="flex flex-col gap-2">
-        <h2 className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
-          Trạng thái chi tiết các Module cảm biến & Xử lý trên tải KVC
-        </h2>
+        <div className="flex items-center gap-1.5">
+          <h2 className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
+            Trạng thái chi tiết các Module cảm biến & Xử lý trên tải KVC
+          </h2>
+          <InfoTip text="Bảng kiểm tra tình trạng kết nối, nguồn điện và tín hiệu dữ liệu thực tế của toàn bộ 8 khối thiết bị trên UAV và trạm mặt đất." />
+        </div>
         <div className="border border-border rounded-xl bg-card overflow-hidden shadow-xs">
           <Table>
             <TableHeader className="bg-muted/40">

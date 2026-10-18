@@ -8,7 +8,15 @@ import { CurrentPositionPanel } from '@/features/mission/CurrentPositionPanel'
 import { useMission } from '@/state/MissionProvider'
 import { Map2DView } from './Map2DView'
 
-export const GpsMapPanel: React.FC = () => {
+export interface GpsMapPanelProps {
+  hideHeader?: boolean
+  className?: string
+}
+
+export const GpsMapPanel: React.FC<GpsMapPanelProps> = ({
+  hideHeader = false,
+  className = '',
+}) => {
   const { state } = useMission()
   const {
     camera_position,
@@ -77,9 +85,34 @@ export const GpsMapPanel: React.FC = () => {
     }
   }, [handleResetView, handleFocusTarget])
 
+  // Nếu hideHeader=true (dùng trong MissionPage), vẽ bản đồ trực tiếp tràn viền 100% không qua thẻ Panel
+  if (hideHeader) {
+    return (
+      <div className={`relative w-full h-full min-h-0 flex-1 overflow-hidden select-none ${className}`}>
+        <span className="sr-only">Bản đồ định vị WGS-84</span>
+        {/* Bản đồ 2D chính chiếm 100% diện tích */}
+        <Map2DView
+          cameraPosition={camera_position}
+          target={target}
+          hasTarget={has_target}
+          cameraTrail={camera_trail}
+          showTrails={show_trails}
+          isStale={is_stale}
+          rxAgeMs={rx_age_ms}
+          mapInstanceRef={mapInstanceRef}
+          onResetView={handleResetView}
+        />
+
+        {/* Panel Vị trí nổi chỉ hiển thị trên màn hình nhỏ/hẹp (lg:hidden) */}
+        <CurrentPositionPanel onResetView={handleResetView} floating className="lg:hidden" />
+      </div>
+    )
+  }
+
   return (
     <Panel
       title="Bản đồ định vị WGS-84"
+      infoTip="Bản đồ không gian địa lý thời gian thực: Hiển thị vị trí kinh/vĩ độ của UAV, vệt bay lịch sử và các điểm mục tiêu Người/Tàu thuyền trên nền bản đồ OpenStreetMap / vệ tinh."
       icon={<Compass className="h-4 w-4 text-primary" />}
       noPadding
       className="h-full flex flex-col min-h-0 border-border bg-card shadow-xs"

@@ -2,24 +2,25 @@ import React, { useState } from 'react'
 import {
   AlertCircle,
   AlertTriangle,
+  ChevronDown,
+  ChevronUp,
   Columns,
   Compass,
-  Crosshair,
-  LocateFixed,
   Radio,
   Video,
   VideoOff,
+  X,
 } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { InfoTip } from '@/components/shared/InfoTip'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { GpsMapPanel } from '@/features/map/GpsMapPanel'
 import { LocalRadarPanel } from '@/features/radar/LocalRadarPanel'
-import { ReplayControls } from '@/features/replay/ReplayControls'
 import { VideoPanel } from '@/features/video/VideoPanel'
 import { useMission } from '@/state/MissionProvider'
-import { ActiveAlertsQuickPanel } from './ActiveAlertsQuickPanel'
-import { CurrentPositionPanel } from './CurrentPositionPanel'
-import { TargetDetailsPanel } from './TargetDetailsPanel'
+import { BottomTacticalDock } from './BottomTacticalDock'
+import { FloatingMapControls } from './FloatingMapControls'
 
 export type ViewportMode = 'MAP' | 'RADAR' | 'SPLIT'
 
@@ -29,33 +30,56 @@ export const MissionPage: React.FC = () => {
     source_mode,
     session_id,
     ws_connected,
-    camera_position,
     target,
-    has_target,
     alerts,
   } = state
 
   // Chế độ hiển thị khung nhìn định vị (Bản đồ WGS-84 | Radar Hệ Local | Chia đôi)
   const [viewportMode, setViewportMode] = useState<ViewportMode>('MAP')
 
-  // Bật/tắt video phụ (mặc định thu gọn để ưu tiên bản đồ/radar và dữ liệu định vị)
+  // Bật/tắt video phụ dạng PiP (mặc định thu gọn để tối đa diện tích bản đồ)
   const [showVideoFeed, setShowVideoFeed] = useState<boolean>(false)
 
-  const hasGpsFix = Boolean(
-    camera_position.is_valid &&
-    camera_position.latitude !== null &&
-    camera_position.longitude !== null
-  )
+  // Bật/tắt dạng thanh thu của thanh điều khiển trên cùng để tăng diện tích hiển thị bản đồ
+  const [isTopBarCollapsed, setIsTopBarCollapsed] = useState<boolean>(() => {
+    try {
+      return localStorage.getItem('kvc_topbar_collapsed') === 'true'
+    } catch {
+      return false
+    }
+  })
+
+  const toggleTopBarCollapse = () => {
+    setIsTopBarCollapsed((prev) => {
+      const next = !prev
+      try {
+        localStorage.setItem('kvc_topbar_collapsed', String(next))
+      } catch {
+        // ignore
+      }
+      return next
+    })
+  }
+
+  // Phím tắt 'T' để thu gọn / mở rộng nhanh thanh điều khiển nổi
+  React.useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (
+        e.target instanceof HTMLInputElement ||
+        e.target instanceof HTMLTextAreaElement ||
+        e.target instanceof HTMLSelectElement
+      ) {
+        return
+      }
+      if (e.key === 't' || e.key === 'T') {
+        toggleTopBarCollapse()
+      }
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [])
 
   const isLocalGrid = target?.coordinate_frame === 'LOCAL_GRID'
-
-  const hasValidTarget = Boolean(
-    has_target &&
-    target &&
-    target.pos_valid &&
-    ((target.coordinate_frame === 'LOCAL_GRID' && target.local_x_cm !== null) ||
-      (target.latitude !== null && target.longitude !== null))
-  )
 
   // Lọc các cảnh báo nguy cấp đang hoạt động chưa tiếp nhận
   const criticalAlert = alerts.find(
@@ -84,243 +108,354 @@ export const MissionPage: React.FC = () => {
   }
 
   return (
-    <div className="flex-1 min-h-0 flex flex-col p-2.5 sm:p-3 gap-2 overflow-hidden select-none">
-      {/* 1. Dải cảnh báo khẩn cấp nổi bật nếu có sự cố (Review điểm 8) */}
-      {criticalAlert && (
-        <div
-          className={`px-3 py-1.5 rounded-lg border flex items-center justify-between gap-2 text-xs shrink-0 shadow-xs ${
-            criticalAlert.level === 'CRITICAL'
-              ? 'bg-red-500/15 border-red-500/40 text-red-700 dark:text-red-300'
-              : 'bg-amber-500/15 border-amber-500/40 text-amber-800 dark:text-amber-300'
-          }`}
-          role="alert"
-        >
-          <div className="flex items-center gap-2 min-w-0">
-            {criticalAlert.level === 'CRITICAL' ? (
-              <AlertCircle className="h-4 w-4 shrink-0 text-red-500" />
-            ) : (
-              <AlertTriangle className="h-4 w-4 shrink-0 text-amber-500" />
-            )}
-            <span className="font-mono font-bold shrink-0">[{criticalAlert.code}]</span>
-            <span className="truncate">{criticalAlert.message}</span>
+    <div className="relative flex-1 w-full h-full min-h-0 overflow-hidden select-none bg-background">
+      {/* 1. KHUNG BẢN ĐỒ / RADAR ĐỘC LẬP TỪNG CHẾ ĐỘ HOẶC SONG SONG */}
+      <div className="w-full h-full min-h-0 overflow-hidden">
+        {viewportMode === 'MAP' && <GpsMapPanel hideHeader />}
+        {viewportMode === 'RADAR' && (
+          <LocalRadarPanel onSwitchToMap={() => setViewportMode('MAP')} hideHeader />
+        )}
+        {viewportMode === 'SPLIT' && (
+          <div className="w-full flex flex-col md:flex-row gap-2 h-full min-h-0 overflow-hidden p-1 sm:p-2">
+            <div className="flex-1 h-1/2 md:h-full min-h-0 overflow-hidden relative rounded-xl border border-white/15 shadow-xl bg-slate-950">
+              <div className="absolute top-14 left-3 z-20 px-2.5 py-0.5 rounded-md bg-slate-900/90 backdrop-blur-md text-[10px] font-mono text-cyan-300 font-bold border border-cyan-500/40 shadow">
+                🌐 KHUNG BẢN ĐỒ VỆ TINH (WGS-84)
+              </div>
+              <GpsMapPanel hideHeader />
+            </div>
+            <div className="flex-1 h-1/2 md:h-full min-h-0 overflow-hidden relative rounded-xl border border-white/15 shadow-xl bg-slate-950">
+              <div className="absolute top-14 left-3 z-20 px-2.5 py-0.5 rounded-md bg-slate-900/90 backdrop-blur-md text-[10px] font-mono text-emerald-300 font-bold border border-emerald-500/40 shadow">
+                🎯 KHUNG RADAR SA BÀN (LOCAL GRID)
+              </div>
+              <LocalRadarPanel onSwitchToMap={() => setViewportMode('MAP')} hideHeader />
+            </div>
           </div>
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={() => dispatch({ type: 'ACKNOWLEDGE_ALERT', payload: criticalAlert.id })}
-            className="h-6 px-2 text-xs font-semibold shrink-0 border-current hover:bg-black/10 dark:hover:bg-white/10"
-          >
-            Tiếp nhận (ACK)
-          </Button>
-        </div>
-      )}
+        )}
+      </div>
 
-      {/* 2. Thanh điều khiển tối giản & Toolbar nhiệm vụ */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-1.5 border-b border-border/50 shrink-0">
-        {/* Nhóm trái: Tiêu đề, Nguồn dữ liệu, Kết nối, Phiên/Kịch bản */}
-        <div className="flex items-center gap-2 flex-wrap min-w-0">
-          <h1 className="text-base sm:text-lg font-bold tracking-tight text-foreground truncate">
-            Giám sát định vị tải nhiệm vụ
-          </h1>
-
-          {/* Nhãn nguồn dữ liệu: MOCK / REAL / REPLAY */}
-          <Badge
-            variant="outline"
-            className={`text-xs px-2 py-0.5 font-mono ${
-              source_mode === 'MOCK'
-                ? 'border-purple-500/40 text-purple-600 dark:text-purple-300 bg-purple-500/10'
-                : source_mode === 'REPLAY'
-                ? 'border-cyan-500/40 text-cyan-600 dark:text-cyan-400 bg-cyan-500/10'
-                : 'border-emerald-500/40 text-emerald-600 dark:text-emerald-400 bg-emerald-500/10'
+      {/* 2. DẢI CẢNH BÁO NỔI TRUNG TÂM (Chỉ hiện khi có cảnh báo nguy cấp hoặc nhận hệ local) */}
+      <div className="absolute top-14 left-1/2 -translate-x-1/2 z-[420] w-[92%] max-w-xl pointer-events-auto flex flex-col gap-1.5 items-center">
+        {criticalAlert && (
+          <div
+            className={`w-full px-3 py-1 rounded-xl border flex items-center justify-between gap-2 text-xs shadow-xl backdrop-blur-md ${
+              criticalAlert.level === 'CRITICAL'
+                ? 'bg-red-950/85 border-red-500/50 text-red-200'
+                : 'bg-amber-950/85 border-amber-500/50 text-amber-200'
             }`}
+            role="alert"
           >
-            Nguồn: {source_mode}
-          </Badge>
+            <div className="flex items-center gap-1.5 min-w-0">
+              {criticalAlert.level === 'CRITICAL' ? (
+                <AlertCircle className="h-4 w-4 shrink-0 text-red-400" />
+              ) : (
+                <AlertTriangle className="h-4 w-4 shrink-0 text-amber-400" />
+              )}
+              <span className="font-mono font-bold shrink-0">[{criticalAlert.code}]</span>
+              <span className="truncate">{criticalAlert.message}</span>
+            </div>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => dispatch({ type: 'ACKNOWLEDGE_ALERT', payload: criticalAlert.id })}
+              className="h-5 px-2 text-[10px] font-semibold shrink-0 border-current hover:bg-white/10"
+            >
+              Tiếp nhận (ACK)
+            </Button>
+          </div>
+        )}
 
-          {/* Trạng thái kết nối */}
-          <Badge
-            variant={ws_connected ? 'outline' : 'destructive'}
-            className={`text-xs px-2 py-0.5 font-mono ${
-              ws_connected
-                ? 'border-emerald-500/40 text-emerald-600 dark:text-emerald-400 bg-emerald-500/10'
-                : ''
-            }`}
-          >
-            {ws_connected ? 'LINK OK' : 'MẤT KẾT NỐI'}
-          </Badge>
+        {isLocalGrid && viewportMode === 'MAP' && (
+          <div className="bg-cyan-950/90 backdrop-blur-md border border-cyan-500/50 px-3 py-1 rounded-full text-xs text-cyan-200 flex items-center gap-2 shadow-lg animate-in fade-in slide-in-from-top-2">
+            <span>
+              🎯 Nhận gói tin hệ local <strong>LOCAL_GRID</strong> (#{target?.track_id ?? '101'}: X={target?.local_x_cm ?? 0}cm, Y={target?.local_y_cm ?? 0}cm)
+            </span>
+            <button
+              type="button"
+              onClick={() => setViewportMode('RADAR')}
+              className="text-xs font-bold text-cyan-400 underline hover:text-cyan-300 cursor-pointer ml-1"
+            >
+              Xem Radar &rarr;
+            </button>
+          </div>
+        )}
+      </div>
 
-          {/* Tên phiên hoặc kịch bản */}
-          <span className="text-xs font-mono text-muted-foreground truncate hidden md:inline">
-            • {sessionOrScenarioName}
-          </span>
-        </div>
-
-        {/* Nhóm phải: Chuyển đổi Khung nhìn, Tâm UAV, Tâm Target & Toggle Video */}
-        <div className="flex items-center gap-1.5 sm:gap-2 shrink-0 flex-wrap">
-          {/* Nhóm chuyển đổi khung nhìn định vị (Bản đồ WGS-84 ↔ Radar Hệ Local ↔ Chia đôi) */}
-          <div className="flex items-center bg-muted/60 p-0.5 rounded-lg border border-border/50">
+      {/* 3. THANH ĐIỀU KHIỂN NỔI TRÊN BẢN ĐỒ — HỖ TRỢ DẠNG THANH THU ĐỂ TĂNG DIỆN TÍCH BẢN ĐỒ */}
+      {isTopBarCollapsed ? (
+        /* DẠNG THANH THU (COLLAPSED): Capsule chip siêu gọn nằm sát góc trên bên trái */
+        <div className="absolute top-3 left-3 z-[410] flex items-center gap-1.5 p-1 rounded-xl bg-slate-950/85 backdrop-blur-md border border-white/20 shadow-xl text-slate-100 pointer-events-auto animate-in fade-in zoom-in-95 duration-150">
+          {/* Nhóm nút micro chuyển view nhanh */}
+          <div className="flex items-center bg-white/10 p-0.5 rounded-lg border border-white/10 h-7">
             <Button
               variant={viewportMode === 'MAP' ? 'default' : 'ghost'}
               size="sm"
               onClick={() => setViewportMode('MAP')}
-              className="min-h-[36px] h-9 px-2.5 text-xs sm:text-sm gap-1.5 font-semibold focus-visible:ring-2 focus-visible:ring-primary cursor-pointer"
+              className={`h-6 px-1.5 text-[11px] gap-1 font-semibold cursor-pointer ${
+                viewportMode === 'MAP'
+                  ? 'bg-cyan-600 text-white shadow-xs'
+                  : 'text-slate-300 hover:text-white hover:bg-white/10'
+              }`}
               aria-label="Xem Bản đồ WGS-84"
             >
-              <Compass className="h-4 w-4" />
-              <span className="hidden sm:inline">Bản đồ WGS-84</span>
+              <Compass className="h-3 w-3" />
+              <span className="hidden md:inline">GPS</span>
             </Button>
 
             <Button
               variant={viewportMode === 'RADAR' ? 'default' : 'ghost'}
               size="sm"
               onClick={() => setViewportMode('RADAR')}
-              className="min-h-[36px] h-9 px-2.5 text-xs sm:text-sm gap-1.5 font-semibold focus-visible:ring-2 focus-visible:ring-primary cursor-pointer"
-              aria-label="Xem Radar Hệ Local"
+              className={`h-6 px-1.5 text-[11px] gap-1 font-semibold cursor-pointer ${
+                viewportMode === 'RADAR'
+                  ? 'bg-cyan-600 text-white shadow-xs'
+                  : 'text-slate-300 hover:text-white hover:bg-white/10'
+              }`}
+              aria-label="Xem Radar Sa Bàn (Hệ Local)"
             >
-              <Radio className="h-4 w-4" />
-              <span className="hidden sm:inline">Radar Hệ Local</span>
+              <Radio className="h-3 w-3" />
+              <span className="hidden md:inline">Radar</span>
             </Button>
 
             <Button
               variant={viewportMode === 'SPLIT' ? 'default' : 'ghost'}
               size="sm"
               onClick={() => setViewportMode('SPLIT')}
-              className="min-h-[36px] h-9 px-2 text-xs sm:text-sm gap-1 font-semibold hidden xl:inline-flex focus-visible:ring-2 focus-visible:ring-primary cursor-pointer"
+              className={`h-6 px-1 text-[11px] gap-1 font-semibold hidden xl:inline-flex cursor-pointer ${
+                viewportMode === 'SPLIT'
+                  ? 'bg-cyan-600 text-white shadow-xs'
+                  : 'text-slate-300 hover:text-white hover:bg-white/10'
+              }`}
               aria-label="Xem Chia đôi Bản đồ và Radar"
             >
-              <Columns className="h-4 w-4" />
-              <span>Chia đôi</span>
+              <Columns className="h-3 w-3" />
             </Button>
           </div>
 
-          {/* Nút "Đặt lại khung nhìn" (Tâm tải UAV) */}
-          <Button
+          <Badge
             variant="outline"
-            size="sm"
-            onClick={handleTriggerResetView}
-            disabled={viewportMode === 'MAP' && !hasGpsFix}
-            className="min-h-[36px] h-9 px-2.5 text-xs sm:text-sm gap-1.5 border-border hover:border-primary/50 text-foreground font-semibold shadow-xs cursor-pointer focus-visible:ring-2 focus-visible:ring-primary"
-            title="Đưa tâm bản đồ hoặc local về vị trí tải nhiệm vụ UAV"
-            aria-label="Đặt lại khung nhìn"
+            className="text-[10px] px-1.5 py-0 h-5 font-mono border-white/20 text-slate-300"
           >
-            <LocateFixed className="h-4 w-4 text-primary" />
-            <span className="hidden md:inline">Tâm UAV</span>
-            <span className="md:hidden">Đặt lại</span>
-          </Button>
+            {source_mode}
+          </Badge>
 
-          {/* Nút "Tâm Mục tiêu" (Focus Target riêng theo Review điểm 4) */}
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleTriggerFocusTarget}
-            disabled={!hasValidTarget}
-            className="min-h-[36px] h-9 px-2.5 text-xs sm:text-sm gap-1.5 border-border hover:border-cyan-500/50 text-foreground font-semibold shadow-xs cursor-pointer focus-visible:ring-2 focus-visible:ring-primary disabled:opacity-50"
-            title={hasValidTarget ? 'Đưa tâm bản đồ về mục tiêu cứu nạn' : 'Chưa có tọa độ mục tiêu hợp lệ để focus'}
-            aria-label="Tâm mục tiêu"
-          >
-            <Crosshair className="h-4 w-4 text-rose-500" />
-            <span className="hidden md:inline">Tâm Target</span>
-          </Button>
+          {!ws_connected && (
+            <Badge variant="destructive" className="text-[10px] px-1.5 py-0 h-5 font-mono">
+              MẤT KẾT NỐI
+            </Badge>
+          )}
 
-          {/* Nút bật/tắt Video phụ (Review điểm 1: Video phụ thu gọn/ẩn khi không có stream) */}
+          {/* Nút bật/tắt Video PiP nhỏ gọn */}
           <Button
-            variant={showVideoFeed ? 'secondary' : 'outline'}
-            size="sm"
+            variant={showVideoFeed ? 'secondary' : 'ghost'}
+            size="icon"
             onClick={() => setShowVideoFeed(!showVideoFeed)}
-            className="min-h-[36px] h-9 px-2.5 text-xs sm:text-sm gap-1.5 border-border font-medium shadow-xs cursor-pointer focus-visible:ring-2 focus-visible:ring-primary"
-            title={showVideoFeed ? 'Thu gọn video tham chiếu' : 'Mở video quang học tham chiếu'}
+            className={`h-6 w-6 cursor-pointer ${
+              showVideoFeed
+                ? 'bg-cyan-500/20 text-cyan-300'
+                : 'text-slate-300 hover:text-white hover:bg-white/10'
+            }`}
+            title={showVideoFeed ? 'Thu gọn video PiP' : 'Mở video quang học PiP'}
             aria-label="Bật tắt Video phụ"
           >
             {showVideoFeed ? (
-              <Video className="h-4 w-4 text-primary" />
+              <Video className="h-3 w-3 text-cyan-400" />
             ) : (
-              <VideoOff className="h-4 w-4 text-muted-foreground" />
+              <VideoOff className="h-3 w-3 text-slate-400" />
             )}
-            <span className="hidden lg:inline">Video phụ</span>
+          </Button>
+
+          {/* Nút Mở rộng lại thanh điều khiển */}
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={toggleTopBarCollapse}
+            className="h-6 px-2 text-[11px] gap-1 font-semibold text-cyan-400 hover:text-cyan-300 hover:bg-white/10 rounded-lg cursor-pointer ml-1"
+            aria-label="Mở rộng thanh điều khiển"
+            title="Mở rộng đầy đủ thanh điều khiển tác chiến (Phím T)"
+          >
+            <ChevronDown className="h-3.5 w-3.5" />
+            <span className="hidden sm:inline">Mở rộng</span>
           </Button>
         </div>
-      </div>
+      ) : (
+        /* DẠNG MỞ RỘNG (EXPANDED): Thanh điều khiển nổi kính mờ trải đều 2 góc trên bản đồ */
+        <div className="absolute top-3 left-3 right-3 z-[410] flex items-center justify-between gap-2 pointer-events-none">
+          {/* Góc trên trái: Tiêu đề + InfoTip + Nguồn + Kết nối + Session */}
+          <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-950/85 backdrop-blur-md border border-white/20 shadow-xl text-slate-100 max-w-[calc(100vw-420px)] pointer-events-auto">
+            <h1 className="text-xs sm:text-sm font-bold tracking-tight text-white truncate">
+              Giám sát định vị tải nhiệm vụ
+            </h1>
+            <InfoTip text="Bàn làm việc tác chiến trực tiếp: Khung nhìn bản đồ 100% full-width, radar sa bàn hệ local, mục tiêu phát hiện Người/Tàu và dock bàn giao cứu nạn SAR." />
 
-      <ReplayControls />
+            {/* Nhãn nguồn dữ liệu: MOCK / REAL / REPLAY */}
+            <Badge
+              variant="outline"
+              className={`text-[10px] px-1.5 py-0 h-4.5 font-mono shrink-0 ${
+                source_mode === 'MOCK'
+                  ? 'border-purple-400/40 text-purple-300 bg-purple-500/20'
+                  : source_mode === 'REPLAY'
+                  ? 'border-cyan-400/40 text-cyan-300 bg-cyan-500/20'
+                  : 'border-emerald-400/40 text-emerald-300 bg-emerald-500/20'
+              }`}
+            >
+              Nguồn: {source_mode}
+            </Badge>
 
-      {/* Thông báo thông minh: Gợi ý chuyển sang Radar khi nhận dữ liệu hệ local LOCAL_GRID */}
-      {isLocalGrid && viewportMode === 'MAP' && (
-        <div className="bg-cyan-500/10 border border-cyan-500/30 px-3 py-1.5 rounded-lg text-xs text-cyan-800 dark:text-cyan-300 flex items-center justify-between shrink-0 shadow-xs">
-          <span className="truncate">
-            🎯 Đang nhận gói tin hệ local <strong>LOCAL_GRID</strong> (Mục tiêu #{target?.track_id ?? '101'}:{' '}
-            X={target?.local_x_cm ?? 0}cm, Y={target?.local_y_cm ?? 0}cm).
-          </span>
-          <button
-            type="button"
-            onClick={() => setViewportMode('RADAR')}
-            className="text-xs font-bold text-cyan-600 dark:text-cyan-400 underline hover:text-cyan-500 ml-2 shrink-0 cursor-pointer"
-          >
-            Chuyển sang Radar Hệ Local &rarr;
-          </button>
+            {/* Trạng thái kết nối (Chỉ hiện khi mất kết nối để tránh lặp với Header) */}
+            {!ws_connected && (
+              <Badge
+                variant="destructive"
+                className="text-[10px] px-1.5 py-0 h-4.5 font-mono shrink-0"
+              >
+                MẤT KẾT NỐI
+              </Badge>
+            )}
+
+            {/* Tên phiên rút gọn */}
+            <span className="text-[11px] font-mono text-slate-400 truncate hidden xl:inline max-w-[160px]">
+              • {sessionOrScenarioName}
+            </span>
+          </div>
+
+          {/* Góc trên phải: Chuyển đổi Viewport + Video PiP + Nút Thu gọn dạng thanh thu */}
+          <div className="flex items-center gap-1.5 p-1 rounded-xl bg-slate-950/85 backdrop-blur-md border border-white/20 shadow-xl text-slate-100 pointer-events-auto">
+            {/* Nhóm nút chuyển đổi khung nhìn định vị (Bản đồ WGS-84 ↔ Radar Hệ Local ↔ Chia đôi) */}
+            <div className="flex items-center bg-white/10 p-0.5 rounded-lg border border-white/10 h-7">
+              <Button
+                variant={viewportMode === 'MAP' ? 'default' : 'ghost'}
+                size="sm"
+                onClick={() => setViewportMode('MAP')}
+                className={`h-6 px-2 text-[11px] gap-1 font-semibold cursor-pointer ${
+                  viewportMode === 'MAP'
+                    ? 'bg-cyan-600 text-white shadow-xs'
+                    : 'text-slate-300 hover:text-white hover:bg-white/10'
+                }`}
+                aria-label="Xem Bản đồ WGS-84"
+              >
+                <Compass className="h-3 w-3" />
+                <span className="hidden sm:inline">🌐 Bản đồ GPS (WGS-84)</span>
+                <span className="sm:hidden">GPS</span>
+              </Button>
+
+              <Button
+                variant={viewportMode === 'RADAR' ? 'default' : 'ghost'}
+                size="sm"
+                onClick={() => setViewportMode('RADAR')}
+                className={`h-6 px-2 text-[11px] gap-1 font-semibold cursor-pointer ${
+                  viewportMode === 'RADAR'
+                    ? 'bg-cyan-600 text-white shadow-xs'
+                    : 'text-slate-300 hover:text-white hover:bg-white/10'
+                }`}
+                aria-label="Xem Radar Sa Bàn (Hệ Local)"
+              >
+                <Radio className="h-3 w-3" />
+                <span className="hidden sm:inline">🎯 Radar Sa bàn (Local)</span>
+                <span className="sm:hidden">Radar</span>
+              </Button>
+
+              <Button
+                variant={viewportMode === 'SPLIT' ? 'default' : 'ghost'}
+                size="sm"
+                onClick={() => setViewportMode('SPLIT')}
+                className={`h-6 px-2 text-[11px] gap-1 font-semibold inline-flex cursor-pointer ${
+                  viewportMode === 'SPLIT'
+                    ? 'bg-cyan-600 text-white shadow-xs'
+                    : 'text-slate-300 hover:text-white hover:bg-white/10'
+                }`}
+                aria-label="Xem Hai Khung Riêng Song Song (Bản đồ + Radar)"
+              >
+                <Columns className="h-3 w-3" />
+                <span className="hidden md:inline">🪟 Hai Khung Song Song</span>
+                <span className="md:hidden">Song song</span>
+              </Button>
+            </div>
+
+            {/* Nút bật/tắt Video phụ (PiP) */}
+            <Button
+              variant={showVideoFeed ? 'secondary' : 'ghost'}
+              size="sm"
+              onClick={() => setShowVideoFeed(!showVideoFeed)}
+              className={`h-7 px-2 text-[11px] gap-1 font-medium shadow-2xs cursor-pointer border border-white/10 ${
+                showVideoFeed
+                  ? 'bg-cyan-500/20 text-cyan-300 border-cyan-500/40'
+                  : 'text-slate-300 hover:text-white hover:bg-white/10'
+              }`}
+              title={showVideoFeed ? 'Thu gọn video PiP' : 'Mở video quang học PiP'}
+              aria-label="Bật tắt Video phụ"
+            >
+              {showVideoFeed ? (
+                <Video className="h-3.5 w-3.5 text-cyan-400" />
+              ) : (
+                <VideoOff className="h-3.5 w-3.5 text-slate-400" />
+              )}
+              <span className="hidden sm:inline">Video PiP</span>
+            </Button>
+
+            {/* Nút Thu gọn thanh điều khiển dạng thanh thu */}
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={toggleTopBarCollapse}
+                  className="h-7 px-2 text-[11px] gap-1 text-cyan-400 hover:text-cyan-300 hover:bg-white/10 rounded-lg cursor-pointer border border-cyan-500/30 font-semibold"
+                  aria-label="Thu gọn thanh điều khiển"
+                  title="Thu gọn thanh điều khiển để tăng tối đa diện tích bản đồ (Phím T)"
+                >
+                  <ChevronUp className="h-3.5 w-3.5" />
+                  <span className="hidden sm:inline">Thu gọn</span>
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side="bottom">
+                <p className="text-xs">Thu gọn thanh điều khiển để tăng tối đa diện tích bản đồ (Phím T)</p>
+              </TooltipContent>
+            </Tooltip>
+          </div>
         </div>
       )}
 
-      {/* 3. Bố cục đề xuất theo UX Review: Vùng radar/map 65–75% + Panel target/health/alerts 25–35% */}
-      <div className="flex-1 flex flex-col lg:flex-row gap-2.5 min-h-0 overflow-hidden">
-        {/* Vùng chính (65%–75% chiều rộng trên desktop): Radar / Map / Split */}
-        <div className="flex-1 lg:w-[68%] xl:w-[72%] h-full min-h-0 flex flex-col overflow-hidden">
-          {showVideoFeed ? (
-            /* Khi bật Video phụ: Chia phần lớn cho Map/Radar, phần nhỏ cho Video */
-            <div className="flex-1 flex flex-col md:flex-row gap-2.5 min-h-0 h-full overflow-hidden">
-              <div className="flex-1 h-3/5 md:h-full min-h-0 overflow-hidden">
-                {viewportMode === 'MAP' && <GpsMapPanel />}
-                {viewportMode === 'RADAR' && (
-                  <LocalRadarPanel onSwitchToMap={() => setViewportMode('MAP')} />
-                )}
-                {viewportMode === 'SPLIT' && (
-                  <div className="flex-1 flex flex-col xl:flex-row gap-2 min-h-0 h-full overflow-hidden">
-                    <div className="flex-1 h-1/2 xl:h-full min-h-0 overflow-hidden">
-                      <GpsMapPanel />
-                    </div>
-                    <div className="flex-1 h-1/2 xl:h-full min-h-0 overflow-hidden">
-                      <LocalRadarPanel onSwitchToMap={() => setViewportMode('MAP')} />
-                    </div>
-                  </div>
-                )}
-              </div>
-              <div className="w-full md:w-72 lg:w-80 h-2/5 md:h-full min-h-0 shrink-0 overflow-hidden">
-                <VideoPanel />
-              </div>
-            </div>
-          ) : (
-            /* Khi ẩn Video phụ (mặc định): Tối đa hóa 100% diện tích cho Radar / Map */
-            <div className="flex-1 h-full min-h-0 flex flex-col overflow-hidden">
-              {viewportMode === 'MAP' && <GpsMapPanel />}
-              {viewportMode === 'RADAR' && (
-                <LocalRadarPanel onSwitchToMap={() => setViewportMode('MAP')} />
-              )}
-              {viewportMode === 'SPLIT' && (
-                <div className="flex-1 flex flex-col xl:flex-row gap-2.5 min-h-0 h-full overflow-hidden">
-                  <div className="flex-1 h-1/2 xl:h-full min-h-0 overflow-hidden">
-                    <GpsMapPanel />
-                  </div>
-                  <div className="flex-1 h-1/2 xl:h-full min-h-0 overflow-hidden">
-                    <LocalRadarPanel onSwitchToMap={() => setViewportMode('MAP')} />
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
+      {/* 5. GÓC DƯỚI BÊN TRÁI: Thanh HUD kính mờ thu thập gói tin thời gian thực (LiDAR, IMU, GPS, LoRa, SAR Handover) */}
+      <BottomTacticalDock
+        showVideoFeed={showVideoFeed}
+        onToggleVideoFeed={() => setShowVideoFeed(!showVideoFeed)}
+      />
+
+      {/* 6. GÓC DƯỚI BÊN PHẢI: Cụm điều khiển nổi Đặt lại khung nhìn UAV & Tâm Mục tiêu */}
+      <FloatingMapControls
+        onResetView={handleTriggerResetView}
+        onFocusTarget={handleTriggerFocusTarget}
+      />
+
+      {/* 7. KHUNG NỔI VIDEO PICTURE-IN-PICTURE (PiP) (Khi người dùng mở video quang học) */}
+      {showVideoFeed && (
+        <div
+          className="absolute top-13 left-3 z-[410] w-72 sm:w-80 md:w-96 rounded-xl border border-white/20 bg-slate-950/95 backdrop-blur-md shadow-2xl overflow-hidden flex flex-col animate-in fade-in zoom-in-95 duration-200"
+          role="dialog"
+          aria-label="Cửa sổ Video PiP"
+        >
+          <div className="flex items-center justify-between px-3 py-1.5 bg-white/5 border-b border-white/10">
+            <span className="text-xs font-semibold text-white flex items-center gap-1.5">
+              <Video className="h-3.5 w-3.5 text-cyan-400" />
+              Video tham chiếu
+              <Badge variant="outline" className="text-[10px] px-1 py-0 h-4 font-mono text-cyan-400 border-cyan-400/40">
+                PiP
+              </Badge>
+            </span>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setShowVideoFeed(false)}
+              className="h-6 w-6 text-slate-400 hover:text-white cursor-pointer"
+              title="Đóng video PiP"
+            >
+              <X className="h-3.5 w-3.5" />
+            </Button>
+          </div>
+          <div className="h-48 sm:h-56 md:h-60 overflow-hidden">
+            <VideoPanel />
+          </div>
         </div>
-
-        {/* Panel Tác chiến bên cạnh (25%–35% trên desktop, xếp dưới trên màn hình nhỏ):
-            Chi tiết mục tiêu bàn giao cứu nạn + Vị trí tải UAV + Cảnh báo nhanh */}
-        <div className="w-full lg:w-[32%] xl:w-[28%] lg:max-w-md h-auto lg:h-full min-h-0 flex flex-col gap-2.5 overflow-y-auto shrink-0 pr-0.5">
-          {/* 1. Dữ liệu bàn giao cứu nạn chính: Mục tiêu cứu nạn */}
-          <TargetDetailsPanel />
-
-          {/* 2. Vị trí & Trạng thái cảm biến tải UAV */}
-          <CurrentPositionPanel onResetView={handleTriggerResetView} />
-
-          {/* 3. Cảnh báo kỹ thuật khẩn cấp */}
-          <ActiveAlertsQuickPanel />
-        </div>
-      </div>
+      )}
     </div>
   )
 }

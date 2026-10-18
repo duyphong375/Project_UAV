@@ -23,6 +23,7 @@ export const TargetDetailsPanel: React.FC<{ className?: string }> = ({ className
     switch (classNameStr) {
       case 'person':
         return <User className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+      case 'boat':
       case 'lifebuoy':
         return <LifeBuoy className="h-4 w-4 text-cyan-600 dark:text-cyan-400" />
       default:
@@ -33,9 +34,10 @@ export const TargetDetailsPanel: React.FC<{ className?: string }> = ({ className
   const getTargetLabel = (classNameStr?: string) => {
     switch (classNameStr) {
       case 'person':
-        return 'Người trôi dạt (Person)'
+        return 'Người gặp nạn (Person)'
+      case 'boat':
       case 'lifebuoy':
-        return 'Phao cứu sinh (Lifebuoy)'
+        return 'Tàu thuyền (Boat / Vessel)'
       default:
         return 'Chưa phân loại'
     }
@@ -110,6 +112,7 @@ export const TargetDetailsPanel: React.FC<{ className?: string }> = ({ className
   return (
     <Panel
       title="Mục tiêu cứu nạn (Target)"
+      infoTip="Chi tiết mục tiêu Người gặp nạn hoặc Tàu thuyền phát hiện bởi AI: độ tin cậy, cự ly, góc lệch, tọa độ WGS-84/Local và nút sao chép bàn giao cứu nạn (SAR Handover)."
       icon={<Crosshair className="h-4 w-4 text-cyan-600 dark:text-cyan-400" />}
       className={`h-auto shrink-0 shadow-xs border-border ${className}`}
       headerRight={
@@ -137,7 +140,7 @@ export const TargetDetailsPanel: React.FC<{ className?: string }> = ({ className
           <Target className="h-8 w-8 stroke-[1.5] text-muted-foreground/40" />
           <span className="text-sm font-semibold text-foreground">Không có mục tiêu cứu nạn trong tầm nhìn</span>
           <span className="text-xs text-muted-foreground max-w-xs">
-            Hệ thống AI đang liên tục rà quét mặt nước tìm kiếm người trôi dạt và phao cứu sinh...
+            Hệ thống AI đang liên tục rà quét mặt nước tìm kiếm người gặp nạn (Class 1) và tàu thuyền (Class 2)...
           </span>
         </div>
       ) : (

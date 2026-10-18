@@ -24,9 +24,10 @@ export const MapLayerSwitcher: React.FC<MapLayerSwitcherProps> = ({
   className = '',
 }) => {
   const is2D = mode === '2D'
+  const positionClass = className || 'bottom-24 right-3 z-[390]'
 
   return (
-    <div className={`absolute bottom-3 left-3 z-20 select-none ${className}`}>
+    <div className={`absolute select-none ${positionClass}`}>
       <Tooltip>
         <TooltipTrigger asChild>
           <button

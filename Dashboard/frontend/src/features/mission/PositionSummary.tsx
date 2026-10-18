@@ -148,10 +148,10 @@ export const PositionSummary: React.FC<{ className?: string }> = ({ className = 
 
       <div className="h-4 w-[1px] bg-border shrink-0" />
 
-      {/* 6. Tuổi dữ liệu (Packet Age) theo quy ước Xanh / Vàng / Đỏ */}
-      <div className="flex items-center gap-1 font-mono text-xs shrink-0" title="Tuổi gói tin gần nhất">
+      {/* 6. Độ trễ tín hiệu (Packet Latency) theo quy ước Xanh / Vàng / Đỏ */}
+      <div className="flex items-center gap-1 font-mono text-xs shrink-0" title="Độ trễ tín hiệu gói tin gần nhất">
         <Clock className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-        <span className="text-muted-foreground font-sans text-xs font-semibold hidden sm:inline">Tuổi:</span>
+        <span className="text-muted-foreground font-sans text-xs font-semibold hidden sm:inline">Trễ:</span>
         <Badge
           variant="outline"
           className={`py-0.5 px-1.5 font-mono text-xs font-bold ${
@@ -162,7 +162,7 @@ export const PositionSummary: React.FC<{ className?: string }> = ({ className = 
               : 'border-emerald-500/50 text-emerald-600 dark:text-emerald-400 bg-emerald-500/10'
           }`}
         >
-          {rx_age_ms} ms
+          {is_stale || rx_age_ms > 3000 ? `${(rx_age_ms / 1000).toFixed(1)}s` : `${rx_age_ms} ms`}
         </Badge>
       </div>
 

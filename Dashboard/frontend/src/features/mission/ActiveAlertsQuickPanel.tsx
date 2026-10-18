@@ -22,6 +22,7 @@ export const ActiveAlertsQuickPanel: React.FC = () => {
   return (
     <Panel
       title="Cảnh báo cần xử lý"
+      infoTip="Danh sách cảnh báo kỹ thuật tải bay (pin yếu, mất kết nối LoRa, độ cao ngoài vùng an toàn) hỗ trợ xác nhận và xử lý nhanh."
       icon={<AlertTriangle className="h-4 w-4 text-amber-500" />}
       className="h-auto shrink-0 shadow-xs"
       headerRight={

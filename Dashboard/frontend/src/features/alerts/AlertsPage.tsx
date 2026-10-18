@@ -71,6 +71,7 @@ export const AlertsPage: React.FC = () => {
       <PageHeader
         breadcrumb="Dữ liệu · Cảnh báo hệ thống"
         title="Trung tâm cảnh báo kỹ thuật"
+        infoTip="Hệ thống giám sát và quản lý toàn bộ cảnh báo về mức pin tải, ngắt kết nối LoRa/Wi-Fi, độ lệch cảm biến LiDAR và khóa vệ tinh GNSS."
         subtitle="Tiếp nhận, phân loại và xử lý các sự cố an toàn tải nhiệm vụ, cảm biến và kênh truyền."
         badge={
           <Badge

@@ -10,6 +10,7 @@ import {
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { PageHeader } from '@/components/shared/PageHeader'
+import { InfoTip } from '@/components/shared/InfoTip'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -71,6 +72,7 @@ export const SettingsPage: React.FC = () => {
       <PageHeader
         breadcrumb="Hệ thống · Cài đặt giao diện"
         title="Cài đặt giao diện & Tham số GCS"
+        infoTip="Cấu hình hiển thị giao diện tác chiến, chế độ Sáng/Tối, kịch bản diễn tập giả lập và tham số kết nối trạm GCS."
         subtitle="Tùy biến hiển thị chiến thuật, bố cục trạm điều khiển và cấu hình kết nối mạng mặt đất."
         actions={
           <Button
@@ -89,9 +91,12 @@ export const SettingsPage: React.FC = () => {
         {/* Khối 1: Giao diện & Hiển thị */}
         <Card className="border-border bg-card shadow-xs">
           <CardHeader className="py-3 px-4 border-b border-border/60 bg-muted/20">
-            <CardTitle className="text-xs font-semibold text-foreground uppercase tracking-wider flex items-center gap-2">
-              <Monitor className="h-4 w-4 text-cyan-500" />
-              <span>Chủ đề & Bố cục hiển thị</span>
+            <CardTitle className="text-xs font-semibold text-foreground uppercase tracking-wider flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Monitor className="h-4 w-4 text-cyan-500" />
+                <span>Chủ đề & Bố cục hiển thị</span>
+                <InfoTip text="Tùy biến theme giao diện Sáng/Tối, vệt quỹ đạo bay lịch sử và tự động cuộn bản đồ theo tâm UAV." />
+              </div>
             </CardTitle>
           </CardHeader>
           <CardContent className="p-4 flex flex-col gap-4 text-xs">
@@ -212,9 +217,12 @@ export const SettingsPage: React.FC = () => {
         {/* Khối 2: Nguồn Dữ Liệu & Kịch Bản Thử Nghiệm MOCK */}
         <Card className="border-border bg-card shadow-xs">
           <CardHeader className="py-3 px-4 border-b border-border/60 bg-muted/20">
-            <CardTitle className="text-xs font-semibold text-foreground uppercase tracking-wider flex items-center gap-2">
-              <Database className="h-4 w-4 text-primary" />
-              <span>Nguồn dữ liệu & Mô phỏng</span>
+            <CardTitle className="text-xs font-semibold text-foreground uppercase tracking-wider flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Database className="h-4 w-4 text-primary" />
+                <span>Nguồn dữ liệu & Mô phỏng</span>
+                <InfoTip text="Chọn nguồn dữ liệu: chế độ MOCK (chạy độc lập với kịch bản diễn tập mô phỏng) hoặc REAL (nhận RF Telemetry 32-byte thực địa)." />
+              </div>
             </CardTitle>
           </CardHeader>
           <CardContent className="p-4 flex flex-col gap-4 text-xs">
@@ -313,9 +321,12 @@ export const SettingsPage: React.FC = () => {
         {/* Khối 3: Địa chỉ mạng & Kết nối Backend */}
         <Card className="border-border bg-card shadow-xs md:col-span-2">
           <CardHeader className="py-3 px-4 border-b border-border/60 bg-muted/20">
-            <CardTitle className="text-xs font-semibold text-foreground uppercase tracking-wider flex items-center gap-2">
-              <Globe className="h-4 w-4 text-muted-foreground" />
-              <span>Cấu hình kết nối mạng trạm GCS</span>
+            <CardTitle className="text-xs font-semibold text-foreground uppercase tracking-wider flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Globe className="h-4 w-4 text-muted-foreground" />
+                <span>Cấu hình kết nối mạng trạm GCS</span>
+                <InfoTip text="Cấu hình địa chỉ WebSocket IP/Port của trạm điều khiển mặt đất GCS kết nối với Gateway ESP32." />
+              </div>
             </CardTitle>
           </CardHeader>
           <CardContent className="p-4 flex flex-col gap-3 text-xs">

@@ -26,7 +26,7 @@ class Telemetry(StrictModel):
 class Target(StrictModel):
     track_id: Annotated[int, Field(ge=1, le=65535)] | None = None
     class_id: Annotated[int, Field(ge=0, le=2)] = 0
-    class_name: Literal["unknown", "person", "lifebuoy"] = "unknown"
+    class_name: Literal["unknown", "person", "lifebuoy", "boat"] = "unknown"
     confidence: Percent | None = None
     target_confirmed: bool = False
     pos_valid: bool = False

@@ -15,6 +15,7 @@ build/
 build_*/
 coverage/
 *.log
+.vscode/
 
 # Hardware outputs (keep source, constraints and project files)
 .pio/

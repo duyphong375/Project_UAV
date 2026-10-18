@@ -4,11 +4,14 @@ import {
   ArrowRight,
   CheckCircle2,
   Play,
+  Radio,
   Video,
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { useAppRouter } from '@/app/routes'
 import { Button } from '@/components/ui/button'
+import { InfoTip } from '@/components/shared/InfoTip'
+import { getEsp32PhysicalStatus } from '@/lib/connectionStatus'
 import { RecentDetectionsTable } from '@/features/telemetry/RecentDetectionsTable'
 import { TopStatCards } from '@/features/telemetry/TopStatCards'
 import { UavHardwareGaugeCard } from '@/features/telemetry/UavHardwareGaugeCard'
@@ -19,13 +22,15 @@ export const OverviewPage: React.FC = () => {
   const { navigate } = useAppRouter()
   const {
     alerts,
-    telemetry,
     session_id,
-    camera_position,
-    target,
     is_stale,
     source_mode,
+    ws_connected,
+    hardware_link,
+    rx_age_ms,
   } = state
+
+  const esp32Status = getEsp32PhysicalStatus(source_mode, ws_connected, hardware_link, is_stale, rx_age_ms)
 
   const [clockTime, setClockTime] = useState<string>('N/A')
 
@@ -47,17 +52,6 @@ export const OverviewPage: React.FC = () => {
     toast.success('Đã kích hoạt kịch bản diễn tập cứu nạn: Phát hiện người trôi dạt & bám bắt GPS.')
   }
 
-  // Không tạo tọa độ hoặc chất lượng RF khi thiếu/không hợp lệ.
-  const gpsReady = !is_stale && camera_position.is_valid && telemetry.gps_valid
-  const targetReady = !is_stale && target?.pos_valid && target.coordinate_frame === 'WGS84' && telemetry.gps_valid
-  const uavLatStr = gpsReady && camera_position.latitude !== null ? camera_position.latitude.toFixed(6) : 'N/A'
-  const uavLonStr = gpsReady && camera_position.longitude !== null ? camera_position.longitude.toFixed(6) : 'N/A'
-  const tgtLatStr = targetReady && target.latitude !== null ? target.latitude.toFixed(6) : 'N/A'
-  const tgtLonStr = targetReady && target.longitude !== null ? target.longitude.toFixed(6) : 'N/A'
-  const lidarM = !is_stale && telemetry.lidar_valid && telemetry.lidar_range_cm !== null ? (telemetry.lidar_range_cm / 100).toFixed(2) : 'N/A'
-  const rssiStr = !is_stale && telemetry.packet_rssi_dbm !== null ? telemetry.packet_rssi_dbm + ' dBm' : 'N/A'
-  const snrStr = !is_stale && telemetry.packet_snr_db !== null ? telemetry.packet_snr_db + ' dB' : 'N/A'
-
   return (
     <div className="flex-1 min-h-0 flex flex-col p-3 sm:p-5 gap-4 sm:gap-5 overflow-y-auto max-w-7xl mx-auto w-full select-none">
       {/* 1. Header Trang Tổng Quan Tác Chiến (Mission Banner Title Area) */}
@@ -75,28 +69,61 @@ export const OverviewPage: React.FC = () => {
               Tổng quan nhiệm vụ tìm kiếm cứu nạn
             </span>
           </div>
-          <h1 className="text-lg sm:text-xl font-bold tracking-tight uppercase text-foreground">
-            BẢNG ĐIỀU KHIỂN TÁC CHIẾN SAR — TỔNG QUAN PHIÊN BAY <span className="text-primary">#{session_id || 'N/A'}</span>
-          </h1>
+          <div className="flex items-center gap-2">
+            <h1 className="text-lg sm:text-xl font-bold tracking-tight uppercase text-foreground">
+              BẢNG ĐIỀU KHIỂN TÁC CHIẾN SAR — TỔNG QUAN PHIÊN BAY <span className="text-primary">#{session_id || 'N/A'}</span>
+            </h1>
+            <InfoTip text="Bảng điều khiển tác chiến SAR: Giám sát toàn diện chuỗi tìm kiếm cứu nạn từ phát hiện đối tượng Người/Tàu thuyền, định vị GPS, đo độ cao mặt nước tới pin tải." />
+          </div>
           <p className="text-xs text-muted-foreground">
             Bảng theo dõi chuỗi giá trị cứu nạn: Phát hiện → Định vị → Theo dõi → Cảnh báo → Bằng chứng.
           </p>
         </div>
 
         <div className="flex items-center gap-2 flex-wrap">
-          {/* Subsystem Health Badge */}
-          <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-card border border-border shadow-2xs">
+          {/* Subsystem Health Badge - Cập nhật trung thực tình trạng kết nối vật lý */}
+          <div
+            className={`flex items-center gap-2 px-3 py-1.5 rounded-xl bg-card border shadow-2xs ${
+              esp32Status.status === 'LIVE'
+                ? 'border-emerald-500/40'
+                : esp32Status.status === 'LOST_SIGNAL'
+                ? 'border-red-500/40 bg-red-500/5'
+                : esp32Status.status === 'WAITING'
+                ? 'border-rose-500/40 bg-rose-500/5'
+                : esp32Status.status === 'BACKEND_DOWN'
+                ? 'border-red-500/40 bg-red-500/10'
+                : 'border-purple-500/30'
+            }`}
+          >
             <span className="relative flex h-2.5 w-2.5">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-500 opacity-75" />
-              <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500" />
+              {esp32Status.pingClass && (
+                <span className={`animate-ping absolute inline-flex h-full w-full rounded-full ${esp32Status.pingClass} opacity-75`} />
+              )}
+              <span className={`relative inline-flex rounded-full h-2.5 w-2.5 ${esp32Status.dotColorClass}`} />
             </span>
             <div className="flex flex-col">
-              <span className="text-[9px] font-mono uppercase text-muted-foreground">Trạng thái kết nối tải</span>
-              <span className="font-mono text-xs text-emerald-600 dark:text-emerald-400 font-bold">
-                BÌNH THƯỜNG (8/8 SUBSYSTEMS)
+              <span className="text-[9px] font-mono uppercase text-muted-foreground">
+                {source_mode === 'REAL' ? 'Liên kết Gateway ESP32' : 'Trạng thái kết nối tải'}
+              </span>
+              <span
+                className={`font-mono text-xs font-bold ${
+                  esp32Status.status === 'LIVE'
+                    ? 'text-emerald-600 dark:text-emerald-400'
+                    : esp32Status.status === 'LOST_SIGNAL' || esp32Status.status === 'BACKEND_DOWN' || esp32Status.status === 'WAITING'
+                    ? 'text-rose-600 dark:text-rose-400'
+                    : 'text-purple-600 dark:text-purple-400'
+                }`}
+              >
+                {source_mode === 'REAL' ? esp32Status.label : 'MÔ PHỎNG (8/8 SUBSYSTEMS)'}
               </span>
             </div>
-            <CheckCircle2 className="h-4 w-4 text-primary ml-1" />
+            {esp32Status.status === 'LIVE' ? (
+              <CheckCircle2 className="h-4 w-4 text-emerald-500 ml-1" />
+            ) : esp32Status.status === 'LOST_SIGNAL' || esp32Status.status === 'BACKEND_DOWN' || esp32Status.status === 'WAITING' ? (
+              <AlertTriangle className="h-4 w-4 text-rose-500 ml-1" />
+            ) : (
+              <CheckCircle2 className="h-4 w-4 text-purple-500 ml-1" />
+            )}
           </div>
 
           {/* Action Buttons */}
@@ -140,41 +167,32 @@ export const OverviewPage: React.FC = () => {
       {/* 4. Row 3: Lịch sử nhận diện thời gian thực (Detection Log) */}
       <RecentDetectionsTable />
 
-      {/* 5. Telemetry Ticker Footer Bar */}
+      {/* 5. Telemetry Ticker Footer Bar (Single Line Console Status) */}
       <div className="shrink-0 w-full rounded-xl bg-card border border-border p-2.5 sm:p-3 overflow-hidden shadow-2xs">
         <div className="flex flex-wrap items-center justify-between gap-y-2 gap-x-4 font-mono text-[11px] text-muted-foreground">
-          <div className="flex items-center gap-1.5">
+          <div className="flex items-center gap-2">
             <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-            <span className="text-foreground font-bold uppercase">KVC STREAM:</span>
-            <span className="text-primary font-bold">
-              UAV [{uavLatStr}, {uavLonStr}]
+            <span className="text-foreground font-bold uppercase tracking-wider">KVC LIVE CONSOLE:</span>
+            <span className="text-primary font-bold">PHIÊN #{session_id || 'SES-REAL-001'}</span>
+            <InfoTip text="Băng thông tin tóm lược luồng dữ liệu thời gian thực: Mã phiên bay, kênh RF LoRa 433MHz, cổng Gateway ESP32-C3 và trạng thái kết nối tổng thể." />
+          </div>
+          <div className="flex items-center gap-1.5">
+            <span className="text-muted-foreground">KÊNH TRUYỀN:</span>
+            <span className="text-foreground font-bold">LoRa Ra-02 SX1278 (433MHz)</span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <span className="text-muted-foreground">TRẠM ĐẤT:</span>
+            <span className="text-foreground font-bold">ESP32-C3 SoftAP (:8080)</span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <span className="text-muted-foreground">LIÊN KẾT:</span>
+            <span className={`font-bold ${esp32Status.status === 'LIVE' ? 'text-emerald-500' : 'text-amber-500'}`}>
+              {esp32Status.shortLabel}
             </span>
           </div>
           <div className="flex items-center gap-1.5">
-            <span className="text-muted-foreground">TARGET #{target?.track_id ?? 'N/A'}:</span>
-            <span className="text-rose-500 font-bold">
-              [{tgtLatStr}, {tgtLonStr}]
-            </span>
-          </div>
-          <div className="flex items-center gap-1.5">
-            <span className="text-muted-foreground">LiDAR dọc tia:</span>
-            <span className="text-foreground font-bold">{lidarM} m</span>
-          </div>
-          <div className="flex items-center gap-1.5">
-            <span className="text-muted-foreground">VẬN TỐC:</span>
-            <span className="text-foreground font-bold">N/A</span>
-          </div>
-          <div className="flex items-center gap-1.5">
-            <span className="text-muted-foreground">LORA RSSI:</span>
-            <span className="text-emerald-500 font-bold">{rssiStr}</span>
-          </div>
-          <div className="flex items-center gap-1.5">
-            <span className="text-muted-foreground">SNR:</span>
-            <span className="text-emerald-500 font-bold">{snrStr}</span>
-          </div>
-          <div className="flex items-center gap-1.5">
-            <span className="text-muted-foreground">GÓI TIN:</span>
-            <span className="text-emerald-500 font-bold">{source_mode} • ABI chưa duyệt</span>
+            <span className="text-muted-foreground">CHẾ ĐỘ NGUỒN:</span>
+            <span className="text-primary font-bold">{source_mode}</span>
           </div>
         </div>
       </div>
