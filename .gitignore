@@ -32,6 +32,8 @@ Listings/
 *.vcd
 *.fst
 *.vvp
+*.uvgui.*
+*.uvguix.*
 
 # Local model weights and exported models; keep training source
 *.pt

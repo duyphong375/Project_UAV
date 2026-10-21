@@ -87,10 +87,10 @@ MCU Sonix trên UAV đóng gói 32 byte theo thứ tự Little-Endian:
 * **Byte 12–15:** Target Longitude (int32_t, $\times 10^7$ độ).
 * **Byte 16–17:** Target X Local cm (int16_t).
 * **Byte 18–19:** Target Y Local cm (int16_t).
-* **Byte 20–21:** LiDAR Distance cm (uint16_t).
+* **Byte 20–21:** Altitude Distance cm (uint16_t, siêu âm AJ-SR04M).
 * **Byte 22:** Class ID (`1`: `person`, `2`: `lifebuoy`).
 * **Byte 23:** Confidence (0–100%).
-* **Byte 24:** Sensor Status Flags (Bit 0: GPS Fix, Bit 1: LiDAR, Bit 2: IMU, Bit 3: Target Valid).
+* **Byte 24:** Sensor Status Flags (Bit 0: GPS Fix, Bit 1: Siêu âm ALT_VALID, Bit 2: IMU, Bit 3: Target Valid).
 * **Byte 25:** Battery UAV (0.1V/bit, vd 126 = 12.6V).
 * **Byte 26–29:** Reserved (4 bytes dự phòng).
 * **Byte 30–31:** **CRC-16/CCITT-FALSE** (Tính từ Byte 0 đến Byte 29).

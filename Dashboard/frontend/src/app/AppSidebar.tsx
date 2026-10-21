@@ -209,14 +209,20 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({
                 Nguồn dữ liệu
               </span>
               <Badge
-                variant={state.source_mode === 'REAL' ? 'default' : 'outline'}
+                variant="outline"
                 className={`text-[10px] px-1.5 py-0 font-mono ${
                   state.source_mode === 'MOCK'
-                    ? 'border-amber-500/40 text-amber-600 dark:text-amber-400 bg-amber-500/10'
-                    : 'bg-emerald-500 text-white'
+                    ? 'border-purple-500/40 text-purple-600 dark:text-purple-300 bg-purple-500/10'
+                    : state.source_mode === 'REPLAY'
+                    ? 'border-cyan-500/40 text-cyan-600 dark:text-cyan-300 bg-cyan-500/10'
+                    : state.hardware_link.status === 'CONNECTED'
+                    ? 'bg-emerald-600 text-white border-transparent'
+                    : 'border-rose-500/50 text-rose-600 dark:text-rose-400 bg-rose-500/10'
                 }`}
               >
-                {state.source_mode}
+                {state.source_mode === 'REAL' && state.hardware_link.status !== 'CONNECTED'
+                  ? 'REAL (CHƯA INGRESS)'
+                  : state.source_mode}
               </Badge>
             </div>
             <div className="flex items-center justify-between text-[11px] text-muted-foreground font-mono">

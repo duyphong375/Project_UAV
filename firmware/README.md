@@ -21,14 +21,20 @@ Phân hệ này quản lý toàn bộ mã nguồn nhúng (C/C++) chạy trên c�
 ```text
 firmware/
 ├── mcu_uav/
-│   └── README.md             # Hướng dẫn phân hệ; project/source firmware chưa có trong workspace
+│   ├── inc/
+│   │   ├── kvc_pinout.h      # Header cấu hình chân ngoại vi chuẩn (LoRa, Siêu âm, IMU, GNSS, FPGA)
+│   │   └── kvc_telemetry.h   # Định nghĩa gói tin 32 byte Little-Endian và CRC-16
+│   ├── project_keil/main.c   # Khởi động và kiểm tra chuỗi ngoại vi cơ bản
+│   └── README.md             # Hướng dẫn chi tiết phân hệ MCU Sonix SN34F788
 ├── gateway_esp32/
 │   ├── platformio.ini        # Board mục tiêu esp32-c3-devkitm-1, framework Arduino
-│   └── README.md             # Hướng dẫn phân hệ; thư mục src/include chưa có trong workspace
+│   ├── src/main.cpp          # Mã nguồn Gateway thu LoRa SX1278 (433 MHz, SPI)
+│   └── README.md             # Hướng dẫn chi tiết phân hệ Gateway ESP32
 └── README.md                 # Tài liệu tổng quan này
 ```
 
-Đây là inventory hiện có trong workspace, không phải cây project đề xuất. Trạng thái có thể đổi khi được bổ sung; hãy kiểm tra file thực tế trước khi build hoặc mô tả firmware đã triển khai.
+Bản đồ chân Master và sơ đồ đấu nối toàn hệ thống được quy định tập trung tại:
+👉 **[docs/hardware/KVC_MASTER_PINOUT_WIRING.md](file:///d:/Project_UAV_KVC/docs/hardware/KVC_MASTER_PINOUT_WIRING.md)**
 
 ---
 
@@ -43,3 +49,5 @@ firmware/
    - Thành viên chỉ commit file mã nguồn `.c`, `.cpp`, `.h`, `.ini`, `.uvprojx` và tài liệu `.md`.
 3. **Quy tắc an toàn phần cứng:**
    - AI (Codex / Antigravity) **tuyệt đối không tự ý nạp flash (flash firmware)** vào MCU hay FPGA. Việc nạp chip thực tế do thành viên phụ trách phần cứng thực hiện.
+4. **Chuẩn phân bổ chân Master:**
+   - Toàn bộ cấu hình chân I/O, ngoại vi UART/SPI/I2C và jumper kit phải tuân thủ nghiêm ngặt theo [KVC_MASTER_PINOUT_WIRING.md](file:///d:/Project_UAV_KVC/docs/hardware/KVC_MASTER_PINOUT_WIRING.md). Cấm cấp nguồn 5V trực tiếp vào chân GPIO 3.3V của Sonix SN34F788 hoặc ESP32-C3.

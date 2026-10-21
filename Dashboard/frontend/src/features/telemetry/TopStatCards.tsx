@@ -5,6 +5,7 @@ import {
   Mountain,
   Radio,
 } from 'lucide-react'
+import { APP_CONFIG } from '@/config/appConfig'
 import { InfoTip } from '@/components/shared/InfoTip'
 import { Card } from '@/components/ui/card'
 import { useMission } from '@/state/MissionProvider'
@@ -22,9 +23,14 @@ export const TopStatCards: React.FC<{ className?: string }> = ({ className = '' 
   } = state
 
   const targetCount = is_stale ? 0 : bounding_boxes.length || (has_target ? 1 : 0)
+  const isLocalGrid = target?.coordinate_frame === 'LOCAL_GRID'
   const hasValidTarget = !is_stale && has_target && target?.pos_valid && target.coordinate_frame === 'WGS84' && telemetry.gps_valid
-  const targetLatStr = hasValidTarget && target.latitude !== null ? target.latitude.toFixed(6) + '°' : 'N/A'
-  const targetLonStr = hasValidTarget && target.longitude !== null ? target.longitude.toFixed(6) + '°' : 'N/A'
+  const targetLatStr = hasValidTarget && target?.latitude !== null ? target?.latitude?.toFixed(6) + '°' : 'N/A'
+  const targetLonStr = hasValidTarget && target?.longitude !== null ? target?.longitude?.toFixed(6) + '°' : 'N/A'
+  const targetLocationSummary = isLocalGrid
+    ? (target?.local_x_cm != null && target?.local_y_cm != null ? `Local Grid: (${target.local_x_cm}, ${target.local_y_cm}) cm` : 'Local Grid: N/A')
+    : (hasValidTarget ? `WGS84: ${targetLatStr}, ${targetLonStr}` : 'Tọa độ: N/A')
+
   const targetTrackId = !is_stale ? target?.track_id ?? 'N/A' : 'N/A'
   const isLidarLocked = !is_stale && telemetry.lidar_valid && telemetry.lidar_range_cm !== null
   const lidarMeters = isLidarLocked ? (telemetry.lidar_range_cm! / 100).toFixed(2) : 'N/A'
@@ -44,7 +50,7 @@ export const TopStatCards: React.FC<{ className?: string }> = ({ className = '' 
   const getRfStatus = () => {
     if (rssi === null) {
       return source_mode === 'REAL'
-        ? { label: 'CHƯA KẾT NỐI ESP32', color: 'text-rose-600 dark:text-rose-400 bg-rose-500/10 border-rose-500/30' }
+        ? { label: 'CHƯA CÓ INGRESS', color: 'text-rose-600 dark:text-rose-400 bg-rose-500/10 border-rose-500/30' }
         : { label: 'CHỜ TÍN HIỆU', color: 'text-muted-foreground bg-muted border-border' }
     }
     if (rssi >= -85) return { label: 'SÓNG TỐT', color: 'text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 border-emerald-500/30' }
@@ -83,8 +89,8 @@ export const TopStatCards: React.FC<{ className?: string }> = ({ className = '' 
             </span>
             <span className="text-sm font-bold text-foreground truncate">{targetClassLabel}</span>
           </div>
-          <div className="mt-1 font-mono text-xs text-foreground font-semibold truncate" title={`Track #${targetTrackId} • ${deviceLabel} • WGS84: ${targetLatStr}, ${targetLonStr}`}>
-            {targetCount > 0 ? `Track #${targetTrackId} • ${deviceLabel} (${confidenceStr}) • ${targetLatStr}, ${targetLonStr}` : source_mode === 'REAL' ? 'Chưa kết nối ESP32 (Chờ Telemetry thật)' : `AI [${deviceLabel}] đang phân tích luồng thị giác`}
+          <div className="mt-1 font-mono text-xs text-foreground font-semibold truncate" title={`Track #${targetTrackId} • ${deviceLabel} • ${targetLocationSummary}`}>
+            {targetCount > 0 ? `Track #${targetTrackId} • ${deviceLabel} (${confidenceStr}) • ${targetLocationSummary}` : source_mode === 'REAL' ? 'Chưa có Ingress ESP32 (Chế độ Real)' : `AI [${deviceLabel}] đang phân tích luồng thị giác`}
           </div>
         </div>
 
@@ -157,10 +163,12 @@ export const TopStatCards: React.FC<{ className?: string }> = ({ className = '' 
             }`}>
               {batteryPct === null ? 'N/A' : batteryPct + '%'}
             </span>
-            <span className="text-xs font-semibold text-muted-foreground">Điện áp 12.6V max</span>
+            <span className="text-xs font-semibold text-muted-foreground">
+              {batteryPct !== null ? 'Điện áp 12.6V max' : 'Chưa có dữ liệu'}
+            </span>
           </div>
           <div className="mt-1 font-mono text-xs text-foreground truncate">
-            {batteryPct !== null && batteryPct > 20 ? 'Mức điện áp an toàn tải bay' : 'Cảnh báo: Pin sắp cạn'}
+            {batteryPct !== null ? (batteryPct > 20 ? 'Mức điện áp an toàn tải bay' : 'Cảnh báo: Pin sắp cạn') : 'N/A'}
           </div>
         </div>
 
@@ -195,13 +203,15 @@ export const TopStatCards: React.FC<{ className?: string }> = ({ className = '' 
             <span className="text-xs font-semibold text-muted-foreground">SNR: {snrStr}</span>
           </div>
           <div className="mt-1 font-mono text-xs text-foreground truncate">
-            Tần số: 433MHz • Băng thông 125kHz • SF7
+            {rssi !== null ? 'Tần số: 433MHz • Băng thông 125kHz • SF7' : 'Chưa có tín hiệu RF'}
           </div>
         </div>
 
         <div className="pt-1 text-muted-foreground flex items-center justify-between text-xs">
           <span className="truncate">
-            {source_mode === 'REAL' ? 'Gateway ESP32-C3 SoftAP' : 'Kênh mô phỏng loopback'}
+            {source_mode === 'REAL'
+              ? (state.hardware_link.status === 'CONNECTED' ? 'Gateway ESP32-C3 SoftAP' : 'Chưa có ingress Gateway')
+              : (APP_CONFIG.MOCK_TRANSPORT === 'LOCAL' ? 'Trình duyệt sinh kịch bản' : 'Kênh mô phỏng backend')}
           </span>
           <Radio className="h-4 w-4 text-indigo-500 shrink-0 ml-1" />
         </div>

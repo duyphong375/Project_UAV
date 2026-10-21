@@ -77,8 +77,8 @@ export const RecentDetectionsTable: React.FC<{ className?: string }> = ({
         lon: target.longitude,
         distanceM: computeDistanceMeters(uavLat, uavLon, target.latitude, target.longitude, 82.4),
         time: last_rx_iso ? last_rx_iso.slice(11, 19) : '14:32:05',
-        actionLabel: isBoat ? 'Theo dõi tàu' : 'Đã gửi Ca nô #02',
-        actionIcon: 'boat',
+        actionLabel: 'Đánh dấu sự kiện',
+        actionIcon: 'check',
       })
     }
 
@@ -98,41 +98,41 @@ export const RecentDetectionsTable: React.FC<{ className?: string }> = ({
             lat: boxLat,
             lon: boxLon,
             distanceM: computeDistanceMeters(uavLat, uavLon, boxLat, boxLon, 76.1 + idx * 12),
-            time: '14:32:01',
-            actionLabel: isBoat ? 'Theo dõi tàu' : 'Đã gửi Ca nô #02',
-            actionIcon: 'boat',
+            time: last_rx_iso ? last_rx_iso.slice(11, 19) : '14:32:01',
+            actionLabel: 'Đánh dấu sự kiện',
+            actionIcon: 'check',
           })
         }
       })
     }
 
-    // 3. Fallback demo items khi ở chế độ MOCK để hoàn thiện bảng theo đúng thiết kế tác chiến 3 hàng
+    // 3. Fallback demo items khi ở chế độ MOCK (được đánh dấu rõ là MÔ PHỎNG, không áp dụng cho REAL)
     if (source_mode === 'MOCK') {
       if (!list.some((item) => item.id === 102)) {
         list.push({
           id: 102,
-          label: 'Lifebuoy (Phao cứu sinh)',
+          label: '[Mô phỏng] Phao cứu sinh',
           rawType: 'buoy',
           confidence: 88.5,
           lat: 21.028420,
           lon: 105.854090,
           distanceM: computeDistanceMeters(uavLat, uavLon, 21.028420, 105.854090, 76.1),
           time: '14:32:01',
-          actionLabel: 'Thả phao #1',
-          actionIcon: 'buoy',
+          actionLabel: 'Đánh dấu sự kiện',
+          actionIcon: 'check',
         })
       }
       if (!list.some((item) => item.id === 98)) {
         list.push({
           id: 98,
-          label: 'Mảnh vỡ / Vật cản trôi',
+          label: '[Mô phỏng] Vật cản trôi dạt',
           rawType: 'debris',
           confidence: 71.0,
           lat: 21.027910,
           lon: 105.853200,
           distanceM: computeDistanceMeters(uavLat, uavLon, 21.027910, 105.853200, 114.0),
           time: '14:28:14',
-          actionLabel: 'Đã phân loại vật trôi',
+          actionLabel: 'Đánh dấu sự kiện',
           actionIcon: 'check',
         })
       }
@@ -171,13 +171,7 @@ export const RecentDetectionsTable: React.FC<{ className?: string }> = ({
   }
 
   const handleActionClick = (item: DetectionItem) => {
-    if (item.rawType === 'person') {
-      toast.success(`Đã phát điện tín bàn giao vị trí #${item.id} (${item.lat.toFixed(6)}, ${item.lon.toFixed(6)}) cho Ca nô cứu hộ #02!`)
-    } else if (item.rawType === 'buoy') {
-      toast.success(`Đã xác nhận lệnh kích hoạt cơ cấu Thả Phao #1 tại tọa độ #${item.id}!`)
-    } else {
-      toast.info(`Đối tượng #${item.id} đã được phân loại là vật trôi, duy trì giám sát.`)
-    }
+    toast.success(`Đã ghi nhận mốc sự kiện mục tiêu #${item.id} (${item.lat.toFixed(6)}, ${item.lon.toFixed(6)}) vào nhật ký giám sát.`)
   }
 
   return (
@@ -252,11 +246,20 @@ export const RecentDetectionsTable: React.FC<{ className?: string }> = ({
             </tr>
           </thead>
           <tbody className="divide-y divide-border/40 text-xs">
-            {detections.map((item) => (
-              <tr
-                key={item.id}
-                className="hover:bg-muted/30 transition-colors select-none"
-              >
+            {detections.length === 0 ? (
+              <tr>
+                <td colSpan={7} className="py-8 text-center text-muted-foreground font-mono">
+                  {source_mode === 'REAL'
+                    ? 'Chưa có dữ liệu nhận diện (Chế độ REAL chưa có ingress từ ESP32)'
+                    : 'Chưa phát hiện mục tiêu trong phiên hiện tại (Chờ dữ liệu AI)'}
+                </td>
+              </tr>
+            ) : (
+              detections.map((item) => (
+                <tr
+                  key={item.id}
+                  className="hover:bg-muted/30 transition-colors select-none"
+                >
                 {/* ID */}
                 <td className="py-3 px-3 font-mono font-bold text-primary">
                   #{item.id}
@@ -351,7 +354,8 @@ export const RecentDetectionsTable: React.FC<{ className?: string }> = ({
                   </div>
                 </td>
               </tr>
-            ))}
+              ))
+            )}
           </tbody>
         </table>
       </div>

@@ -30,11 +30,11 @@ export const UavHardwareGaugeCard: React.FC<{ className?: string }> = ({ classNa
     { id: 'gnss', title: '1. GNSS NEO-M8N / ATGM336H', detail: !is_stale && telemetry.gps_valid ? 'Fix hợp lệ theo nguồn' : source_mode === 'REAL' ? 'Chờ gói RF tải bay' : 'Fix: Chờ vệ tinh', status: !is_stale && telemetry.gps_valid ? dataStatus : 'N/A' },
     { id: 'lidar', title: '2. LiDAR TF-Luna', detail: !is_stale && telemetry.lidar_valid && telemetry.lidar_range_cm !== null ? 'Cự ly dọc tia: ' + (telemetry.lidar_range_cm / 100).toFixed(2) + ' m' : source_mode === 'REAL' ? 'Chờ gói RF tải bay' : 'Cự ly: Chờ đo', status: !is_stale && telemetry.lidar_valid ? dataStatus : 'N/A' },
     { id: 'imu', title: '3. IMU GY-87', detail: 'Tư thế & góc nghiêng UAV', status: !is_stale && telemetry.imu_valid ? dataStatus : 'N/A' },
-    { id: 'camera', title: '4. Camera RGB', detail: 'Cảm biến thị giác cứu nạn', status: 'SẴN SÀNG' },
+    { id: 'camera', title: '4. Camera RGB', detail: 'Kênh video độc lập • Chờ tích hợp', status: 'CHƯA TÍCH HỢP' },
     { id: 'fpga', title: '5. OneKiwi Primer 20K V1.1', detail: 'YOLO11n mục tiêu • ' + inference_device, status: 'AI ENGINE' },
     { id: 'sonix', title: '6. Sonix SN34F788', detail: 'MCU tải: Cảm biến/Định vị/RF', status: 'MCU TẢI' },
     { id: 'lora', title: '7. LoRa Ra-02 SX1278', detail: !is_stale && telemetry.packet_rssi_dbm !== null ? 'RSSI ' + telemetry.packet_rssi_dbm + ' dBm • SNR ' + (telemetry.packet_snr_db ?? 'N/A') : 'Sóng vô tuyến 433MHz', status: !is_stale && telemetry.packet_rssi_dbm !== null ? dataStatus : 'RF LINK' },
-    { id: 'ground', title: '8. ESP32-C3 Gateway Trạm Đất', detail: source_mode === 'REAL' ? 'Wi-Fi SoftAP :8080 • ' + (hardware_link.port ?? 'ws://192.168.4.1') : 'Wi-Fi SoftAP :8080 • Virtual Loopback', status: esp32Status.shortLabel },
+    { id: 'ground', title: '8. ESP32-C3 Gateway Trạm Đất', detail: source_mode === 'REAL' ? (hardware_link.status === 'CONNECTED' ? (hardware_link.port ?? 'ESP32 Ingress') : 'Chưa có Ingress Gateway') : 'Virtual Loopback / Mock', status: esp32Status.shortLabel },
   ]
 
   return (
@@ -64,7 +64,7 @@ export const UavHardwareGaugeCard: React.FC<{ className?: string }> = ({ classNa
           <div className="rounded-lg bg-muted/30 p-2"><p className="text-muted-foreground">Loại Pin</p><p className="font-mono font-bold">3S LiPo 12.6V</p></div>
           <div className="rounded-lg bg-muted/30 p-2"><p className="text-muted-foreground">Điện áp danh định</p><p className="font-mono font-bold">11.1V – 12.6V Max</p></div>
           <div className="rounded-lg bg-muted/30 p-2"><p className="text-muted-foreground">Khóa vệ tinh GNSS</p><p className="font-mono font-bold text-emerald-600 dark:text-emerald-400">{telemetry.gps_valid ? 'ĐÃ CÓ 3D FIX' : 'CHỜ TÍN HIỆU'}</p></div>
-          <div className="rounded-lg bg-muted/30 p-2"><p className="text-muted-foreground">Trạm Mặt Đất</p><p className="font-mono font-bold text-primary">ESP32-C3 SoftAP</p></div>
+          <div className="rounded-lg bg-muted/30 p-2"><p className="text-muted-foreground">Trạm Mặt Đất</p><p className="font-mono font-bold text-primary">{source_mode === 'REAL' ? (hardware_link.status === 'CONNECTED' ? 'ESP32 SoftAP' : 'Chưa có Ingress') : 'Mô phỏng GCS'}</p></div>
         </div>
         <p className="mt-3 text-xs text-muted-foreground">Phần trăm pin giám sát nguồn tải hệ thống KVC. Hệ thống không can thiệp điều khiển bay an toàn.</p>
       </Card>

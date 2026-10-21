@@ -151,20 +151,22 @@ export const VideoPanel: React.FC = () => {
           </div>
         )}
 
-        {/* Thông tin OSD Quang học góc dưới trái (Mục 5: Tên camera, Độ phân giải, FPS) */}
+        {/* Thông tin OSD Quang học góc dưới trái (Không tự đặt FPS/Độ phân giải khi không có trong schema) */}
         <div className="absolute bottom-2 left-2 z-10 bg-slate-900/85 backdrop-blur border border-white/10 px-2.5 py-1 rounded-md text-[10px] font-mono text-slate-300 flex items-center gap-2 shadow-xs">
           <span className="flex items-center gap-1">
             <Camera className="h-3 w-3 text-cyan-400" />
             <span>{getCameraName()}</span>
           </span>
           <span className="text-white/30">•</span>
-          <span>1280×720</span>
+          <span>{isMock ? 'PATTERN MÔ PHỎNG' : 'ĐỘ PHÂN GIẢI: N/A'}</span>
           <span className="text-white/30">•</span>
-          <span className="text-emerald-400">FPS: 30</span>
+          <span className="text-slate-400">FPS: N/A</span>
           {bounding_boxes && bounding_boxes.length > 0 && (
             <>
               <span className="text-white/30">•</span>
-              <span className="text-cyan-400 font-semibold">{bounding_boxes.length} MỤC TIÊU</span>
+              <span className="text-cyan-400 font-semibold">
+                {bounding_boxes.filter((b) => b.is_synced).length}/{bounding_boxes.length} BBOX ĐỒNG BỘ
+              </span>
             </>
           )}
         </div>

@@ -1,4 +1,4 @@
-# Đặc tả giao diện: MCU Tải Sonix ↔ Cảm biến Định vị (LiDAR, IMU, GNSS)
+# Đặc tả giao diện: MCU Tải Sonix ↔ Cảm biến Định vị (Siêu âm AJ-SR04M, IMU, GNSS)
 
 - **Mã giao diện:** `IF-00`
 - **Hai đầu kết nối:** MCU Sonix SN34F788 trên UAV (**Nguyễn Tá Duy Phong** - Xử lý phần mềm) ↔ Cụm cảm biến tải (**Đàm Nguyễn Mạnh Cường** - Lắp đặt & đo đạc; **Trương Trung Kiên** - Nguồn & dây)
@@ -9,45 +9,54 @@
 ## 1. Quy tắc an toàn điện và nguồn (Bắt buộc tuân thủ)
 
 > ⚠️ **CẢNH BÁO CHỐNG CHÁY CHIP SONIX:**
-> 1. Vi điều khiển Sonix SN34F788 hoạt động ở dải điện áp **VDD = 2,4 V – 3,6 V (Chuẩn 3,3 V)**. Các chân GPIO của chip **KHÔNG chịu được mức điện áp 5 V**. Tuyệt đối không cắm nguồn 5 V trực tiếp vào chân GPIO của Sonix.
-> 2. **Nối chung GND (Ground):** Toàn bộ dây GND của Kit Sonix, TF-Luna, GY-87, NEO-M8N và nguồn hạ áp Buck DC-DC phải được nối chung với nhau để tạo mốc điện áp chuẩn.
+> 1. Vi điều khiển Sonix SN34F788 hoạt động ở dải điện áp **VDD = 2,4 V – 3,6 V (Chuẩn 3,3 V)**. Các chân GPIO của chip **KHÔNG chịu được mức điện áp 5 V**. Tuyệt đối không cắm nguồn 5 V trực tiếp vào chân GPIO của Sonix (chân TX của module cảm biến nếu có mức 5V cần dùng cầu phân áp hoặc chọn mức 3.3V).
+> 2. **Nối chung GND (Ground):** Toàn bộ dây GND của Kit Sonix, AJ-SR04M, GY-87, NEO-M8N và nguồn hạ áp Buck DC-DC phải được nối chung với nhau để tạo mốc điện áp chuẩn.
 > 3. Cụm cảm biến và MCU tải phải dùng nguồn từ mạch Buck hạ áp riêng (cấp dòng tối thiểu 2 A), **không dùng chân 3.3V của mạch nạp SN-Link hoặc mạch nạp CP2102** để nuôi toàn bộ cảm biến.
+
+> **NEO-M8N:** Datasheet u-blox quy định VCC hoạt động 2.7–3.6 V, tối đa tuyệt đối 3.6 V. Chỉ cấp 5 V vào carrier/breakout khi xác định đúng bo và datasheet của carrier xác nhận có LDO 3.3 V cùng đầu vào 5 V. Giữ TX/RX ở mức logic 3.3 V; không đưa tín hiệu 5 V vào GPIO Sonix. [u-blox NEO-M8 data sheet UBX-15031086 R14, §§4.1–4.2](https://content.u-blox.com/sites/default/files/NEO-M8-FW3_DataSheet_UBX-15031086.pdf).
 
 ---
 
 ## 2. Bảng phân bổ chân cắm và mức điện áp trên MCU Sonix
 
-| Cảm biến / Module | Chuẩn giao tiếp | Mức logic tín hiệu | Nguồn cấp VCC | Chân tín hiệu trên Module | Cổng ngoại vi dự kiến trên Sonix SN34F788 |
+> 📌 **Tham chiếu pinout dự thảo:** Xem sơ đồ chân, số thứ tự pin và header Kit tại [KVC_MASTER_PINOUT_WIRING.md](../hardware/KVC_MASTER_PINOUT_WIRING.md).
+
+| Cảm biến / Module | Chuẩn giao tiếp | Mức logic tín hiệu | Nguồn cấp VCC | Chân tín hiệu trên Module | Cổng ngoại vi phần cứng trên Sonix SN34F788 |
 | :--- | :---: | :---: | :---: | :---: | :--- |
-| **TF-Luna LiDAR** | UART (115.200 bps) | 3,3 V TTL | **5,0 V** (DC-DC) | TXD ➔ RXD<br>RXD ◄ TXD | **UART2_RX** (`P1.0` / AFIO)<br>**UART2_TX** (`P1.1` / AFIO) |
-| **GY-87 IMU 10-DOF** | I2C (100 / 400 kHz) | 3,3 V CMOS | **3,3 V** | SDA (Data)<br>SCL (Clock) | **I2C0_SDA** (`P0.8` / AFIO)<br>**I2C0_SCL** (`P0.9` / AFIO)<br>*(Trở kéo 4,7 kΩ lên 3,3V)* |
-| **NEO-M8N GNSS** | UART (9.600 bps) | 3,3 V TTL | **3,3 V – 5,0 V** | TXD ➔ RXD<br>RXD ◄ TXD | **UART3_RX** (`P2.4` / AFIO)<br>**UART3_TX** (`P2.5` / AFIO) |
-| **LoRa Ra-02 (SX1278)** | SPI (1–4 MHz) | 3,3 V CMOS | **3,3 V** (DC-DC) | MOSI, MISO, SCK, NSS, DIO0 | **SPI0** (`P0.0..P0.3`) + GPIO ngắt DIO0 (`P0.4`) |
-| **FPGA BBox Data** | UART (115.200 bps) | 3,3 V CMOS | Chung nguồn | RXD ◄ TXD (FPGA)<br>DATA_READY | **UART1_RX** (`P0.10`)<br>Chân ngắt EXTI (`P0.12`) |
+| **AJ-SR04M / JSN-SR04T (Siêu âm IP67)** | UART (9.600 bps) / Trig-Echo | 3,3 V / 5,0 V TTL | **5,0 V** (Buck DC-DC) | TXD (qua phân áp) ➔ RXD<br>RXD ◄ TXD | **UART2_RX** (`P2.15` - Pin 31)<br>**UART2_TX** (`P2.14` - Pin 30) |
+| **GY-87 IMU 10-DOF** | I2C (100 / 400 kHz) | 3,3 V CMOS | **3,3 V** | SCL (Clock)<br>SDA (Data) | **I2C0_SCL** (`P0.10` - Pin 38)<br>**I2C0_SDA** (`P0.11` - Pin 39)<br>*(Kit có R3/R4 = 1 kΩ cho I2C0; không thêm pull-up ngoài. Kiểm tra pull-up có sẵn trên module và cô lập một bộ nếu cần.)* |
+| **NEO-M8N GNSS** | UART (9.600 bps) | 3,3 V logic | **2,7–3,6 V bare module (max 3,6 V)** | TXD ➔ RXD<br>RXD ◄ TXD; giữ logic 3,3 V | **UART3_RX** (`P2.1` - Pin 15)<br>**UART3_TX** (`P2.0` - Pin 14) |
+| **LoRa Ra-02 (SX1278)** | SPI (1–4 MHz) | 3,3 V CMOS | **3,3 V** (DC-DC) | NSS, SCK, MISO, MOSI<br>DIO0 (Ngắt)<br>RST | **SPI0** (`P2.4..P2.7` - Pin 20..23)<br>**DIO0** (`P2.8` - Pin 24)<br>**RST** (`P2.9` - Pin 25) |
+| **FPGA BBox Data** | UART (115.200 bps) | 3,3 V CMOS | Chung nguồn | RXD ◄ TXD (FPGA)<br>DATA_READY | **UART1_RX** (`P2.3` - Pin 17)<br>**DATA_READY** (`P0.12` - Pin 3) |
+| **Debug Console PC** | UART (115.200 bps) | 3,3 V TTL | Chung GND | TXD ➔ RXD<br>RXD ◄ TXD | **UART5_TX** (`P0.15` - Pin 6)<br>**UART5_RX** (`P0.14` - Pin 5) |
 
 ---
 
 ## 3. Đặc tả giao thức chi tiết từng cảm biến
 
-### 3.1. Cảm biến cự ly độ cao TF-Luna LiDAR (Benewake)
+### 3.1. Cảm biến cự ly độ cao siêu âm chống nước AJ-SR04M / JSN-SR04T
 
-* **Chuẩn truyền thông:** UART 115.200 bps, 8 bit dữ liệu, No Parity, 1 Stop bit (8N1).
-* **Tần số lấy mẫu:** Mặc định 100 Hz (có thể cấu hình 10–250 Hz).
-* **Định dạng khung dữ liệu 9 byte:**
+> *Ghi chú cập nhật phần cứng:* Thay thế cảm biến laser ToF TF-Luna bằng cảm biến siêu âm chống nước AJ-SR04M (JSN-SR04T) chuẩn IP67 để giảm giá thành, chống chịu môi trường mưa lũ, bọt nước và phản xạ tốt trên bề mặt nước.
+
+* **Chuẩn truyền thông:** UART 9.600 bps, 8 bit dữ liệu, No Parity, 1 Stop bit (8N1) (chế độ xuất nối tiếp Serial). Có thể dùng chế độ xung Trigger/Echo qua GPIO.
+* **Dải đo danh định:** 20 cm – 600 cm (0,2 m – 6,0 m).
+* **Độ chính xác:** $\pm 1\text{ cm}$, độ phân giải 1 mm. Tần số sóng siêu âm: 40 kHz.
+* **Định dạng khung dữ liệu UART 4 byte:**
 
 ```text
-+------+------+--------+--------+-------+-------+--------+--------+----------+
-| 0x59 | 0x59 | Dist_L | Dist_H | Amp_L | Amp_H | Temp_L | Temp_H | Checksum |
-+------+------+--------+--------+-------+-------+--------+--------+----------+
++------+--------+--------+----------+
+| 0xFF | Data_H | Data_L | Checksum |
++------+--------+--------+----------+
 ```
 
 * **Công thức giải mã:**
-  * $\text{Distance (cm)} = \text{Dist\_L} + (\text{Dist\_H} \ll 8)$
-  * $\text{Signal Amplitude} = \text{Amp\_L} + (\text{Amp\_H} \ll 8)$
-  * $\text{Checksum} = (\text{Byte}_0 + \text{Byte}_1 + \dots + \text{Byte}_7) \ \& \ \text{0xFF}$
-* **Điều kiện cờ hợp lệ (`lidar_valid`):**
-  * Khoảng cách đo nằm trong dải tin cậy: $20\text{ cm} \le \text{Distance} \le 800\text{ cm}$ (độ cao UAV khi quét bão lũ).
-  * Cường độ tín hiệu $\text{Amplitude} \ge 100$ (tránh hiện tượng tán xạ trên mặt nước).
+  * $\text{Distance (mm)} = (\text{Data\_H} \ll 8) + \text{Data\_L}$
+  * $\text{Distance (cm)} = \text{Distance (mm)} / 10$
+  * $\text{Checksum} = (0\text{xFF} + \text{Data\_H} + \text{Data\_L}) \ \& \ 0\text{xFF}$
+* **Điều kiện cờ hợp lệ (`alt_valid`):**
+  * Khoảng cách đo nằm trong dải tin cậy: $20\text{ cm} \le \text{Distance} \le 500\text{ cm}$ (phù hợp trần bay quét tìm kiếm của tải UAV).
+  * Checksum khung dữ liệu đúng.
+  * **Lưu ý góc mở chùm sóng (~75°):** Khi thử nghiệm bể bơi, cho UAV bay cách mép bờ kè/thành bể tối thiểu 1,5 m để tránh sóng âm bắt nhầm tiếng vọng từ thành bờ.
 
 ---
 
@@ -70,11 +79,15 @@ Mô-đun GY-87 tích hợp 3 chip trên cùng 1 bus I2C:
 
 #### C. BMP180 (Cảm biến áp suất khí quyển & độ cao)
 * **Địa chỉ I2C:** `0x77`.
-* **Mục đích:** Dự phòng đo độ cao tương đối so với mặt nước khi LiDAR gặp góc phản xạ quá lớn.
+* **Mục đích:** Dự phòng đo độ cao tương đối so với mặt nước khi cảm biến siêu âm gặp góc nghiêng quá lớn.
 
 ---
 
 ### 3.3. Module định vị vệ tinh NEO-M8N GNSS
+
+* **Nguồn:** Module trần nhận 2.7–3.6 V (tối đa 3.6 V). Nguồn 5 V chỉ dùng tại đầu vào của carrier có LDO 3.3 V khi datasheet của đúng carrier cho phép.
+* **Logic UART:** Giữ TXD/RXD ở mức 3.3 V tại giao tiếp với Sonix; nếu carrier có mức logic khác hoặc chưa rõ thì xác minh/chuyển mức trước kết nối.
+* **Nguồn tham chiếu:** [u-blox NEO-M8 data sheet UBX-15031086 R14, §§4.1–4.2](https://content.u-blox.com/sites/default/files/NEO-M8-FW3_DataSheet_UBX-15031086.pdf).
 
 * **Chuẩn truyền thông:** UART 9.600 bps (mặc định xuất xưởng) hoặc cấu hình lên 38.400 / 115.200 bps, 8N1.
 * **Giao thức:** NMEA-0183 (Câu `$GNGGA` hoặc `$GNRMC` xuất định kỳ 1–5 Hz).
@@ -92,7 +105,7 @@ Mô-đun GY-87 tích hợp 3 chip trên cùng 1 bus I2C:
 
 1. **Cường (Phần cứng):**
    - Kiểm tra thông mạch và đo điện áp các chân cấp nguồn bằng đồng hồ VOM trước khi cắm vào Kit Sonix.
-   - Thử nghiệm độ phản xạ của LiDAR TF-Luna trên mặt nước thật (bể bơi/chậu nước) với các góc nghiêng từ $0^\circ$ đến $30^\circ$, ghi lại suy giảm tín hiệu `Amplitude`.
+   - Thử nghiệm độ phản xạ của cảm biến siêu âm AJ-SR04M trên mặt nước thật (bể bơi/chậu nước) với các góc nghiêng, kiểm tra vùng mù dưới 20 cm.
 2. **Phong (Firmware):**
    - Viết module đọc lần lượt từng cảm biến trong `firmware/mcu_uav/src/sensors/`.
    - Cài đặt cơ chế Timeout cho các hàm đọc I2C/UART: nếu 1 cảm biến bị tuột dây hoặc treo bus, chương trình chính vẫn tiếp tục chạy điều phối, **tuyệt đối không bị treo vô hạn trong vòng lặp chờ**.

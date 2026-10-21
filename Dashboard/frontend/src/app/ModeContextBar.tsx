@@ -8,6 +8,7 @@ import {
   RotateCcw,
   Wifi,
 } from 'lucide-react'
+import { APP_CONFIG } from '@/config/appConfig'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { MockLocationControl } from '@/features/map/MockLocationControl'
@@ -52,7 +53,7 @@ export const ModeContextBar: React.FC = () => {
             </span>
             <span className="font-bold tracking-tight text-purple-600 dark:text-purple-300 uppercase text-[11px] flex items-center gap-1">
               <FlaskConical className="h-3.5 w-3.5" />
-              Chế độ Mô phỏng
+              Chế độ Mô phỏng [{APP_CONFIG.MOCK_TRANSPORT === 'LOCAL' ? 'LOCAL' : 'BACKEND'}]
             </span>
             <span className="text-muted-foreground hidden sm:inline">•</span>
           </div>
@@ -86,7 +87,7 @@ export const ModeContextBar: React.FC = () => {
             </span>
             <span className="font-bold tracking-tight text-rose-600 dark:text-rose-400 uppercase text-[11px] flex items-center gap-1">
               <Radio className="h-3.5 w-3.5" />
-              Chưa kết nối ESP32 (Chế độ Real)
+              REAL: Chưa có Ingress ESP32
             </span>
             <span className="text-muted-foreground hidden sm:inline">•</span>
           </div>
@@ -134,7 +135,9 @@ export const ModeContextBar: React.FC = () => {
         ) : (
           <div className="flex items-center gap-2 text-xs font-mono">
             <span className="text-muted-foreground hidden md:inline">Gateway ESP32:</span>
-            <span className="text-foreground font-semibold">{state.hardware_link.port || 'ws://192.168.1.15:8080/telemetry'}</span>
+            <span className="text-foreground font-semibold">
+              {state.hardware_link.port || (state.hardware_link.status === 'CONNECTED' ? 'ESP32 Ingress' : 'Chưa cấu hình Ingress')}
+            </span>
             <span className="text-muted-foreground hidden lg:inline">•</span>
             <span className="hidden lg:inline text-muted-foreground">
               Độ trễ:{' '}
@@ -216,7 +219,7 @@ export const ModeContextBar: React.FC = () => {
               ) : (
                 <>
                   <AlertTriangle className="h-3.5 w-3.5" />
-                  <span>CHƯA KẾT NỐI ESP32</span>
+                  <span>CHƯA CÓ INGRESS (REAL)</span>
                 </>
               )}
             </div>

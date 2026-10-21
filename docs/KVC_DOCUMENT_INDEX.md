@@ -26,6 +26,7 @@ Rà soát 15/10/2026 (Asia/Saigon), KVC-MD-UNIFY-20261015-001; owner: Codex; SEL
 | [AI README](../ai_training/README.md) | Adapter, dataset inventory, generator/validator và giới hạn metrics | PC_REFERENCE; release BLOCKED |
 | [OneKiwi/Gowin](hardware/CHIP_ONEKIWI_20K_GOWIN_GW2A.md) | Ghi chú chip/board, tài liệu hãng và SDK | DOCUMENTED; không dùng pin candidate chưa duyệt để đấu nối |
 | [SONiX](hardware/CHIP_SONIX_SN34F788_MCU.md) | Ghi chú MCU và tài liệu hãng | DOCUMENTED; project/board mapping/build còn cần xác minh |
+| [Bản đồ chân Master](hardware/KVC_MASTER_PINOUT_WIRING.md) | Bản đồ phân bổ chân và đấu nối toàn hệ thống KVC | BASELINE RELEASE; chuẩn đấu nối cảm biến (AJ-SR04M, GY-87 I2C0, NEO-M8N), MCU, LoRa, ESP32 và FPGA |
 | [Workflow AI](KVC_AI_WORKFLOW.md) | Task/owner/test/review/handoff | Quy tắc hiện hành ở đầu; setup 11/10 là lịch sử |
 | [AGENTS](../AGENTS.md) | Quy tắc chung và quyền sửa | Nguồn quy tắc AI chính |
 | [Adapter Antigravity](../.agents/rules/kvc.md) | Trỏ IDE về AGENTS | Không tạo bộ policy độc lập |
@@ -38,9 +39,9 @@ Rà soát 15/10/2026 (Asia/Saigon), KVC-MD-UNIFY-20261015-001; owner: Codex; SEL
 | [README frontend](../Dashboard/frontend/README.md) | Lập trình viên GCS frontend | Lệnh chạy/test và giới hạn UI; theo contract và kiến trúc |
 | [README AI](../ai_training/README.md) | Người phụ trách dữ liệu/model AI | Mô tả adapter, dataset, scripts và giới hạn PC_REFERENCE |
 | [README scripts](../scripts/README.md) | Người chạy tooling dự án | Danh mục script; phải đọc tác dụng trước khi chạy |
-| [README FPGA](../fpga/README.md) | Người phụ trách OneKiwi/FPGA | Ghi chú phân hệ và interface; camera/bo/RTL chưa xác minh |
-| [README MCU](../firmware/mcu_uav/README.md) | Người phụ trách MCU tải | Ghi chú toolchain và interface; RF ABI còn draft |
-| [README Gateway](../firmware/gateway_esp32/README.md) | Người phụ trách ESP32-C3 | Cấu hình PlatformIO và transport mục tiêu; chưa có firmware ingress |
+| [README FPGA](../fpga/README.md) | Người phụ trách OneKiwi/FPGA | Ghi chú phân hệ, interface và ràng buộc chân Header J2 (`pins.cst`); camera/RTL chưa xác minh |
+| [README MCU](../firmware/mcu_uav/README.md) | Người phụ trách MCU tải | Ghi chú toolchain, interface và header chân chuẩn (`kvc_pinout.h`); RF ABI còn draft |
+| [README Gateway](../firmware/gateway_esp32/README.md) | Người phụ trách ESP32-C3 | Cấu hình PlatformIO, transport mục tiêu và mã nguồn (`main.cpp`) đồng bộ chân SPI LoRa |
 | [README weights AI](../ai_training/weights/README.md) | Người quản lý checkpoint AI cục bộ | Chính sách giữ và giới hạn evidence của weights |
 | [Báo cáo eval 2 lớp](../ai_training/runs/eval_2class_hardware/EVAL_REPORT.md) | Nhóm AI/reviewer | Kết quả lịch sử theo chính candidate trong báo cáo; không phải bằng chứng FPGA |
 | [Báo cáo eval boosted](../ai_training/runs/eval_boosted/EVAL_REPORT_BOOSTED.md) | Nhóm AI/reviewer | Kết quả lịch sử; không ghi đè bằng metric mới |

@@ -43,14 +43,18 @@ KVC/
 ├── README.md                         # Điểm vào dự án này
 ├── .gitignore                        # Loại môi trường, artifact và dữ liệu cục bộ
 ├── fpga/                             # Phân hệ FPGA OneKiwi Primer 20K (Vững)
+│   ├── constraints/                  # Ràng buộc chân Header J2 (pins.cst)
 │   ├── tb/                           # Testbench mô phỏng RTL riêng biệt
 │   └── README.md                     # Hướng dẫn project Gowin EDA và link IF-01
 ├── firmware/                         # Mã nguồn vi điều khiển
 │   ├── README.md                     # Tổng quan phân hệ nhúng, phân định Sonix vs ESP32
 │   ├── mcu_uav/                      # Firmware MCU Sonix SN34F788 trên UAV (Phong)
+│   │   ├── inc/kvc_pinout.h          # Header định nghĩa chân chuẩn toàn hệ thống
+│   │   ├── project_keil/             # Project mẫu Keil MDK (main.c)
 │   │   └── README.md                 # Hướng dẫn project Keil MDK, link IF-01 và IF-02
 │   └── gateway_esp32/                # Firmware Gateway trạm đất ESP32 (Thịnh)
 │       ├── platformio.ini            # Cấu hình PlatformIO (framework = arduino)
+│       ├── src/main.cpp              # Mã nguồn Gateway thu LoRa SX1278 (433 MHz)
 │       └── README.md                 # Hướng dẫn và link IF-02, IF-03
 ├── Dashboard/
 │   ├── README.md                     # Tổng quan trạm mặt đất GCS, kiến trúc 2 tầng (ESP32 -> Backend -> Frontend)
@@ -110,7 +114,7 @@ KVC/
 │   ├── interfaces/                   # Quản lý tập trung hợp đồng giao diện toàn hệ thống
 │   │   ├── README.md                 # Ma trận luồng dữ liệu toàn chuỗi và topology
 │   │   ├── IF_CAMERA_FPGA.md         # Camera DVP/MIPI ➔ FPGA OneKiwi GW2A
-│   │   ├── IF_MCU_SENSORS.md         # [IF-00] Cảm biến định vị tải UAV (LiDAR, IMU, GNSS)
+│   │   ├── IF_MCU_SENSORS.md         # [IF-00] Cảm biến định vị tải UAV (Siêu âm AJ-SR04M, IMU, GNSS)
 │   │   ├── IF_FPGA_MCU_UART.md       # [IF-01] UART BBox: FPGA (Vững) ➔ MCU Sonix (Phong)
 │   │   ├── IF_MCU_LORA_RF.md         # [IF-02] LoRa Telemetry: MCU Sonix (Phong) ➔ ESP32 (Thịnh)
 │   │   └── IF_ESP32_GCS_WS.md        # [IF-03] Wi-Fi WS: ESP32 (Thịnh) ➔ Backend GCS Laptop
@@ -124,6 +128,7 @@ KVC/
 │   └── hardware/
 │       ├── onekiwi20k/               # Tài liệu board hãng; file gốc có thể để riêng
 │       ├── sonix_sn34f788/           # SDK/tài liệu hãng MCU (nếu có quyền phân phối)
+│       ├── KVC_MASTER_PINOUT_WIRING.md # [MASTER] Bản đồ phân bổ chân và đấu nối toàn hệ thống KVC
 │       ├── CHIP_ONEKIWI_20K_GOWIN_GW2A.md
 │       └── CHIP_SONIX_SN34F788_MCU.md
 ├── media/                            # Tư liệu minh họa cục bộ, không mặc định commit
@@ -131,6 +136,7 @@ KVC/
 ```
 
 > 🔗 **Lối tắt truy cập nhanh (Bấm để mở trực tiếp):**
+> - [📌 **docs/hardware/KVC_MASTER_PINOUT_WIRING.md** — Bản đồ chân Master & Đấu nối toàn hệ thống](docs/hardware/KVC_MASTER_PINOUT_WIRING.md)
 > - [📂 **fpga/** — Phân hệ FPGA OneKiwi Primer 20K (Vững)](fpga/README.md)
 > - [📂 **firmware/mcu_uav/** — Phân hệ MCU Sonix SN34F788 trên UAV (Phong)](firmware/mcu_uav/README.md)
 > - [📂 **firmware/gateway_esp32/** — Phân hệ Gateway ESP32 Trạm Đất (Thịnh)](firmware/gateway_esp32/README.md)
@@ -229,9 +235,10 @@ Các test adapter dùng dữ liệu giả. `scripts/test_webcam.py` có thể m�
 4. [Đặc tả giao diện toàn chuỗi](docs/interfaces/) — ma trận kết nối cảm biến IF-00, UART BBox IF-01, LoRa RF IF-02 và Wi-Fi WebSocket IF-03.
 5. [Tài liệu GCS](docs/gcs/) — kế hoạch, data contract và thiết kế frontend/backend.
 6. [Tài liệu AI](ai_training/README.md) và [chuẩn bị dữ liệu](docs/ai/KVC_AI_DATA_PREPARATION.md).
-7. [Tài liệu phần cứng](docs/hardware/) — OneKiwi, Gowin và Sonix; cần phân biệt tài liệu thiết kế với phép đo thực tế.
-8. [Chuẩn tài liệu Markdown](docs/KVC_MARKDOWN_STANDARD.md) — quy ước định dạng và trạng thái tài liệu.
-9. [Tài liệu Dashboard](Dashboard/frontend/README.md), [Backend](Dashboard/backend/README.md), [scripts](scripts/README.md) và [docs/README.md](docs/README.md).
+7. [Bản đồ chân Master](docs/hardware/KVC_MASTER_PINOUT_WIRING.md) — chuẩn phân bổ chân và đấu nối toàn hệ thống KVC (MCU Sonix, cảm biến, LoRa, ESP32, FPGA).
+8. [Tài liệu phần cứng](docs/hardware/) — OneKiwi, Gowin và Sonix; cần phân biệt tài liệu thiết kế với phép đo thực tế.
+9. [Chuẩn tài liệu Markdown](docs/KVC_MARKDOWN_STANDARD.md) — quy ước định dạng và trạng thái tài liệu.
+10. [Tài liệu Dashboard](Dashboard/frontend/README.md), [Backend](Dashboard/backend/README.md), [scripts](scripts/README.md) và [docs/README.md](docs/README.md).
 
 ---
 

@@ -5,7 +5,7 @@ Frontend trạm giám sát tải nhiệm vụ cứu nạn bão lũ KVC hiện c�
 Cập nhật 14/10/2026: backend FastAPI MOCK, SQLite logger và replay đã có source và kiểm thử ứng dụng. Parser hardware/serial chưa triển khai; frontend MOCK không chứng minh chuỗi phần cứng. [Thiết kế hệ thống](../../docs/KVC_ThietKeHeThong.md) là nguồn kiến trúc/BOM/nghiệm thu, [GCS plan](../../docs/gcs/KVC_GCS_PLAN.md) phân task và [data contract](../../docs/gcs/KVC_GCS_DATA_CONTRACT.md) quy định dữ liệu ứng dụng.
 
 > **Phân định ranh giới khí tài:**
-> KVC là trạm giám sát tải nhiệm vụ cứu nạn (camera, AI phát hiện người/phao, LiDAR, telemetry cảm biến và định vị vị trí). **Không phải Flight Controller, không can thiệp điều khiển bay, arm/disarm hay lập lộ trình waypoint.**
+> KVC là trạm giám sát tải nhiệm vụ cứu nạn (camera, AI phát hiện người/phao, cảm biến siêu âm AJ-SR04M, telemetry cảm biến và định vị vị trí). **Không phải Flight Controller, không can thiệp điều khiển bay, arm/disarm hay lập lộ trình waypoint.**
 
 ---
 
@@ -78,7 +78,7 @@ Source có bộ MOCK phía trình duyệt phục vụ phát triển khi chưa c�
 6. **Backend Mất Kết Nối:** WebSocket ngắt kết nối, hiển thị cảnh báo mất liên lạc và cơ chế tự động thử kết nối lại.
 7. **Phần Cứng Ngừng Gửi:** WebSocket vẫn mở nhưng cáp nối tiếp hoặc dongle LoRa bị rút (`DISCONNECTED`).
 8. **Video Chưa Cấu Hình / Lỗi Luồng:** Báo lỗi luồng video nhưng Telemetry và GPS vẫn hoạt động độc lập bình thường.
-9. **Cảm Biến Suy Hao (LiDAR & IMU Lỗi):** LiDAR ngoài dải đo, IMU mất hiệu chuẩn, hạ cờ `pos_valid=false`.
+9. **Cảm Biến Suy Hao (Cảm biến siêu âm & IMU Lỗi):** Cảm biến siêu âm ngoài dải đo (hoặc vùng mù < 20 cm), IMU mất hiệu chuẩn, hạ cờ `pos_valid=false`.
 10. **Đổi Phiên Dữ Liệu Mới:** Khởi tạo phiên nhật ký mới, tự động xóa sạch bộ nhớ đệm vệt di chuyển và mục tiêu cũ.
 11. **Phục Hồi Sau Sự Cố:** Kết nối lại thành công, tín hiệu phục hồi bình thường.
 12. **Thiếu Tọa Độ:** AI phát hiện đối tượng nhưng thuật toán chưa giải được tọa độ (latitude/longitude null).
@@ -87,7 +87,7 @@ Source có bộ MOCK phía trình duyệt phục vụ phát triển khi chưa c�
 
 ## 5. Ý Nghĩa Kỹ Thuật & Giới Hạn Phần Cứng
 
-Cấu hình mục tiêu theo [thiết kế hệ thống](../../docs/KVC_ThietKeHeThong.md): OneKiwi Primer 20K V1.1, Sonix SN34F788, TF-Luna, GY-87, GNSS NEO-M8N/ATGM336H, Ra-02 hai đầu, gateway ESP32-C3 (kit/module còn TBD) và model YOLO11n hai lớp. ESP32 có nguồn riêng; baseline kết nối laptop là Wi-Fi SoftAP/WebSocket. Camera/cáp và pinout còn phải xác minh; ingress ESP32 chưa được triển khai. UI không tự tạo số vệ tinh/DOP/sai số, điện áp/cell/dòng pin hoặc hiệu năng AI khi schema không có dữ liệu; chỉ số thiếu là N/A.
+Cấu hình mục tiêu theo [thiết kế hệ thống](../../docs/KVC_ThietKeHeThong.md): OneKiwi Primer 20K V1.1, Sonix SN34F788, AJ-SR04M, GY-87, GNSS NEO-M8N/ATGM336H, Ra-02 hai đầu, gateway ESP32-C3 (kit/module còn TBD) và model YOLO11n hai lớp. ESP32 có nguồn riêng; baseline kết nối laptop là Wi-Fi SoftAP/WebSocket. Camera/cáp và pinout còn phải xác minh; ingress ESP32 chưa được triển khai. UI không tự tạo số vệ tinh/DOP/sai số, điện áp/cell/dòng pin hoặc hiệu năng AI khi schema không có dữ liệu; chỉ số thiếu là N/A.
 
 ### 5.1. Vị Trí Camera / Tải Nhiệm Vụ
 - **Nguồn:** Trích xuất từ anten GNSS gắn trên cụm tải nhiệm vụ hoặc thân UAV do backend truyền về qua bản tin telemetry.

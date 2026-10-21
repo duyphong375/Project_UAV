@@ -26,7 +26,7 @@ flowchart TD
         direction TB
         HAL_OUT["Mảng nhị phân thô 32 bytes + RSSI (dBm) + SNR (dB)"]
         VALIDATOR["Bộ thẩm định tính toàn vẹn:<br/>1. Kiểm tra Sync Header: 0xAA 0x55<br/>2. Kiểm tra CRC-16/CCITT-FALSE (30 bytes đầu)"]
-        PARSER["Giải mã Telemetry cứu nạn:<br/>• Tọa độ WGS-84 (Lat, Lon) hoặc Sa bàn Local (X, Y cm)<br/>• Cự ly LiDAR mặt nước, Phân loại Người/Tàu, Pin"]
+        PARSER["Giải mã Telemetry cứu nạn:<br/>• Tọa độ WGS-84 (Lat, Lon) hoặc Sa bàn Local (X, Y cm)<br/>• Cự ly siêu âm mặt nước, Phân loại Người/Tàu, Pin"]
         JSON_PACK["Đóng gói JSON Envelope v1 (IF-03):<br/>• Chuỗi Hex 64 ký tự (rf_payload_hex)<br/>• Metadata sóng vô tuyến & Drop Count"]
         WS_SRV["WebSocket Server (:8080/telemetry)<br/>Wi-Fi SoftAP: KVC_GCS_AP (192.168.4.1)"]
     end
@@ -150,16 +150,16 @@ flowchart TD
 
 * **Trực quan trên Serial Monitor (ESP32):**
   ```text
-  [TX-WS #001] NGUOI (Person) | Conf: 95% | LiDAR: 250 cm | Lat: 16.073852, Lon: 108.149921 | RSSI: -76 dBm
-  [TX-WS #002] NGUOI (Person) | Conf: 95% | LiDAR: 250 cm | Lat: 16.073852, Lon: 108.149921 | RSSI: -77 dBm
-  [TX-WS #003] TAU (Boat)     | Conf: 92% | LiDAR: 230 cm | Lat: 16.075100, Lon: 108.151200 | RSSI: -75 dBm
-  [TX-WS #004] SA BAN LOCAL   | Conf: 89% | X: +150 cm, Y: +320 cm | LiDAR: 245 cm       | RSSI: -76 dBm
+  [TX-WS #001] NGUOI (Person) | Conf: 95% | Siêu âm: 250 cm | Lat: 16.073852, Lon: 108.149921 | RSSI: -76 dBm
+  [TX-WS #002] NGUOI (Person) | Conf: 95% | Siêu âm: 250 cm | Lat: 16.073852, Lon: 108.149921 | RSSI: -77 dBm
+  [TX-WS #003] TAU (Boat)     | Conf: 92% | Siêu âm: 230 cm | Lat: 16.075100, Lon: 108.151200 | RSSI: -75 dBm
+  [TX-WS #004] SA BAN LOCAL   | Conf: 89% | X: +150 cm, Y: +320 cm | Siêu âm: 245 cm     | RSSI: -76 dBm
   ```
 
 * **Trực quan trên Terminal Backend Python (`esp32_ingress.py`):**
   ```text
   [INGRESS_REAL] Da ket noi toi Gateway ESP32 tai ws://192.168.4.1:8080/telemetry
-  [INGRESS_REAL] RX #001 | Seq=1 | Target: PERSON (95.0%) | Pos: (16.073852, 108.149921) | LiDAR: 2.50m
+  [INGRESS_REAL] RX #001 | Seq=1 | Target: PERSON (95.0%) | Pos: (16.073852, 108.149921) | Siêu âm: 2.50m
   [SQLITE_WAL] Ghi ban ghi Telemetry vao SES-REAL-001.db (ID: 1, Frame: WGS84)
   [HUB] Phat tiep tuc toi Web Dashboard qua kenh Telemetry Hub
   ```
@@ -181,7 +181,7 @@ flowchart TD
   │ │ 🎯 BÀN GIAO CỨU NẠN SAR                │         │ [🎯 Đặt lại tâm UAV]      │ │
   │ │ • Tọa độ: 16.073852° N, 108.149921° E  │         │ [📍 Khóa tâm Mục tiêu]    │ │
   │ │ • Đối tượng: Người dưới nước (95%)     │         │                           │ │
-  │ │ • Cự ly LiDAR: 2.50 m (An toàn > 2.0m) │         │ ┌───────────────────────┐ │ │
+  │ │ • Cự ly Siêu âm: 2.50 m (An toàn > 2.0m)│         │ ┌───────────────────────┐ │ │
   │ │ • Sóng LoRa SX1278: -76 dBm (SÓNG TỐT) │         │ │ 🗺️ Lớp Vệ tinh / 2D  │ │ │
   │ │ • Điện áp pin UAV: 12.5V (90%)         │         │ └───────────────────────┘ │ │
   │ └────────────────────────────────────────┘         └───────────────────────────┘ │
@@ -256,7 +256,7 @@ flowchart TD
   [LORA-RX] Do dai goi tin: 32 bytes | CRC Phan cung LoRa: VALID
   [RF-METRICS] RSSI Do duoc: -68 dBm | SNR: +10.2 dB
   [DECODER] Sync Header: 0xAA 0x55 OK | CRC-16 Software: 0xE421 == 0xE421 (MATCH)
-  [TARGET] Phat hien: Class 1 (Person) | Lat: 16.073910, Lon: 108.150040 | LiDAR: 2.45m
+  [TARGET] Phat hien: Class 1 (Person) | Lat: 16.073910, Lon: 108.150040 | Siêu âm: 2.45m
   [TX-WS #045] Da dong goi JSON va ban sang Laptop qua WebSocket!
   ```
 
@@ -340,7 +340,7 @@ Mở trình duyệt (Chrome, Edge...) truy cập vào:
 Ngay lập tức, trang Web Dashboard sẽ hiển thị:
 * **Vòng quét Radar cứu nạn**
 * **Bản đồ vệ tinh OpenStreetMap vị trí UAV và nạn nhân**
-* **Thước đo độ cao LiDAR, mức Pin UAV, và vạch sóng LoRa (RSSI/SNR)**.
+* **Thước đo cự ly độ cao siêu âm, mức Pin UAV, và vạch sóng LoRa (RSSI/SNR)**.
 
 ### Sơ đồ luồng dữ liệu 3 tầng khép kín:
 ```text
@@ -362,7 +362,7 @@ Ngay lập tức, trang Web Dashboard sẽ hiển thị:
 +-------------------------------------------------------------+
 |                 WEB DASHBOARD TRÌNH DUYỆT (GCS)             |
 | - Chạy tại: http://127.0.0.1:5173 (React + Vite)            |
-| - Hiển thị Radar quét, Tọa độ bản đồ, Pin UAV, Độ cao LiDAR |
+| - Hiển thị Radar quét, Tọa độ bản đồ, Pin UAV, Cự ly siêu âm |
 +-------------------------------------------------------------+
 ```
 
@@ -381,7 +381,7 @@ Dùng bảng này để theo dõi tiến độ công việc hàng ngày:
 | :---: | :--- | :--- | :--- |
 | **G1** | Wi-Fi (STA/SoftAP) & WebSocket | Laptop ping ESP32 $< 2\text{ms}$; Handshake WebSocket thành công | `[x]` **HOÀN TẤT** |
 | **G2** | Gói 32-byte & Thẩm định CRC-16 | CRC kiểm tra khớp chuẩn; chuỗi Hex xuất ra đủ 64 ký tự; bắt lỗi nhiễu 1-bit | `[x]` **HOÀN TẤT** |
-| **G3** | Thông luồng Self-Mock lên Web | Firmware ESP32 tự sinh 3 kịch bản mỗi 1.0s; Backend giải mã; Dashboard hiển thị Người/Tàu/LiDAR | `[x]` **HOÀN TẤT** |
+| **G3** | Thông luồng Self-Mock lên Web | Firmware ESP32 tự sinh 3 kịch bản mỗi 1.0s; Backend giải mã; Dashboard hiển thị Người/Tàu/Siêu âm | `[x]` **HOÀN TẤT** |
 | **G4** | SPI Check LoRa Ra-02 | Đọc thanh ghi `RegVersion (0x42)` qua SPI trả về đúng `0x12` | `[ ]` **TIẾP THEO** |
 | **G5** | Thu sóng LoRa 433MHz thật | Bắt gói RF từ UAV, Serial in RSSI/SNR thật, Dashboard cập nhật mượt | `[ ]` CHỜ TEST |
 | **G6** | Độ bền & Chống rớt mạng | Tắt/bật Wi-Fi tự phục hồi trong 2 giây; gói sai CRC tự động bị loại | `[ ]` CHỜ TEST |

@@ -17,7 +17,7 @@
 * **Bản chất KVC:** KVC là **Tải nhiệm vụ (Payload)** cứu nạn bão lũ lắp trên UAV, **không phải Flight Controller**. GCS tập trung chuyên sâu vào:
   1. Video RGB từ kênh riêng hoặc file tham chiếu; không có camera nhiệt trong BOM.
   2. AI mục tiêu **YOLO11n**, phân loại person/lifebuoy theo candidate có hash; chưa mặc định đã chạy trên FPGA.
-  3. Định vị local/WGS-84 khi có GNSS hoặc origin/pose, calibration camera–IMU–LiDAR và dữ liệu hợp lệ; gá cố định theo BOM, chưa có gimbal.
+  3. Định vị local/WGS-84 khi có GNSS hoặc origin/pose, calibration camera–IMU–siêu âm và dữ liệu hợp lệ; gá cố định theo BOM, chưa có gimbal.
    4. Giám sát OneKiwi Primer 20K, MCU tải Sonix SN34F788, cảm biến và LoRa. ESP32-C3 là SoC gateway trạm đất theo kiến trúc hiện hành; có nguồn riêng và gửi dữ liệu tới dịch vụ GCS trên laptop qua Wi-Fi SoftAP/WebSocket v1. Kit/module và pinout còn phải xác minh. Trạng thái chưa có dữ liệu phải là UNKNOWN/N/A.
 * **Cảm hứng & Ngôn ngữ tạo hình:** Lấy cảm hứng từ hệ sinh thái giao diện y tế/chiến thuật cao cấp **SortiX-Med**:
   - Giao diện siêu phẳng (Flat Minimalist) kết hợp chiều sâu viền kính mờ (Subtle Glassmorphism & Micro-borders).
@@ -63,7 +63,7 @@
 |  • Tổng quan       |  A. TRANG GIÁM SÁT TRỰC TIẾP (/mission):                                      |
 |  • Trực tiếp (Live)|     [Video Stream + AI HUD] | [Leaflet 2D GNSS Map] | [Target Info & Alerts]  |
 |  • Cảnh báo        |     ------------------------------------------------------------------------  |
-|  • Nhật ký phiên   |     [Telemetry Footer Bar: Tọa độ, LiDAR AGL, LoRa RSSI/SNR, Packet Age ms]   |
+|  • Nhật ký phiên   |     [Telemetry Footer Bar: Tọa độ, Cự ly siêu âm AGL, LoRa RSSI/SNR, Packet Age ms]   |
 |  • Thiết bị        |                                                                               |
 |  • Cài đặt         |  B. TRANG BẢNG ĐIỀU KHIỂN TÁC CHIẾN (/overview):                              |
 |                    |     [4 Thẻ KPI Stat Cards]                                                    |
@@ -133,7 +133,7 @@
 * Ticker ngang cố định chân màn hình hiển thị tức thời:
   - `📷 Camera: 15.893186, 108.068218`
   - `🎯 Target: 15.893586, 108.068518`
-  - `🏔️ Alt AGL (LiDAR): 279 cm`
+  - `🏔️ Alt AGL (Siêu âm): 279 cm`
   - `📶 LoRa RF: -82 dBm (SNR: 7.5 dB)`
   - `⏱️ Packet Age: 1080 ms`
 
@@ -154,7 +154,7 @@ Các số dưới đây chỉ minh họa bố cục, không phải kết quả �
   - Ngưỡng cảnh báo pin là thiết kế UI; KVC không gửi lệnh RTH hoặc điều khiển bay.
 * **Danh sách thiết bị theo BOM:**
   1. GNSS NEO-M8N hoặc biến thể ATGM336H đã chọn — UART; chưa có mẫu thật thì UNKNOWN.
-  2. TF-Luna — UART/I2C theo cấu hình; range không tự là độ cao vuông góc.
+  2. AJ-SR04M — UART/GPIO theo cấu hình; range không tự là độ cao vuông góc.
   3. GY-87 — I2C; chip thực và hiệu chuẩn cần xác minh.
   4. Camera — module/giao diện còn chờ chốt cho OneKiwi.
   5. Ra-02 SX1278 hai đầu — SPI; hardware link độc lập WebSocket.

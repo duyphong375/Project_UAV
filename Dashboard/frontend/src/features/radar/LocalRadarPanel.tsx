@@ -10,7 +10,6 @@ import {
 } from 'lucide-react'
 import { Panel } from '@/components/shared/Panel'
 import { StatusBadge } from '@/components/shared/StatusBadge'
-import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { useMission } from '@/state/MissionProvider'

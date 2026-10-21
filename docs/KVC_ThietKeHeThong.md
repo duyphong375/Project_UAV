@@ -29,7 +29,7 @@ KVC hướng tới tình huống cứu nạn bão lũ khi kết nối Internet h
 
 Kiến trúc mục tiêu sử dụng **xử lý tại biên**. Các khối dưới đây cần triển khai và kiểm thử:
 - **Phát hiện tại chỗ trên UAV:** Camera quang học thu hình ảnh mặt nước → FPGA OneKiwi Primer 20K tiền xử lý và chạy mạng nơ-ron tích chập (CNN) tăng tốc phần cứng để phát hiện người trôi dạt (`person`) và phao cứu sinh (`lifebuoy`).
-- **Định vị không gian:** MCU Sonix SN34F788 nhận kết quả Bounding Box từ FPGA qua UART, đọc đồng bộ các cảm biến đo đạc (TF-Luna LiDAR, GY-87 IMU 10-DOF, GNSS NEO-M8N) và giải bài toán giao điểm tia quang học với mặt phẳng nước để xác định tọa độ thực tế.
+- **Định vị không gian:** MCU Sonix SN34F788 nhận kết quả Bounding Box từ FPGA qua UART, đọc đồng bộ các cảm biến đo đạc (cảm biến siêu âm chống nước AJ-SR04M, GY-87 IMU 10-DOF, GNSS NEO-M8N) và giải bài toán giao điểm tia quang học với mặt phẳng nước để xác định tọa độ thực tế.
 - **Truyền tin vô tuyến tầm xa:** Thay vì truyền video, hệ thống chỉ đóng gói các thông tin cứu nạn quan trọng thành các gói tin nhị phân siêu nhỏ (**32 byte/gói**) và truyền metadata qua **LoRa 433 MHz**. RF 32 byte là dự thảo; cự ly, tỷ lệ nhận và độ trễ chưa được xác nhận bằng phép đo.
 - **Trạm giám sát mặt đất (GCS):** ESP32-C3 trạm đất giải mã gói LoRa, đọc RSSI/SNR và gửi dữ liệu sang laptop qua **Wi-Fi SoftAP/WebSocket**. ESP32 có nguồn riêng và hoạt động độc lập với laptop. Laptop chạy Dashboard web và dịch vụ GCS để nhận dữ liệu, hiển thị, lưu log và replay; không tham gia xử lý nhiệm vụ trên UAV hay điều khiển ESP32.
 
@@ -105,8 +105,8 @@ flowchart TB
             FUSION --> GEOREF --> PACKET
         end
         subgraph SENSORS["CẢM BIẾN ĐỊNH VỊ & KHÔNG GIAN"]
-            LIDAR["TF-Luna ToF LiDAR<br/>(Cự ly dọc tia — UART 115200 bps, 50–100Hz)"]
-            IMU["GY-87 IMU 10-DOF<br/>(MPU6050 + HMC5883L + BMP180 — I2C1 400 kHz)"]
+            ULTRASONIC["AJ-SR04M Siêu âm chống nước<br/>(Cự ly mặt nước — UART 9600 bps)"]
+            IMU["GY-87 IMU 10-DOF<br/>(MPU6050 + HMC5883L + BMP180 — I2C0 400 kHz)"]
             GNSS["GNSS u-blox NEO-M8N<br/>(Tọa độ WGS-84 — UART 38400 bps UBX/NMEA, 5Hz)"]
         end
         RF1["LoRa Ra-02 (Air TX)<br/>SX1278 433 MHz (SPI)"]
@@ -114,8 +114,8 @@ flowchart TB
 
         CAM -->|Giao diện theo camera/board đã xác minh| RX
         TX -->|UART 115200 bps + GPIO DATA_READY| FUSION
-        LIDAR -->|UART 115200 bps| FUSION
-        IMU -->|I2C1 400 kHz| FUSION
+        ULTRASONIC -->|UART 9600 bps| FUSION
+        IMU -->|I2C0 400 kHz| FUSION
         GNSS -->|UART 38400 bps UBX/NMEA| FUSION
         PACKET -->|SPI Bus + DIO0| RF1
         FUSION -.->|GPIO / UART| LED_STATUS
@@ -157,7 +157,7 @@ Kênh truyền LoRa (Long Range) đóng vai trò là xương sống thông tin l
 2. **Nguyên tắc "Zero-Video" — Chỉ truyền Metadata:**
    - Trong bối cảnh cứu nạn mưa lũ, việc truyền luồng video số trực tiếp (RTSP/H.264) qua sóng vô tuyến đòi hỏi băng thông hàng Megabit/giây (Mbps), rất dễ bị mất tín hiệu hoặc nhiễu trắng khi bay xa hoặc thời tiết xấu.
    - KVC triệt để loại bỏ việc truyền video qua LoRa: toàn bộ dữ liệu ảnh thô từ camera được thu nhận và chạy suy luận AI ngay trên FPGA tại UAV.
-   - LoRa chỉ đảm nhiệm truyền tải các gói tin **Metadata nhị phân siêu nhỏ (32 byte/gói)** chứa thông tin cứu nạn quan trọng: ID mục tiêu, tọa độ địa lý nạn nhân (WGS-84 / Local), mức độ tin cậy AI, cự ly LiDAR, mức pin và các cờ trạng thái hệ thống.
+   - LoRa chỉ đảm nhiệm truyền tải các gói tin **Metadata nhị phân siêu nhỏ (32 byte/gói)** chứa thông tin cứu nạn quan trọng: ID mục tiêu, tọa độ địa lý nạn nhân (WGS-84 / Local), mức độ tin cậy AI, cự ly siêu âm, mức pin và các cờ trạng thái hệ thống.
 
 3. **Cấu trúc gói tin nhị phân và kiểm tra toàn vẹn:**
    - Chiều dài gói tin cố định đúng **32 byte** (đặc tả wire v1 tại mục IV.3):
@@ -165,7 +165,7 @@ Kênh truyền LoRa (Long Range) đóng vai trò là xương sống thông tin l
      - Byte 2: Protocol Version (`1`).
      - Byte 3: Packet Type (`0x01` Telemetry tải, `0x02` Target phát hiện, `0x03` Boot/Status chẩn đoán).
      - Byte 4–5: Sequence Number (tăng đơn điệu chống trùng lặp/mất gói).
-     - Byte 6–29: Tải dữ liệu hữu ích (Track ID, Timestamp, Tọa độ X/Y hoặc Lat/Lon, cự ly LiDAR, Confidence, Mức pin, System Flags 16-bit, Session ID).
+     - Byte 6–29: Tải dữ liệu hữu ích (Track ID, Timestamp, Tọa độ X/Y hoặc Lat/Lon, cự ly siêu âm, Confidence, Mức pin, System Flags 16-bit, Session ID).
      - Byte 30–31: **CRC-16/CCITT-FALSE** (Poly `0x1021`, Init `0xFFFF`) tính trên 30 byte đầu.
    - Gói tin chỉ được phía nhận chấp nhận nếu vượt qua kiểm tra CRC-16; gói sai CRC lập tức bị drop để bảo vệ dữ liệu Dashboard không bị nhảy tọa độ rác.
 
@@ -197,8 +197,8 @@ Kênh truyền LoRa (Long Range) đóng vai trò là xương sống thông tin l
 | :--- | :--- | :--- | :--- |
 | **Tải UAV — Khối Xử lý Ảnh & AI** | **OneKiwi Primer 20K V1.1** | Gowin GW2A-LV18PG256, 20.736 LUTs, 828 Kbit BSRAM, chip nạp GWU2X; hardware notes cho biết không có DDR3 ngoài trên board | Candidate nhận ảnh qua giao diện sẽ xác minh; đánh giá khả năng đệm bằng tài nguyên có thật, khả thi AI và xuất BBox qua UART. |
 | **Tải UAV — Camera Quang học** | **Camera quang học — model TBD** | Sensor, giao diện, connector/cáp và rail cấp nguồn chưa chốt; không mặc định OV2640/OV5640, DVP/MIPI hay FPC trên OneKiwi | Thu nhận hình ảnh mặt nước sau khi xác minh camera, board, cáp, nguồn và pin map thực tế. |
-| **Tải UAV — MCU Điều khiển & Dung hợp** | **Sonix STK SN34F788** | ARM Cortex-M4F 192 MHz, Flash 512 KB, SRAM 160 KB, FPU phần cứng, tích hợp SN-LINK Lite | Giải mã BBox từ UART, đọc và lọc cảm biến AHRS/LiDAR/GNSS, giải bài toán giao điểm chiếu tia 3D, đóng gói LoRa 32-byte. |
-| **Tải UAV — LiDAR Đo cự ly** | **Benewake TF-Luna** | ToF LiDAR 850nm, dải 0,2–8 m, tần số 50–100 Hz, UART 115200 bps, nguồn 5V logic 3,3V | Đo khoảng cách thẳng đứng từ UAV xuống mặt nước để xác định độ cao mặt phẳng phục vụ chiếu tia. |
+| **Tải UAV — MCU Điều khiển & Dung hợp** | **Sonix STK SN34F788** | ARM Cortex-M4F 192 MHz, Flash 512 KB, SRAM 160 KB, FPU phần cứng, tích hợp SN-LINK Lite | Giải mã BBox từ UART, đọc và lọc cảm biến AHRS/Siêu âm/GNSS, giải bài toán giao điểm chiếu tia 3D, đóng gói LoRa 32-byte. |
+| **Tải UAV — Cảm biến cự ly siêu âm** | **AJ-SR04M (JSN-SR04T)** | Siêu âm chống nước IP67, 40 kHz, dải 0,2–6 m, UART 9600 bps / Trig-Echo, nguồn 5V logic 3,3V/5V | Đo khoảng cách thẳng đứng từ UAV xuống mặt nước để xác định độ cao mặt phẳng phục vụ chiếu tia, phản xạ tốt trên bề mặt nước. |
 | **Tải UAV — IMU 10-DOF** | **GY-87** | Tích hợp MPU6050 (3-axis Accel + 3-axis Gyro), HMC5883L (3-axis Compass), BMP180 (Áp suất), I2C 400 kHz | Cung cấp gia tốc, vận tốc góc và hướng từ trường để ước lượng ma trận xoay tư thế $\mathbf{R}_{\text{camera}}$. |
 | **Tải UAV — GNSS Định vị** | **u-blox NEO-M8N** | Thu đồng thời GPS + GLONASS, cập nhật tối đa 5 Hz, UART 38400 bps UBX/NMEA, anten gốm active | Xác định tọa độ vị trí toàn cầu WGS-84 của UAV ngoài trời khi đạt 3D fix (`GPS_VALID = 1`). |
 | **Tải UAV — Module phát LoRa (TX)** | **Ai-Thinker Ra-02 (SX1278)** | Dải 410–525 MHz, SPI, nguồn 3,3V; datasheet V1.1: công suất tối đa 18 ± 1 dBm tại 433 MHz | Phát metadata dự thảo 32 byte xuống trạm đất theo chu kỳ được đo/duyệt. |
@@ -225,9 +225,9 @@ Danh mục dưới đây phân loại chính xác linh kiện theo 5 phân hệ 
 ##### B. Phân hệ 2: Trạm Tải trên UAV (Air Unit) — Khối Điều khiển Sonix MCU, Cảm biến & LoRa TX
 | STT | Tên linh kiện cụ thể | Số lượng | Điện áp / Bus | Chức năng trong KVC | In — Đầu vào | Out — Đầu ra | Yêu cầu kỹ thuật thực tế |
 | :---: | :--- | :---: | :---: | :--- | :--- | :--- | :--- |
-| **B1** | **Sonix STK SN34F788** | 1 kit | 5V vào kit / 3.3V VDD | MCU tải chính: Dung hợp cảm biến, tính toán chiếu tia định vị và đóng gói LoRa. | Nguồn 5V qua ổn áp; UART từ FPGA; UART từ LiDAR/GNSS; I2C từ IMU. | Bus SPI điều khiển LoRa Ra-02; GPIO điều khiển LED trạng thái; UART Debug qua SN-LINK Lite. | Cortex-M4F 192 MHz có FPU; nạp qua SN-LINK Lite tích hợp; kiểm tra đúng sơ đồ nguồn VDD 3.3V. |
-| **B2** | **Benewake TF-Luna LiDAR** | 1 bộ | 5V nguồn / 3.3V UART | Đo cự ly thẳng đứng từ UAV xuống mặt nước (hỗ trợ giải mặt phẳng $Z=0$). | Nguồn 5V DC; Ánh sáng laser phản xạ từ mặt nước; Lệnh UART. | Dữ liệu cự ly (cm) và cường độ phản xạ (amp) qua UART 115200 bps. | Hoạt động dải 0.2–8 m; kiểm tra cờ amp và góc nghiêng; tránh đọc giá trị rác khi mặt nước xao động. |
-| **B3** | **Module IMU 10-DOF GY-87** | 1 module | 3.3V / I2C1 400 kHz | Đo gia tốc 3 trục, vận tốc góc và từ trường để ước lượng góc nghiêng Roll/Pitch/Yaw. | Nguồn 3.3V; Chuyển động cơ học và từ trường Trái Đất. | Dữ liệu thô Accel, Gyro, Mag qua I2C1 (địa chỉ 0x68 và 0x1E). | Gắn cố định trên gá 3D cùng camera; hiệu chuẩn offset cảm biến tĩnh trước khi bay. |
+| **B1** | **Sonix STK SN34F788** | 1 kit | 5V vào kit / 3.3V VDD | MCU tải chính: Dung hợp cảm biến, tính toán chiếu tia định vị và đóng gói LoRa. | Nguồn 5V qua ổn áp; UART từ FPGA; UART từ Siêu âm/GNSS; I2C từ IMU. | Bus SPI điều khiển LoRa Ra-02; GPIO điều khiển LED trạng thái; UART Debug qua SN-LINK Lite. | Cortex-M4F 192 MHz có FPU; nạp qua SN-LINK Lite tích hợp; kiểm tra đúng sơ đồ nguồn VDD 3.3V. |
+| **B2** | **AJ-SR04M (JSN-SR04T)** | 1 bộ | 5V nguồn / 3.3V UART | Đo cự ly thẳng đứng từ UAV xuống mặt nước (hỗ trợ giải mặt phẳng $Z=0$). | Nguồn 5V DC; Sóng siêu âm 40 kHz phản xạ từ mặt nước; UART 9600 bps. | Dữ liệu cự ly (cm) qua khung UART 4 byte hoặc xung Echo. | Hoạt động dải 0.2–6 m, chuẩn chống nước IP67; kiểm tra vùng mù < 20 cm và góc mở chùm sóng 75°; tránh đọc giá trị rác khi mặt nước xao động. |
+| **B3** | **Module IMU 10-DOF GY-87** | 1 module | 3.3V / I2C0 400 kHz | Đo gia tốc 3 trục, vận tốc góc và từ trường để ước lượng góc nghiêng Roll/Pitch/Yaw. | Nguồn 3.3V; Chuyển động cơ học và từ trường Trái Đất. | Dữ liệu thô Accel, Gyro, Mag qua I2C0 (P0.10 Pin 38 SCL0, P0.11 Pin 39 SDA0; địa chỉ 0x68 và 0x1E). | Gắn cố định trên gá 3D cùng camera; kit đã có trở kéo R3/R4 = 1 kΩ trên I2C0; xem [KVC_MASTER_PINOUT_WIRING.md](hardware/KVC_MASTER_PINOUT_WIRING.md). |
 | **B4** | **GNSS u-blox NEO-M8N** | 1 bộ | 3.3V–5V / UART 38400 | Cung cấp tọa độ WGS-84 toàn cầu ngoài trời và đồng bộ thời gian vệ tinh. | Nguồn cấp; Tín hiệu vệ tinh RF từ anten gốm active. | Tọa độ Lat, Lon, Alt, Fix status qua UART (cấu hình 5 Hz, giao thức UBX/NMEA). | Sử dụng anten gốm active 25×25 mm đặt hướng lên trời; chỉ dùng dữ liệu khi đạt 3D Fix (`GPS_VALID=1`). |
 | **B5** | **Module LoRa Ai-Thinker Ra-02** | 1 module | 3.3V / SPI Bus | Phát gói tin nhị phân 32-byte chứa metadata cứu nạn từ tải xuống trạm đất. | Nguồn 3.3V; Lệnh cấu hình và dữ liệu gói qua SPI; Chân Reset. | Sóng vô tuyến RF 433 MHz qua cổng anten U.FL/IPEX; Chân ngắt DIO0. | Sử dụng chip Semtech SX1278; gắn tụ hóa 220 µF sát chân VCC/GND; hàn bo chuyển breakout 2.54mm. |
 | **B6** | **Anten râu LoRa 433 MHz + Cáp IPEX** | 1 bộ | RF 433 MHz | Bức xạ sóng vô tuyến 433 MHz từ module Ra-02 ra không gian. | Tín hiệu RF từ module Ra-02 qua đầu cắm IPEX. | Sóng điện từ bức xạ trong không gian (Polarization dọc). | Anten râu omni 433 MHz chuẩn SMA đực, gain 3 dBi; cáp chuyển IPEX sang SMA cái dài 10–15 cm. |
@@ -246,17 +246,17 @@ Danh mục dưới đây phân loại chính xác linh kiện theo 5 phân hệ 
 | STT | Tên thành phần | Số lượng | Giao tiếp | Chức năng trong KVC | In — Đầu vào | Out — Đầu ra | Yêu cầu kỹ thuật thực tế |
 | :---: | :--- | :---: | :---: | :--- | :--- | :--- | :--- |
 | **D1** | **Laptop cá nhân (GCS)** | 1 máy | Wi-Fi 802.11 | Thiết bị giám sát, hiển thị bản đồ trực quan, quản lý cảnh báo và ghi log dữ liệu. | Wi-Fi SoftAP/WebSocket từ ESP32. | Dashboard web và file cơ sở dữ liệu SQLite. | Chạy hệ điều hành Windows/Linux; cài sẵn trình duyệt Chrome/Edge và môi trường Python 3.10+. |
-| **D2** | **Web Dashboard KVC (Offline App)**| 1 bản | WebSocket Local | Giao diện trực quan hóa: Radar BBox, Bản đồ Leaflet WGS-84, đồ thị LiDAR, bảng mục tiêu. | Backend GCS local (`ws://127.0.0.1:8000/ws`); backend ingress ESP32 được mô tả riêng tại IF-03. | Trực quan hóa dữ liệu cứu nạn trên màn hình; phát âm thanh cảnh báo. | Đóng gói toàn bộ assets thư viện offline (Leaflet JS/CSS, fonts local); không gọi API từ CDN Internet. |
+| **D2** | **Web Dashboard KVC (Offline App)**| 1 bản | WebSocket Local | Giao diện trực quan hóa: Radar BBox, Bản đồ Leaflet WGS-84, đồ thị cự ly độ cao, bảng mục tiêu. | Backend GCS local (`ws://127.0.0.1:8000/ws`); backend ingress ESP32 được mô tả riêng tại IF-03. | Trực quan hóa dữ liệu cứu nạn trên màn hình; phát âm thanh cảnh báo. | Đóng gói toàn bộ assets thư viện offline (Leaflet JS/CSS, fonts local); không gọi API từ CDN Internet. |
 | **D3** | **Backend Python & SQLite Logger** | 1 gói | Localhost / WAL | Dịch vụ tiếp nhận luồng dữ liệu, lưu trữ bền vững vào SQLite và phát lại phiên (Replay). | Luồng dữ liệu telemetry từ Ingress. | File log `kvc_telemetry.db` chế độ WAL (`PRAGMA synchronous=FULL`). | Chạy ngầm trên laptop; đảm bảo commit dữ liệu tức thời, chống hỏng file khi mất nguồn đột ngột. |
 
 ##### E. Phân hệ 5: Khối Nguồn, Gá Cơ Khí & Linh Kiện Kết Nối Phụ Trợ Dùng Chung
 | STT | Tên linh kiện cụ thể | Số lượng | Thông số kỹ thuật | Chức năng trong KVC | Lưu ý lắp đặt và thi công |
 | :---: | :--- | :---: | :--- | :--- | :--- |
-| **E1** | **Mạch hạ áp Buck DC-DC MP1584** | 3 mạch | Vin 4.5–28V, Vout chỉnh được, dòng liên tục 2A (đỉnh 3A) | Hạ áp từ pin chính (UAV 3S/4S hoặc pin trạm đất 2S) xuống rail 5V (LiDAR, Vin bo) và rail 3.3V (LoRa, cảm biến). | Hiệu chỉnh biến trở đo chuẩn điện áp bằng đồng hồ vạn năng trước khi gắn tải; cố định keo biến trở. |
+| **E1** | **Mạch hạ áp Buck DC-DC MP1584** | 3 mạch | Vin 4.5–28V, Vout chỉnh được, dòng liên tục 2A (đỉnh 3A) | Hạ áp từ pin chính (UAV 3S/4S hoặc pin trạm đất 2S) xuống rail 5V (AJ-SR04M, Vin bo) và rail 3.3V (LoRa, cảm biến). | Hiệu chỉnh biến trở đo chuẩn điện áp bằng đồng hồ vạn năng trước khi gắn tải; cố định keo biến trở. |
 | **E2** | **Tụ hóa nhôm 220 µF / 16V** | 4 chiếc | 220 µF, chịu áp 16V, Low ESR | Lọc nguồn và đệm năng lượng tức thời chống sụt áp khi module LoRa Ra-02 phát. | Bắt buộc hàn trực tiếp sát chân VCC và GND của module Ra-02 (cả trên tải và dưới trạm đất). |
 | **E3** | **Tụ gốm 100 nF (0.1 µF)** | 8 chiếc | 100 nF, chịu áp 50V | Lọc nhiễu xung cao tần trên các đường nguồn 3.3V và 5V gần chân IC. | Mắc song song với tụ hóa, đặt càng gần chân nguồn của MCU và module RF càng tốt. |
-| **E4** | **Điện trở kéo 4.7 kΩ** | 2–4 chiếc | 4.7 kΩ, công suất 1/4W, sai số 1% | Trở kéo Pull-up cho đường truyền bus I2C (SDA, SCL) về mức logic 3.3V. | Dùng cho bus I2C1 (GY-87 trên tải) và I2C (OLED trên trạm đất) nếu module chưa có sẵn trở kéo hoặc dây dài; tải UAV không còn dùng bus I2C2 cho màn hình. |
-| **E5** | **Gá in 3D cụm Camera – LiDAR – IMU** | 1 bộ | Nhựa PLA/PETG chịu lực, in 3D chính xác | Giữ cố định mối quan hệ hình học (Extrinsic Calibration) giữa camera được chọn, TF-Luna và GY-87. | Kích thước/góc gá chốt sau khi camera và pose thực tế được xác minh. |
+| **E4** | **Điện trở kéo 4.7 kΩ** | 2–4 chiếc | 4.7 kΩ, công suất 1/4W, sai số 1% | Trở kéo Pull-up cho đường truyền bus I2C (SDA, SCL) về mức logic 3.3V. | Dùng cho bus I2C (OLED trên trạm đất) nếu module chưa có sẵn trở kéo; trên tải UAV, bus I2C0 cho GY-87 đã có trở kéo R3/R4 = 1 kΩ tích hợp sẵn trên Starter-Kit V1.1; xem [KVC_MASTER_PINOUT_WIRING.md](hardware/KVC_MASTER_PINOUT_WIRING.md). |
+| **E5** | **Gá in 3D cụm Camera – Cảm biến siêu âm – IMU** | 1 bộ | Nhựa PLA/PETG chịu lực, in 3D chính xác | Giữ cố định mối quan hệ hình học (Extrinsic Calibration) giữa camera được chọn, AJ-SR04M và GY-87. | Kích thước/góc gá chốt sau khi camera và pose thực tế được xác minh. |
 | **E6** | **Cáp USB Type-C & Micro-USB** | 3 sợi | Cáp đồng có đủ 4 lõi nguồn và data | Nối nạp code/debug cho OneKiwi (Type-C), Sonix (Mini/Type-C) và ESP32 (Micro-USB). | Dùng cáp truyền dữ liệu chất lượng tốt; không dùng cáp sạc 2 lõi chỉ cấp nguồn. |
 | **E7** | **Dây nối Dupont & Header 2.54mm** | 2 tép | Dupont cái-cái, đực-cái dài 10–20 cm; header chân mạ thiếc | Đấu nối tín hiệu thử nghiệm trên bàn test giữa các module và kit phát triển. | Khi đóng gói bay thật, thay thế các mối cắm lỏng bằng cách hàn cố định lên protoboard để chống rung. |
 | **E8** | **Protoboard & Bộ trụ ốc M2/M3** | 1 bộ | Bo đồng lỗ 2.54mm; ốc trụ đồng M2/M3 cách điện | Làm đế hàn module Ra-02 + tụ lọc; cố định chắc chắn các bo mạch vào khung tải bay UAV. | Dùng đệm cao su hoặc silicon chống rung cơ học từ cánh quạt UAV tác động lên IMU và mối hàn. |
@@ -271,12 +271,12 @@ Danh mục dưới đây phân loại chính xác linh kiện theo 5 phân hệ 
 
 **Trạng thái giao thức:** mục IV.2–IV.3, gồm UART và RF payload 32 byte, vẫn là **DRAFT / CHƯA DUYỆT**. Mục IV.4 chốt transport mục tiêu ESP32–laptop để triển khai, không thay đổi layout RF. Telemetry 20 byte là ghi nhận source lịch sử, chưa thấy parser đó trong backend hiện tại.
 
-**Điểm phải giải quyết trước khi khóa ABI:** Width/Height 1 byte chưa rõ cách biểu diễn kích thước ảnh lớn hơn 255; quy tắc wrap sequence/session/time; timestamp và đồng bộ clock; CRC/timeout/resync cho UART; cách nhả/ack DATA_READY và chống mất frame. Cờ LIDAR_VALID phải dựa cả chất lượng phép đo và timeout, không chỉ kiểm khoảng 20–800 cm. Các bảng byte phía dưới được giữ để thảo luận, chưa giải quyết các điểm mở này.
+**Điểm phải giải quyết trước khi khóa ABI:** Width/Height 1 byte chưa rõ cách biểu diễn kích thước ảnh lớn hơn 255; quy tắc wrap sequence/session/time; timestamp và đồng bộ clock; CRC/timeout/resync cho UART; cách nhả/ack DATA_READY và chống mất frame. Cờ ALT_VALID phải dựa cả chất lượng phép đo và timeout, không chỉ kiểm khoảng 20–500 cm. Các bảng byte phía dưới được giữ để thảo luận, chưa giải quyết các điểm mở này.
 
 | Phân hệ | Nhiệm vụ bắt buộc (Bắt buộc hoàn thành) | Nhiệm vụ mở rộng (Làm khi còn thời gian) |
 | :--- | :--- | :--- |
 | **FPGA** | Camera RX, bộ đệm theo bộ nhớ đã xác minh, tiền xử lý ảnh (Resize/Letterbox), accelerator AI sau kiểm khả thi, bộ đệm FIFO và UART TX đóng gói ứng viên BBox; có chế độ BBox giả (Mock) phục vụ kiểm thử. | Tối ưu xung nhịp FPS, chuyển toàn bộ thuật toán NMS sang RTL, thiết kế pipeline song song kép. |
-| **MCU Tải (Sonix)**| Bộ giải mã UART từ FPGA, thu thập cảm biến có timestamp (LiDAR, IMU, GNSS), thuật toán chiếu tia định vị mục tiêu, theo dõi (tracking) 1 mục tiêu ở mức thiết kế, đóng gói và điều khiển phát LoRa 32 byte, watchdog an toàn. | Lọc Kalman nâng cao, theo dõi đa mục tiêu đồng thời, lưu trữ flash bền vững khi mất sóng dài ngày. |
+| **MCU Tải (Sonix)**| Bộ giải mã UART từ FPGA, thu thập cảm biến có timestamp (Cảm biến siêu âm, IMU, GNSS), thuật toán chiếu tia định vị mục tiêu, theo dõi (tracking) 1 mục tiêu ở mức thiết kế, đóng gói và điều khiển phát LoRa 32 byte, watchdog an toàn. | Lọc Kalman nâng cao, theo dõi đa mục tiêu đồng thời, lưu trữ flash bền vững khi mất sóng dài ngày. |
 | **MCU Trạm đất** | Driver SPI điều khiển Ra-02 ở chế độ nhận, kiểm CRC, đọc RSSI/SNR và xuất telemetry qua Wi-Fi SoftAP/WebSocket v1. ESP32-C3 có nguồn riêng; kiểm thử tài nguyên khi các tác vụ chạy đồng thời. | Bổ sung cơ chế phát gói ACK phản hồi khi đường truyền rảnh. |
 | **Dashboard GCS** | Ingress nhận dữ liệu từ ESP32 qua transport được chốt, kiểm tra session và giải mã RF v1, bộ quản lý trạng thái (Reducer), giao diện Radar local và Bản đồ WGS-84, SQLite logger (WAL), Replay phiên. | Hiển thị lớp bản đồ vệ tinh ngoại tuyến (Tile map), thống kê nâng cao. |
 
@@ -304,7 +304,7 @@ Ghi chú về thuật ngữ: “sa bàn” trong các mô tả field local/origi
 | **8–11** | 4 byte | Measurement Time | `uint32` | Thời điểm quan sát (ms tính từ lúc boot MCU tải) |
 | **12–15** | 4 byte | Coordinate A | `int32` | Nếu Bit8=0: Vĩ độ (Latitude độ × 10⁷); Nếu Bit8=1: Tọa độ X sa bàn (cm) |
 | **16–19** | 4 byte | Coordinate B | `int32` | Nếu Bit8=0: Kinh độ (Longitude độ × 10⁷); Nếu Bit8=1: Tọa độ Y sa bàn (cm) |
-| **20–21** | 2 byte | LiDAR Range | `uint16` | Cự ly dọc tia laser (cm); giá trị `65535` nếu lỗi/ngoài dải |
+| **20–21** | 2 byte | Altitude Distance | `uint16` | Cự ly đo mặt nước từ cảm biến siêu âm (cm); giá trị `65535` nếu lỗi/ngoài dải |
 | **22** | 1 byte | Confidence | `uint8` | Target: Độ tin cậy AI (0–100%); Telemetry: gán mặc định `255` |
 | **23** | 1 byte | Battery Level | `uint8` | Dung lượng pin (0–100%); `255` nếu chưa xác định |
 | **24–25** | 2 byte | System Flags | `uint16` | Cờ trạng thái 16-bit (chi tiết bảng bit bên dưới) |
@@ -313,7 +313,7 @@ Ghi chú về thuật ngữ: “sa bàn” trong các mô tả field local/origi
 
 ##### b. Chi tiết định dạng 16-bit trường System Flags
 - **Bit 0 (`GPS_VALID`):** `1` = GNSS đạt 3D fix và dữ liệu còn hạn; `0` = Chưa có fix.
-- **Bit 1 (`LIDAR_VALID`):** `1` = Cự ly LiDAR hợp lệ và nằm trong dải 0,2–8 m; `0` = Ngoài dải/lỗi.
+- **Bit 1 (`ALT_VALID`):** `1` = Cự ly siêu âm hợp lệ và nằm trong dải 0,2–5 m; `0` = Ngoài dải/lỗi.
 - **Bit 2 (`IMU_VALID`):** `1` = Dữ liệu góc nghiêng IMU hợp lệ và đã qua hiệu chuẩn.
 - **Bit 3 (`AI_DETECTED`):** `1` = Mục tiêu được phát hiện trực tiếp bởi mô hình AI.
 - **Bits 4–5 (`SOURCE_MODE`):** `00`: REAL (phần cứng thật); `01`: MOCK (giả lập); `10`: REPLAY (phát lại log); `11`: Bị từ chối.
@@ -367,14 +367,14 @@ Trong đó:
 - $\mathbf{t}_{\text{camera}} = [X_c, Y_c, Z_c]^\top$: Tọa độ tâm camera trong hệ local của khu vực thử nghiệm bể bơi (đo đạc chính xác khi gá đặt).
 - $\mathbf{R}_{\text{camera}}$: Ma trận xoay camera sang hệ local, kết hợp attitude do firmware ước lượng từ IMU đã hiệu chuẩn với phép quay extrinsic IMU–camera; không dùng trực tiếp dữ liệu thô GY-87 như góc Euler.
 - $\mathbf{v}_{\text{pixel}}$: Vector hướng tia xuất phát từ tiêu cự camera xuyên qua điểm pixel tâm Bounding Box $(u, v)$ sau khi đã khử méo ống kính (undistortion).
-- $\lambda$: Hệ số tỷ lệ độ dài tia, được xác định bằng cách giải phương trình giao điểm của tia với mặt phẳng nước $Z = 0$ (hoặc mặt phẳng độ cao xác định bởi LiDAR TF-Luna và góc nghiêng).
+- $\lambda$: Hệ số tỷ lệ độ dài tia, được xác định bằng cách giải phương trình giao điểm của tia với mặt phẳng nước $Z = 0$ (hoặc mặt phẳng độ cao xác định bởi cảm biến siêu âm AJ-SR04M và góc nghiêng).
 2. **Quy tắc tính toán và điều kiện hợp lệ:**
-- Cần camera intrinsics/distortion, phép đổi tọa độ sau resize/letterbox, extrinsics camera–IMU–LiDAR–GNSS và mẫu cảm biến đồng bộ theo thời điểm ảnh. GNSS 3D fix một mình chưa đủ xác nhận tọa độ mục tiêu.
-- TF-Luna chỉ đo dọc một tia; chỉ suy ra mặt phẳng nước khi biết hướng/điểm đặt cảm biến và xác nhận tia phản xạ từ đúng bề mặt. Kiểm amp, timeout, góc tới và phản xạ thực; IMU bù nghiêng không chữa được phép đo mặt nước sai.
+- Cần camera intrinsics/distortion, phép đổi tọa độ sau resize/letterbox, extrinsics camera–IMU–cảm biến siêu âm–GNSS và mẫu cảm biến đồng bộ theo thời điểm ảnh. GNSS 3D fix một mình chưa đủ xác nhận tọa độ mục tiêu.
+- AJ-SR04M đo khoảng cách bằng sóng siêu âm (góc mở chùm sóng ~75°); chỉ suy ra mặt phẳng nước khi biết hướng/điểm đặt cảm biến và xác nhận sóng phản xạ từ đúng bề mặt. Kiểm timeout, góc nghiêng và khoảng cách tin cậy 20–500 cm; lưu ý mép bờ bể bơi; IMU bù nghiêng không chữa được phép đo mặt nước sai.
 - Hệ local không cần GNSS khi camera được gá cố định và pose đã đo. Nếu tải di chuyển, cần cập nhật vị trí camera theo hệ local; IMU đơn lẻ không cung cấp vị trí tịnh tiến ổn định.
 - Chỉ tính tọa độ khi các điều kiện trên hợp lệ. Thiếu dữ liệu thì báo INVALID/N/A; không tự chuyển sang local hợp lệ chỉ vì mất GNSS.
 - Hệ thống chỉ xuất tọa độ hợp lệ (`POS_VALID = 1`) khi mẫu số tính $\lambda$ không gần 0 (tia không song song với mặt nước) và $\lambda > 0$ (mục tiêu nằm phía trước camera).
-- Nếu UAV bị nghiêng vượt ngưỡng hoặc LiDAR đo lỗi/ngoài dải → Gán `POS_VALID = 0`, tọa độ gán `INT32_MIN`.
+- Nếu UAV bị nghiêng vượt ngưỡng hoặc cảm biến siêu âm đo lỗi/ngoài dải → Gán `POS_VALID = 0`, tọa độ gán `INT32_MIN`.
 3. **Phân biệt hai hệ quy chiếu tọa độ:**
 - **Chế độ tọa độ cục bộ (Local frame - `LOCAL_FRAME_ACTIVE = 1`):** Đơn vị tính là **centimet (cm)** so với gốc O(0, 0) của khu vực thử nghiệm đã đo, ví dụ bể bơi. Chế độ này độc lập với GNSS nhưng cần origin và hiệu chuẩn camera/pose gắn với `Origin ID`. Tại nơi thi không có sa bàn và không có hiệu chuẩn local phù hợp thì để `POS_VALID = 0`, không tự gán tọa độ hợp lệ.
 - **Chế độ Toàn cầu (WGS-84 frame - `LOCAL_FRAME_ACTIVE = 0`):** Đơn vị tính là **độ × 10⁷**. Chỉ kích hoạt khi GNSS NEO-M8N đạt `GPS_VALID = 1` (3D fix); kết hợp vị trí GNSS của UAV và vector khoảng cách để suy ra tọa độ Vĩ độ/Kinh độ của nạn nhân.
@@ -466,7 +466,7 @@ Dữ liệu cần phản ánh hai bối cảnh trình diễn: video lũ lụt c�
 | **GoAI không hỗ trợ mạng hoặc thiếu tài nguyên FPGA** | **Rất cao** | Compiler báo lỗi toán tử không hỗ trợ; thiếu LUT/BRAM; timing không đạt. | **Phương án A:** Đánh giá detector nhẹ hơn; mọi candidate vẫn phải qua kiểm operator, tài nguyên và chạy trên bo, không tự đổi khỏi YOLO11n nếu chưa được nhóm chốt và kiểm chứng.<br/>**Phương án B:** PoC phần cứng (FPGA đảm nhiệm Camera RX + UART; MCU định vị; AI chạy trên laptop làm tham chiếu có nhãn `PC_REFERENCE`). |
 | **Lệch phân bố dữ liệu AI (Domain Shift)** | **Cao** | Model tốt trên video lũ lụt nhưng sai ở bể bơi hoặc đầu vào live, hay ngược lại. | QA dữ liệu theo từng miền/phiên, mục tiêu tổng ≥ 1.000 ảnh và 20–30% negative; đánh giá riêng từng miền, bổ sung dữ liệu thật phù hợp, không tuning bằng locked-test. |
 | **Sai lệch giao thức dữ liệu giữa FPGA, MCU và GCS** | **Cao** | Lệch byte offset, sai endian, lỗi checksum CRC khi giải mã. | Giữ ABI LoRa 32B ở trạng thái dự thảo; dùng transport WebSocket v1 ở mục IV.4 làm baseline, tạo JSON schema validation và vector kiểm thử liên thiết bị trước khi tích hợp. |
-| **LiDAR bị sai lệch do góc nghiêng tải UAV** | **Cao** | Cự ly đo dọc tia thay đổi khi tải bị rung lắc/nghiêng. | Bắt buộc kết hợp góc Roll/Pitch từ IMU GY-87 để dựng ma trận bù góc trước khi chiếu tia; ngoài dải gán sentinel `65535`. |
+| **Cảm biến siêu âm bị sai lệch do góc nghiêng tải UAV** | **Cao** | Cự ly đo phản xạ thay đổi khi tải bị rung lắc/nghiêng. | Bắt buộc kết hợp góc Roll/Pitch từ IMU GY-87 để dựng ma trận bù góc trước khi chiếu tia; ngoài dải gán sentinel `65535`. |
 | **Nhiễu nguồn / Sụt áp khi LoRa phát công suất lớn** | **Vừa** | MCU bị reset bất ngờ hoặc cảm biến bị treo khi module LoRa bắt đầu phát. | Bổ sung rail nguồn 3,3V riêng cho LoRa, hàn tụ lọc 100 µF + 100 nF sát chân nguồn, nối mass hình sao (Star Ground). |
 | **Mất dữ liệu GCS khi ứng dụng bị tắt đột ngột** | **Vừa** | File cơ sở dữ liệu SQLite bị hỏng hoặc mất các bản ghi cảnh báo mới. | Cấu hình bắt buộc SQLite WAL mode (`PRAGMA synchronous=FULL`); commit tức thời các bản ghi có sự kiện mục tiêu. |
 | **Video bể bơi không đối chiếu được với Dashboard** | **Cao** | Video và screen recording khác phiên; thiếu timestamp/log hoặc không rõ kênh truyền hình. | Ghi toàn cảnh, màn hình và session/capture cùng lần thử; lưu hash/candidate, đánh dấu đoạn cắt; chỉ mô tả luồng thực chạy và tách video khỏi LoRa metadata. |
@@ -482,7 +482,7 @@ Dữ liệu cần phản ánh hai bối cảnh trình diễn: video lũ lụt c�
 - **[S4]** [Ai-Thinker — Ra-02 Product Specification V1.1](https://aithinker-static.oss-cn-shenzhen.aliyuncs.com/docs/Public%20Document%20Center/LoRa/lora/Specification/Ra-02_V1.1%20Specification-20171219.pdf): SX1278, SPI, dải 410–525 MHz; thông số 433 MHz gồm công suất cực đại 18 ± 1 dBm và độ nhạy tới -141 dBm tại SF12/BW125. [Trang sản phẩm hiện hành](https://docs.ai-thinker.com/en/Ra-02/index.html) ghi +20 dBm và -140 dBm, nên không dùng lẫn hai bộ số liệu khi tính link budget.
 - **[S5]** [Semtech LoRa Calculator](https://calculator.semtech.com/): Dùng đối chiếu Time-on-Air, duty cycle và link budget sau khi khóa cấu hình thanh ghi thực tế.
 
-- **[S6]** [Benewake — TF-Luna ToF LiDAR Module Datasheet](https://en.benewake.com/uploadfiles/2025/04/20250430174515390.pdf): Cảm biến đo khoảng cách laser ToF, dải đo 0,2–8 m, điện áp nguồn và mức logic.
+- **[S6]** [AJ-SR04M / JSN-SR04T Waterproof Ultrasonic Sensor Datasheet](https://www.makerfabs.com/desfile/files/JSN-SR04T-2.0.pdf): Cảm biến đo khoảng cách siêu âm chống nước IP67, dải đo 0,2–6 m, giao tiếp UART / xung Echo.
 - **[S7]** [ARM — Cortex-M4 Floating Point Unit (FPU) Guidelines](https://developer.arm.com/community/arm-community-blogs/b/architectures-and-processors-blog/posts/10-useful-tips-to-using-the-floating-point-unit-on-the-arm-cortex--m4-processor): Tối ưu hóa tính toán dấu phẩy động và hàm lượng giác trên ARM Cortex-M4.
 - **[S8]** [u-blox — NEO-M8 GNSS Module Datasheet](https://content.u-blox.com/sites/default/files/NEO-M8-FW3_DataSheet_UBX-15031086.pdf): Thông số kỹ thuật độ chính xác định vị và giao thức NMEA/UBX.
 - **[S9]** [Varga et al. — SeaDronesSee: A Maritime Benchmark for Detecting Humans in Open Water (WACV 2022)](https://openaccess.thecvf.com/content/WACV2022/papers/Varga_SeaDronesSee_A_Maritime_Benchmark_for_Detecting_Humans_in_Open_Water_WACV_2022_paper.pdf): Bộ dữ liệu chuẩn đánh giá phát hiện người trên mặt nước từ UAV.

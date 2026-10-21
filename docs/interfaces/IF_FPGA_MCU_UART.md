@@ -8,13 +8,40 @@
 
 ## 1. Kết nối vật lý và đường truyền
 
-| Tín hiệu | Hướng | Mức điện áp | Mô tả kỹ thuật |
-| :--- | :---: | :---: | :--- |
-| **UART_TX (FPGA)** → **UART_RX (MCU)** | FPGA → MCU | 3,3 V CMOS | Đường truyền dữ liệu nối tiếp khung kết quả BBox |
-| **DATA_READY** | FPGA → MCU | 3,3 V CMOS | Chân báo hiệu khung ảnh mới sẵn sàng; kích hoạt ngắt ngoài (EXTI) trên MCU |
-| **GND** | Hai chiều | 0 V | **Nối chung GND bắt buộc** giữa bo OneKiwi và kit Sonix |
+### 1.1. Bảng phân bổ chân vật lý (Physical Pin Mapping)
 
-### Tham số UART
+| Tín hiệu | Hướng | Chân FPGA OneKiwi (Header J2) | Chân MCU Sonix (LQFP64) | Chân trên Kit Sonix | Mức logic | Mô tả kỹ thuật |
+| :--- | :---: | :--- | :--- | :--- | :---: | :--- |
+| **UART_TX (FPGA)** → **URXD1** | FPGA → MCU | **`R13`** (J2 Pin 11, Bank 2) | **`P2.3`** (`URXD1`, Pin 17) | `JP3` Pin 7 hoặc 8 | 3.3 V CMOS | Đường truyền dữ liệu nối tiếp khung kết quả BBox |
+| **DATA_READY** → **EXTI** | FPGA → MCU | **`R12`** (J2 Pin 13, Bank 2) | **`P0.12`** (Pin 3) | `JP1` Pin 11 hoặc 12 | 3.3 V CMOS | Xung báo hiệu khung ảnh mới sẵn sàng; kích hoạt ngắt ngoài (EXTI) trên MCU |
+| **UART_RX (FPGA)** ← **UTXD1** | MCU → FPGA | **`T13`** (J2 Pin 12, Bank 2) | **`P2.2`** (`UTXD1`, Pin 16) | `JP3` Pin 5 hoặc 6 | 3.3 V CMOS | Tín hiệu phản hồi / ACK / lệnh điều khiển (dự phòng) |
+| **GND** | Hai chiều | **`GND`** (J2 Pin 14) | `VSS` (GND) | **`J5`** Pin 1..4 | 0 V | **Nối chung GND bắt buộc** giữa bo OneKiwi và kit Sonix |
+
+> [!NOTE]
+> **Tương thích điện áp:**
+> - I/O Bank 2 trên bo OneKiwi Primer 20K được cấp nguồn bởi đường `P3V3` (3.3V).
+> - MCU Sonix SN34F788 hoạt động ở điện áp `VDD = 3.3V`.
+> - Do đó, **2 bo mạch tương thích logic 3.3V trực tiếp 100%**, không cần mạch đệm hay cầu phân áp.
+
+### 1.2. Mẫu cấu hình chân Gowin Physical Constraints (`.cst`) cho Vững
+
+```cst
+// Cấu hình chân giao tiếp UART & DATA_READY sang MCU Sonix
+// Bo mạch: OneKiwi Primer 20K V1.1 (GW2A-LV18PG256)
+
+IO_LOC "uart_tx" R13;
+IO_PORT "uart_tx" IO_TYPE=LVCMOS33 DRIVE=8;
+
+IO_LOC "uart_rx" T13;
+IO_PORT "uart_rx" IO_TYPE=LVCMOS33 PULL_MODE=UP;
+
+IO_LOC "data_ready" R12;
+IO_PORT "data_ready" IO_TYPE=LVCMOS33 DRIVE=8;
+```
+
+> 📌 **File cấu hình dự án đã tạo:** File ràng buộc chân vật lý đã được tạo tại [fpga/constraints/pins.cst](../../fpga/constraints/pins.cst). Header định nghĩa chân phía MCU tại [firmware/mcu_uav/inc/kvc_pinout.h](../../firmware/mcu_uav/inc/kvc_pinout.h). Tham chiếu đấu nối chi tiết xem tại [KVC_MASTER_PINOUT_WIRING.md](../hardware/KVC_MASTER_PINOUT_WIRING.md).
+
+### 1.3. Tham số UART
 - **Baudrate:** Khởi đầu ở **115.200 bps** để kiểm tra tính đúng đắn; sau khi đo sai số xung nhịp ổn định có thể nâng lên **460.800 bps** hoặc **921.600 bps**.
 - **Cấu hình bit:** 8N1 (8 bit dữ liệu, No Parity, 1 Stop bit).
 

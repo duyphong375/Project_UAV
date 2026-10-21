@@ -24,28 +24,14 @@ import type { AlertLevel, AlertSourceCategory } from '@/types/telemetry'
 import { EventLogTable } from './EventLogTable'
 import { FlightDebriefingPlayer } from './FlightDebriefingPlayer'
 
-// Phiên mẫu dự phòng khi database chưa có phiên ghi
+// Phiên mô phỏng mẫu dự phòng khi database chưa có phiên ghi
 const FALLBACK_SESSIONS: StoredSession[] = [
-  {
-    session_id: 'SES-REAL-20261016-01',
-    file: 'data/sessions/SES-REAL-20261016-01.db',
-    records: 1420,
-    size_bytes: 48500,
-    last_persisted_at_iso: new Date(Date.now() - 3600000).toISOString(),
-  },
-  {
-    session_id: 'SES-REAL-20261015-02',
-    file: 'data/sessions/SES-REAL-20261015-02.db',
-    records: 860,
-    size_bytes: 31200,
-    last_persisted_at_iso: new Date(Date.now() - 86400000).toISOString(),
-  },
   {
     session_id: 'MOCK-DEMO-SAR-01',
     file: 'data/sessions/MOCK-DEMO-SAR-01.db',
     records: 600,
     size_bytes: 20480,
-    last_persisted_at_iso: new Date(Date.now() - 172800000).toISOString(),
+    last_persisted_at_iso: new Date(Date.now() - 3600000).toISOString(),
   },
 ]
 

@@ -2,10 +2,8 @@ import React, { useState } from 'react'
 import {
   AlertTriangle,
   BookmarkPlus,
-  CheckCircle2,
   ChevronDown,
   ChevronUp,
-  Compass,
   Copy,
   Crosshair,
   LifeBuoy,
@@ -150,10 +148,15 @@ export const BottomTacticalDock: React.FC<BottomTacticalDockProps> = ({
       {isMinimized ? (
         <div className="bg-slate-950/85 dark:bg-slate-950/90 backdrop-blur-md border border-white/20 dark:border-white/10 rounded-full px-3 py-1.5 flex items-center gap-2.5 text-xs font-mono text-slate-200 shadow-xl">
           <div className="flex items-center gap-1.5 truncate">
-            <span className="flex items-center gap-1 text-white font-bold">
+            <button
+              type="button"
+              onClick={handleCopyUavCoord}
+              className="flex items-center gap-1 text-white font-bold hover:text-cyan-300 cursor-pointer"
+              title="Nhấp để sao chép tọa độ UAV"
+            >
               <MapPin className="h-3 w-3 text-cyan-400 shrink-0" />
               <span className="truncate">{uavLatStr} {uavLonStr}</span>
-            </span>
+            </button>
             <span className="text-slate-500">•</span>
             <span className={isLidarDangerLow ? 'text-rose-400 font-bold animate-pulse' : 'text-slate-300'}>
               LiDAR: {lidarDistM !== null ? `${lidarDistM.toFixed(2)}m` : '—'}
@@ -364,7 +367,7 @@ export const BottomTacticalDock: React.FC<BottomTacticalDockProps> = ({
               <div className="flex flex-col pt-1.5 border-t border-white/5">
                 <span className="text-[10px] text-slate-400 font-sans">Gói vô tuyến:</span>
                 <span className="font-bold text-cyan-300 mt-0.5">
-                  {target?.track_id != null ? `#${target.track_id}` : <span className="text-slate-500 font-normal">N/A</span>}
+                  {state.sequence_number != null ? `#${state.sequence_number}` : <span className="text-slate-500 font-normal">N/A</span>}
                 </span>
               </div>
             </div>

@@ -94,7 +94,7 @@ export const MissionPage: React.FC = () => {
         : 'Mô phỏng độc lập'
       : source_mode === 'REPLAY'
         ? `Phát lại: ${state.replay?.source_session_id ?? 'đang chờ snapshot'}`
-        : `Phiên: ${session_id || 'SES-REAL-001'}`
+        : `Phiên: ${session_id || 'Chưa có phiên'}`
 
   // Kích hoạt Đặt lại khung nhìn về vị trí UAV
   const handleTriggerResetView = () => {

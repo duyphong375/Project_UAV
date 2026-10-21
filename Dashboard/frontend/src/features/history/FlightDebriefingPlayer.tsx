@@ -123,7 +123,7 @@ export const FlightDebriefingPlayer: React.FC<FlightDebriefingPlayerProps> = ({
   }
 
   const hasGpsFix = camera_position.is_valid && camera_position.latitude !== null && camera_position.longitude !== null
-  const lidarM = telemetry.lidar_range_cm !== null ? (telemetry.lidar_range_cm / 100).toFixed(2) : '15.20'
+  const lidarM = telemetry.lidar_range_cm !== null ? (telemetry.lidar_range_cm / 100).toFixed(2) : 'N/A'
   const targetLabel = has_target && target?.class_name
     ? target.class_name === 'boat' || target.class_name === 'lifebuoy'
       ? 'TÀU THUYỀN (Boat)'
@@ -251,18 +251,18 @@ export const FlightDebriefingPlayer: React.FC<FlightDebriefingPlayerProps> = ({
           <div className="flex items-center gap-3">
             <span className="flex items-center gap-1 text-emerald-400">
               <MapPin className="h-3.5 w-3.5" />
-              {hasGpsFix ? `${camera_position.latitude?.toFixed(5)}°N, ${camera_position.longitude?.toFixed(5)}°E` : '10.77689°N, 106.70081°E'}
+              {hasGpsFix ? `${camera_position.latitude?.toFixed(5)}°N, ${camera_position.longitude?.toFixed(5)}°E` : 'Chưa có GPS'}
             </span>
             <span className="flex items-center gap-1 text-cyan-400">
               <Mountain className="h-3.5 w-3.5" />
-              LiDAR: {lidarM}m
+              LiDAR: {lidarM !== 'N/A' ? `${lidarM}m` : 'N/A'}
             </span>
           </div>
 
           <div className="flex items-center gap-2">
             {has_target && (
               <Badge className="bg-rose-600 text-white font-semibold text-[10px] border-none">
-                AI: {targetLabel} ({target?.confidence ?? 88}%)
+                AI: {targetLabel} ({target?.confidence != null ? `${target.confidence}%` : 'N/A'})
               </Badge>
             )}
           </div>
@@ -391,17 +391,17 @@ export const FlightDebriefingPlayer: React.FC<FlightDebriefingPlayerProps> = ({
         <div className="p-2.5 rounded-xl border border-border bg-card/60">
           <div className="text-[10px] text-muted-foreground uppercase font-medium">📍 Tọa độ GPS UAV</div>
           <div className="text-xs font-mono font-bold text-foreground mt-0.5 truncate">
-            {camera_position.latitude ? `${camera_position.latitude.toFixed(6)}° N` : '10.776889° N'}
+            {camera_position.latitude ? `${camera_position.latitude.toFixed(6)}° N` : 'N/A'}
           </div>
           <div className="text-[10px] font-mono text-muted-foreground truncate">
-            {camera_position.longitude ? `${camera_position.longitude.toFixed(6)}° E` : '106.700806° E'}
+            {camera_position.longitude ? `${camera_position.longitude.toFixed(6)}° E` : 'N/A'}
           </div>
         </div>
 
         <div className="p-2.5 rounded-xl border border-border bg-card/60">
           <div className="text-[10px] text-muted-foreground uppercase font-medium">⛰️ Độ cao mặt nước LiDAR</div>
           <div className="text-sm font-mono font-bold text-cyan-600 dark:text-cyan-400 mt-0.5">
-            {lidarM} m
+            {lidarM !== 'N/A' ? `${lidarM} m` : 'N/A'}
           </div>
           <div className="text-[10px] text-muted-foreground">Khoảng cách an toàn</div>
         </div>
@@ -412,17 +412,17 @@ export const FlightDebriefingPlayer: React.FC<FlightDebriefingPlayerProps> = ({
             {targetLabel}
           </div>
           <div className="text-[10px] font-mono text-muted-foreground">
-            Độ tin cậy: {target?.confidence ?? 88}%
+            Độ tin cậy: {target?.confidence != null ? `${target.confidence}%` : 'N/A'}
           </div>
         </div>
 
         <div className="p-2.5 rounded-xl border border-border bg-card/60">
           <div className="text-[10px] text-muted-foreground uppercase font-medium">📡 Đường truyền RF LoRa</div>
           <div className="text-xs font-mono font-bold text-foreground mt-0.5">
-            RSSI: {telemetry.packet_rssi_dbm ?? -85} dBm
+            RSSI: {telemetry.packet_rssi_dbm != null ? `${telemetry.packet_rssi_dbm} dBm` : 'N/A'}
           </div>
           <div className="text-[10px] font-mono text-muted-foreground">
-            SNR: +{telemetry.packet_snr_db ?? 8.5} dB
+            SNR: {telemetry.packet_snr_db != null ? `${telemetry.packet_snr_db > 0 ? `+${telemetry.packet_snr_db}` : telemetry.packet_snr_db} dB` : 'N/A'}
           </div>
         </div>
       </div>

@@ -1,7 +1,7 @@
 # KVC — Phân hệ Trạm Giám Sát Mặt Đất (Dashboard / GCS)
 
 - **Người phụ trách:** **Đoàn Thanh Trường Thịnh**
-- **Mục tiêu:** Cung cấp giao diện trạm mặt đất (GCS) chuyên dụng để giám sát tải nhiệm vụ cứu nạn bão lũ (Bounding Box người/phao cứu sinh từ AI, hình ảnh camera, vị trí định vị WGS-84, cảm biến độ cao khí áp/LiDAR và pin).
+- **Mục tiêu:** Cung cấp giao diện trạm mặt đất (GCS) chuyên dụng để giám sát tải nhiệm vụ cứu nạn bão lũ (Bounding Box người/phao cứu sinh từ AI, hình ảnh camera, vị trí định vị WGS-84, cảm biến độ cao khí áp/siêu âm AJ-SR04M và pin).
 - **Phân định ranh giới khí tài:** KVC là hệ thống giám sát **tải nhiệm vụ cứu nạn** (Payload), **không phải Flight Controller (FC)**. Dashboard không can thiệp điều khiển bay, arm/disarm hay lập lộ trình bay waypoint của máy bay.
 - **Tài liệu căn cứ:**
   - Thiết kế kiến trúc tổng thể: [docs/KVC_ThietKeHeThong.md](file:///d:/Project_UAV_KVC/docs/KVC_ThietKeHeThong.md)

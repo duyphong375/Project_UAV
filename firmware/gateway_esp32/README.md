@@ -62,17 +62,19 @@ firmware/gateway_esp32/
    - ESP32-C3 chỉ có 1 lõi CPU (160 MHz). Tuyệt đối **không gọi `xTaskCreatePinnedToCore` sang Core 1** như trên ESP32 classic. Tất cả tác vụ (LoRa RX ISR, SoftAP Wi-Fi, WebSocket broadcast) chạy phối hợp non-blocking hoặc định thời trên Core 0.
 2. **Cảnh báo chân Strapping Pins khi đấu nối:**
    - `GPIO 2`, `GPIO 8`, `GPIO 9` là các chân quyết định chế độ boot của chip. Đặc biệt `GPIO 8` và `GPIO 9` không được để mức kéo LOW bất thường khi khởi động làm chip rơi vào chế độ nạp ROM.
-3. **Gợi ý phân bổ chân kết nối ngoại vi (Pinout tham khảo):**
-   - **Bus SPI (Module LoRa Ra-02):**
-     * `SCK`: GPIO 4 (hoặc 6)
-     * `MISO`: GPIO 5 (hoặc 2)
-     * `MOSI`: GPIO 6 (hoặc 7)
-     * `NSS / CS`: GPIO 7 (hoặc 10)
-     * `DIO0 (Ngắt RxDone)`: GPIO 3 (hoặc 1)
-     * `RST`: GPIO 1 (hoặc 0)
-   - **Bus I2C (Màn hình OLED SSD1306 0.96"):**
-     * `SDA`: GPIO 8 (hoặc 4)
-     * `SCL`: GPIO 9 (hoặc 5)
+3. **Cấu hình chân kết nối chính thức (Khớp mã nguồn `src/main.cpp` & Master Pinout):**
+   - Tham chiếu toàn bộ tại [KVC_MASTER_PINOUT_WIRING.md](../../docs/hardware/KVC_MASTER_PINOUT_WIRING.md):
+   - **Bus SPI (Module LoRa Ra-02 SX1278 - 433 MHz):**
+     * `NSS / CS`: **`GPIO 7`**
+     * `SCK`: **`GPIO 4`**
+     * `MOSI`: **`GPIO 6`**
+     * `MISO`: **`GPIO 5`**
+     * `RST`: **`GPIO 1`**
+     * `DIO0 (Ngắt RxDone)`: **`GPIO 3`**
+   - **Bus I2C (Màn hình OLED SSD1306 0.96", tùy chọn trạm đất):**
+     * `SDA`: `GPIO 8`
+     * `SCL`: `GPIO 9`
+     *(Lưu ý: GPIO 8 và GPIO 9 là strapping pins; kiểm tra mức logic khi khởi động để tránh kẹt boot)*
 4. **Cổng nạp & Debug Serial (USB-CDC vs USB-to-UART):**
    - Nếu bo devkit ESP32-C3 dùng cổng Type-C nối trực tiếp vào chân USB phần cứng của SoC (`GPIO 18 / 19`), cần bật cờ `-D ARDUINO_USB_CDC_ON_BOOT=1` trong `platformio.ini` để `Serial.print()` xuất ra đúng cổng USB máy tính.
    - Nếu bo dùng chip chuyển đổi trung gian (CH340 / CP2102) nối vào `GPIO 20 / 21` (UART0) thì dùng cấu hình mặc định.

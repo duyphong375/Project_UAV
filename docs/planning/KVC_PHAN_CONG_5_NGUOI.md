@@ -16,7 +16,7 @@ LoRa không truyền video. ESP32 trạm đất nhận LoRa độc lập với l
 
 | Người | Nhiệm vụ chính |
 | --- | --- |
-| **Duy Phong** | MCU tải Sonix: nhận BBox từ FPGA, đọc LiDAR/IMU/GNSS, tính tọa độ chỉ khi đủ điều kiện hợp lệ và điều khiển LoRa phát theo giao thức đã được duyệt. Điều phối ghép và kiểm tra toàn chuỗi. |
+| **Duy Phong** | MCU tải Sonix: nhận BBox từ FPGA, đọc cảm biến siêu âm/IMU/GNSS, tính tọa độ chỉ khi đủ điều kiện hợp lệ và điều khiển LoRa phát theo giao thức đã được duyệt. Điều phối ghép và kiểm tra toàn chuỗi. |
 | **Vững** | FPGA OneKiwi: xác minh giao diện camera/bo, xây đường ảnh và BBox thử, đánh giá tính khả thi AI trên FPGA, xuất dữ liệu sang MCU theo giao diện được nhóm duyệt. |
 | **Thịnh** | Firmware ESP32 trạm đất và GCS laptop: nhận LoRa trên ESP32, chuyển dữ liệu qua Wi-Fi SoftAP/WebSocket v1 theo thiết kế; nối ingress vào Dashboard web, lưu/replay và kiểm trạng thái mất link. Phụ trách QA dữ liệu/model AI và hai video demo. |
 | **Kiên** | Phụ trách kiểm kê phần cứng, nguồn riêng trạm đất, nguồn tải, dây nối, camera và gá. Đo nguồn/nhiệt, xác minh lắp đặt và chuẩn bị bộ thiết bị trình diễn. |

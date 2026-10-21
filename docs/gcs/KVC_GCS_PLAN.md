@@ -44,7 +44,7 @@ Dashboard GCS là trạm mặt đất đóng vai trò **giám sát dữ liệu t
    - Phân biệt rõ 3 chế độ: `REAL` (phần cứng thật), `MOCK` (bộ tạo dữ liệu giả lập), `REPLAY` (phát lại nhật ký).
    - Ghi rõ nhãn chữ và màu sắc; chế độ `REAL` tuyệt đối không tự động âm thầm fallback sang `MOCK`.
 3. **Hiển thị Telemetry và Trạng thái Cảm biến:**
-   - Nhận diện trạng thái nguồn pin, LiDAR range, cờ hợp lệ (`GPS_VALID`, `LIDAR_VALID`, `IMU_VALID`, `AI_DETECTED`, `POS_VALID`).
+   - Nhận diện trạng thái nguồn pin, cự ly siêu âm AJ-SR04M, cờ hợp lệ (`GPS_VALID`, `ALT_VALID`, `IMU_VALID`, `AI_DETECTED`, `POS_VALID`).
    - Tính toán và hiển thị tuổi dữ liệu nhận tại PC (`rx_age_ms`).
    - Đánh dấu trạng thái `STALE` khi không nhận được gói tin mới quá 3 giây.
 4. **Hiển thị Mục tiêu trên Radar Hệ local XY:**
@@ -102,7 +102,7 @@ Giao diện được thiết kế tối ưu cho 2 chuẩn màn hình phổ biế
 | |                                              | | +--------------------------------------------+ |
 | | Thước tỉ lệ: [ 1 ô = 50 cm ]                 | |                                                 |
 | | Gốc O: Cột mốc A (Manifest ID: 0x01)         | | +-- TRẠNG THÁI KHÍ TÀI (PAYLOAD HEALTH) -----+ |
-| +----------------------------------------------+ | | Pin tải: 82%        | LiDAR Range: 245 cm  | |
+| +----------------------------------------------+ | | Pin tải: 82%        | Siêu âm Range: 245 cm| |
 |                                                  | | IMU: VALID          | Tín hiệu LoRa: -92dBm | |
 +--------------------------------------------------+-------------------------------------------------+
 | [4] BẢNG NHẬT KÝ CẢNH BÁO (ALERTS & EVENTS)      | [5] ĐIỀU KHIỂN PHIÊN & REPLAY (SESSION / LOG)   |
@@ -317,7 +317,7 @@ flowchart LR
 - **Sản phẩm bàn giao:** Frontend hiện có đã kiểm/hoàn thiện, kèm build và test evidence.
 
 #### Task KVC-GCS-003: Xây dựng Bộ tạo dữ liệu giả lập (MOCK Fixture Generator)
-- **Scope:** Tạo script Python sinh chuỗi dữ liệu giả lập (MOCK Stream) mô phỏng tải nhiệm vụ UAV: di chuyển mục tiêu trên local, thay đổi pin, thay đổi LiDAR range, giả lập kịch bản mất GNSS, kịch bản mục tiêu mất dấu.
+- **Scope:** Tạo script Python sinh chuỗi dữ liệu giả lập (MOCK Stream) mô phỏng tải nhiệm vụ UAV: di chuyển mục tiêu trên local, thay đổi pin, thay đổi cự ly siêu âm, giả lập kịch bản mất GNSS, kịch bản mục tiêu mất dấu.
 - **Out of scope:** Chưa nối vào cổng serial thật.
 - **Owner duy nhất:** Codex hoặc Antigravity do người dùng chọn trước triển khai.
 - **Allowed files (Đề xuất):**

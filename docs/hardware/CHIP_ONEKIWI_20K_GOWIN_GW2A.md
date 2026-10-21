@@ -13,6 +13,7 @@ Tài liệu này tổng hợp thông tin của **FPGA Gowin GW2A-LV18PG256** và
 | **Đóng gói (Package)** | Mã thiết bị cho biết package PG256/PBGA256; kích thước cơ khí và ball map cần đối chiếu datasheet Gowin đúng biến thể | User Guide mục 2.5 và schematic; datasheet chip chưa có trong folder |
 | **Mã speed/temperature grade** | Schematic ghi hậu tố `C8/I7`; chưa gán dải nhiệt độ/speed grade cụ thể khi thiếu datasheet đúng biến thể. User Guide nêu nhiệt độ môi trường hoạt động của bo là −10°C đến +65°C | Schematic trang 4/13; User Guide mục 2.6 |
 | **Bộ nhớ cấu hình ngoài** | Schematic ghi Winbond **W25Q128JVSIQ** (128 Mbit / 16 MByte, SPI). User Guide mục 2.6 lại ghi 64 Mbit; dung lượng thực cần xác nhận bằng BOM/marking của bo đang dùng | Schematic trang 2/13, trang 5/13; User Guide mục 2.6 có số khác |
+| **DDR3 ngoài** | Trang sản phẩm OneKiwi ghi **512 MB DDR3 SDRAM**; schematic V1.1 đang lưu trong workspace chưa thể hiện rõ chip DDR3/đường bus tương ứng, nên tình trạng lắp thực và controller khả dụng chưa được xác minh | [Trang sản phẩm OneKiwi](https://onekiwi.vn/san-pham/kiwi-primer-20k-fpga-board/); schematic cục bộ V1.1 cần đối chiếu lại với revision bo thực |
 | **Mạch nạp & Debug tích hợp** | Chip cầu chuyển đổi **Gowin GWU2X** (USB-to-JTAG/UART, QFN32) | Schematic trang 11/13, User Guide mục 3.2 |
 | **Giao diện vật lý** | 2× HDMI (1× TX, 1× RX), 1× MicroSD (SDIO), 2× USB 2.0 Host/Device, 2× Header 40-pin, 1× Header 8-pin, 3× WS2812B RGB, 7× User LED, 2× User Key, 1× Reset Key | Schematic & User Guide mục 3 |
 
@@ -250,13 +251,20 @@ Bo OneKiwi Primer 20K cung cấp 2 header 40 chân (J1, J2) bước 2.54 mm và 
 | **37** | `B3_B48_P` | `R3` | Bank 4 | **38** | `B3_B52_N` | `T3` | Bank 4 |
 | **39** | `GND` | — | — | **40** | `B3_B48_N` | `T2` | Bank 4 |
 
+> 📌 **Ánh xạ chân giao tiếp KVC (UART BBox & DATA_READY sang MCU Sonix):**
+> File ràng buộc chính thức tại [fpga/constraints/pins.cst](../../fpga/constraints/pins.cst) và bản đồ đấu nối [KVC_MASTER_PINOUT_WIRING.md](KVC_MASTER_PINOUT_WIRING.md):
+> - **Header J2 Pin 11:** Chân FPGA **`R13`** (`uart_tx`, Bank 2, LVCMOS33) ➔ Nối chân `P2.3` (Pin 17) trên MCU Sonix.
+> - **Header J2 Pin 12:** Chân FPGA **`T13`** (`uart_rx`, Bank 2, LVCMOS33) ➔ Nối chân `P2.2` (Pin 16) trên MCU Sonix.
+> - **Header J2 Pin 13:** Chân FPGA **`R12`** (`data_ready`, Bank 2, LVCMOS33) ➔ Nối chân ngắt `P0.12` (Pin 3) trên MCU Sonix.
+> - **Header J2 Pin 14:** Chân **`GND`** ➔ Bắt buộc nối chung Mass với cụm chân `J5` trên bo Sonix.
+
 ---
 
 ## 7. Lưu ý Kỹ thuật Phần cứng Quan trọng
 
 1.  **Về bộ nhớ RAM ngoài (DDR3):**
-    *   Trang schematic `ddr3.kicad_sch` (trang 7/13 của sơ đồ nguyên lý) chỉ bao gồm các điểm kiểm tra quang học (Fiducial markers `FID1 ~ FID12`). Bo OneKiwi Primer 20K V1.1 **không hàn chip DDR3 ngoài**.
-    *   Mọi thiết kế xử lý dữ liệu và đệm khung hình video/ảnh trên bo phải tận dụng tối đa **828 Kbits BSRAM nội** của chip GW2A, hoặc sử dụng thẻ nhớ MicroSD/Flash SPI để lưu trữ dữ liệu tĩnh.
+    *   Trang sản phẩm OneKiwi hiện công bố board có **512 MB DDR3 SDRAM**. Tuy vậy, ghi chú khi đọc schematic V1.1 cục bộ cho biết trang `ddr3.kicad_sch` (trang 7/13) chỉ có fiducial markers và chưa xác định được chip/đường bus DDR3. Hai nguồn đang mâu thuẫn; không kết luận board có hoặc không có DDR3 chỉ từ các ghi chú này.
+    *   Trước khi dùng DDR3 cho frame buffer, đối chiếu revision schematic/BOM với board thực (marking chip và các kết nối), xác nhận pin mapping và IP/controller Gowin. Nếu chưa xác minh, chỉ tính BSRAM nội **828 Kbits** là bộ nhớ xác nhận được; mức này xấp xỉ 100 KiB và không chứa đủ một frame VGA RGB565 (~600 KiB). Line-buffer/streaming là lựa chọn thiết kế khác nhưng cần RTL/timing/resource verification.
 2.  **Về chuẩn ngõ vào/ngõ ra HDMI:**
     *   Cổng HDMI trên bo sử dụng trực tiếp các chân vi sai true LVDS ở Bank 0 với điện áp `VCCIO0 = 3.3V` kết hợp mạng điện trở phối trở kháng trên bo.
     *   Để thu/phát hình ảnh, thiết kế RTL cần tích hợp các IP Core tương thích (DVI/TMDS encoder, TMDS decoder) và tuân thủ chặt chẽ ràng buộc xung nhịp (timing constraints) cho xung nhịp pixel và xung nhịp dữ liệu (5× pixel clock).

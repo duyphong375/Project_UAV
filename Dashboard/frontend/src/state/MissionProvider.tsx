@@ -60,7 +60,8 @@ function transportReducer(state: MissionState, action: MissionAction): MissionSt
 export const MissionProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const initialMode: SourceMode =
     (typeof window !== 'undefined' && (localStorage.getItem('kvc_source_mode') as SourceMode)) ||
-    (import.meta.env.MODE === 'test' ? 'MOCK' : 'REAL')
+    (APP_CONFIG.DEFAULT_SOURCE_MODE as SourceMode) ||
+    'MOCK'
 
   const [state, dispatch] = useReducer(transportReducer, {
     ...INITIAL_MISSION_STATE,

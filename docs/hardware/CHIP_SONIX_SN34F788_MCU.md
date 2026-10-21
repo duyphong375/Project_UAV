@@ -93,7 +93,7 @@ Bảng địa chỉ cơ sở trích xuất trực tiếp từ CMSIS Device Famil
 | | `SN_I2C1` | `0x4003_4000` | 96 MHz | Bộ điều khiển I2C 1 |
 | | `SN_I2C2` | `0x4003_5000` | 96 MHz | Bộ điều khiển I2C 2 |
 | | **`SN_GPIO0`** | **`0x4003_7000`** | 96 MHz | **Cổng xuất/nhập đa năng GPIO Port 0** |
-| | **`SN_GPIO1`** | **`0x4003_8000`** | 96 MHz | **Cổng GPIO Port 1 (Chứa chân BOOT P1.3, LED1/2 Starter-Kit)** |
+| | **`SN_GPIO1`** | **`0x4003_8000`** | 96 MHz | **Cổng GPIO Port 1 (bao gồm chân BOOT P1.3 và các GPIO P1.x)** |
 | | **`SN_GPIO2`** | **`0x4003_9000`** | 96 MHz | **Cổng GPIO Port 2 (Chứa 16 ngõ vào ADC và chân UART1/2)** |
 | | **`SN_GPIO3`** | **`0x4003_A000`** | 96 MHz | **Cổng GPIO Port 3 (Chứa đường nạp SWD, chân Reset và Thạch anh)** |
 | **AHB** | `SN_BKPSRAM` | `0x4005_1000` | 192 MHz | Bộ nhớ lưu trữ dữ liệu nguồn phụ Backup SRAM (4 KB) |
@@ -365,6 +365,8 @@ Theo phần Features của User Manual v1.7: 4 timer hỗ trợ đếm up/down/c
 
 ## 7. Sơ đồ Chân & Bảng Phân Bố Chức Năng (LQFP64)
 
+> 📌 **Bản đồ phân bổ chân dự thảo:** Tra cứu chi tiết sơ đồ chân, mức điện áp và kết nối các module tại [KVC_MASTER_PINOUT_WIRING.md](KVC_MASTER_PINOUT_WIRING.md); tài liệu đang ở trạng thái DESIGN BASELINE - SOURCE-VERIFIED, chưa HARDWARE-VERIFIED.
+
 Dưới đây là bảng phân bố chức năng chân của vi điều khiển **SN34F788FG** (gói LQFP 64 chân) theo chuẩn Alternate Function (AFIO) từ User Manual v1.7:
 
 | Chân | Tên cổng | Miền nguồn | Chức năng chính / Alternate Functions (AFIO) |
@@ -431,8 +433,8 @@ Dưới đây là bảng phân bố chức năng chân của vi điều khiển 
 | **60** | `P1.5` | VDD | GPIO, `SEL1` (SPI1), `SDA0` (I2C0) |
 | **61** | `P1.6` | **VDDIO1** | GPIO, `MI2` (SPI2 MISO) |
 | **62** | `P1.7` | **VDDIO1** | GPIO, `SEL0` (SPI0) |
-| **63** | `P1.8` | **VDDIO1** | GPIO, kết nối LED1 trên Starter-Kit |
-| **64** | `P1.9` | **VDDIO1** | GPIO, kết nối LED2 trên Starter-Kit, `SEL1`, `SDA1` |
+| **63** | `P1.8` | **VDDIO1** | GPIO; không thuộc LED/KEY TEST trên Starter-Kit V1.1 |
+| **64** | `P1.9` | **VDDIO1** | GPIO, `SEL1`, `SDA1`; không thuộc LED/KEY TEST trên Starter-Kit V1.1 |
 
 ---
 
@@ -479,16 +481,20 @@ Bo mạch phát triển chính thức **SN34F780 Starter-Kit Board V1.1** tích 
 
 | Jumper / Cổng | Trạng thái mặc định | Chức năng cấu hình |
 | :--- | :--- | :--- |
-| **J4** | Nối chân 2–3 (`3V3_LINK`) | **Lựa chọn nguồn VDD cho MCU:** Nối nguồn 3.3V LDO trên bo hoặc cấp nguồn ngoài `VDD_EXT` |
+| **J4** | Chọn theo nguồn cấp (không ghi trạng thái mặc định) | Chân 1 = `3V3_LINK` (LDO SN-Link), chân 2 = `VDD`, chân 3 = `3V3_EXT`. Đóng 1–2 chọn nguồn SN-Link; đóng 2–3 chọn nguồn ngoài 3.3 V đã ổn áp (LiPo qua Buck/LDO, không pin thô). |
 | **J1** | Đóng (Short) | **Cấp nguồn cho miền VDDIO1:** Mặc định nối chung với đường nguồn `VDD` (3.3V) |
 | **JP16** | Đóng (Short) | **Chân đo dòng tiêu thụ:** Mở jumper để gắn đồng hồ miliampe đo dòng tiêu thụ thực tế của MCU |
 | **JP9** | Mở (Open) | **Jumper vào Bootloader cưỡng bức:** Nối tắt (Short) để kéo chân `P1.3` (BOOT) xuống GND, ép MCU vào ROM Bootloader |
 | **JP5** | Đầu nối 20-pin | **Đầu nối nạp Writer chuyên dụng:** Phục vụ nạp hàng loạt bằng máy nạp chuyên dụng ngoài |
 | **JP6** | Đầu nối SWD ngoài | Cổng kết nối với bộ nạp **SN-LINK-V3** rời khi không sử dụng SN-LINK Lite tích hợp |
 | **Nút RESET** | Phím nhấn thường hở | Nối vào chân `P3.7`/`RESET` để kích hoạt Reset phần cứng bằng tay |
-| **KEY1 (Phím thử)**| Nối chân `P3.6` qua JP12 | Phím nhấn người dùng để kiểm tra ngắt/ngõ vào số |
-| **LED1 (Xanh lục)** | Nối chân `P1.8` qua JP14 | LED người dùng hiển thị trạng thái 1 |
-| **LED2 (Xanh lục)** | Nối chân `P1.9` qua JP15 | LED người dùng hiển thị trạng thái 2 |
+| **KEY1 (Phím thử)** | `P1.14` (LQFP64 Pin 50), qua `JP12`; header `JP2` Pin 29/30 | Phím nhấn người dùng theo khối KEY TEST của Starter-Kit V1.1 |
+| **LED1 (Xanh lục)** | `P1.12` (LQFP64 Pin 52), qua `JP10`; header `JP2` Pin 25/26 | LED người dùng theo khối KEY TEST của Starter-Kit V1.1 |
+| **LED2 (Xanh lục)** | `P1.13` (LQFP64 Pin 51), qua `JP11`; header `JP2` Pin 27/28 | LED người dùng theo khối KEY TEST của Starter-Kit V1.1 |
+
+> 📌 **Bản đồ phân bổ chân chi tiết cho dự án KVC:**
+> Toàn bộ kết nối phần cứng từ Kit Sonix SN34F780 Starter-Kit V1.1 tới module LoRa Ra-02, cụm cảm biến (AJ-SR04M, GY-87 I2C0, NEO-M8N) và bo FPGA OneKiwi được chuẩn hóa tại:
+> 👉 **[KVC_MASTER_PINOUT_WIRING.md](KVC_MASTER_PINOUT_WIRING.md)**<br/>Header mã nguồn C tương ứng: [firmware/mcu_uav/inc/kvc_pinout.h](../../firmware/mcu_uav/inc/kvc_pinout.h).
 
 ---
 

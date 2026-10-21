@@ -12,6 +12,7 @@ export const APP_CONFIG = {
   // Kết nối mạng
   API_BASE_URL: import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000',
   WS_URL: import.meta.env.VITE_WS_URL || 'ws://127.0.0.1:8000/ws/telemetry',
+  DEFAULT_SOURCE_MODE: (import.meta.env.VITE_DEFAULT_SOURCE_MODE || 'MOCK') as 'MOCK' | 'REAL' | 'REPLAY',
   MOCK_TRANSPORT: import.meta.env.VITE_MOCK_TRANSPORT === 'BACKEND' ? 'BACKEND' : 'LOCAL',
   VIDEO_STREAM_URL: import.meta.env.VITE_VIDEO_STREAM_URL || '',
 

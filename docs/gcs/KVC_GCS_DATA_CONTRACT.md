@@ -24,7 +24,7 @@
 
 Các bảng mục 2–6 mô tả contract mục tiêu, không phải toàn bộ schema runtime hiện tại. **Mục 7** mô tả phần đã triển khai; source `Dashboard/backend/schemas.py` hiện chấp nhận source_mode MOCK/REPLAY và original_source_mode REAL/MOCK/UNKNOWN. Không gửi REAL hoặc sao chép fixture thiết kế rồi mặc định backend chấp nhận. Wire flags/sentinel phía dưới chưa có decoder hardware.
 
-LOCAL_GRID là hệ tọa độ đã hiệu chuẩn; cách gọi “sa bàn” cũ không yêu cầu sa bàn tại cuộc thi. Dải LiDAR 20–800 cm là miền biểu diễn, không đủ xác nhận phép đo mặt nước hợp lệ.
+LOCAL_GRID là hệ tọa độ đã hiệu chuẩn; cách gọi “sa bàn” cũ không yêu cầu sa bàn tại cuộc thi. Dải cự ly siêu âm AJ-SR04M 20–500 cm (danh định 600 cm, schema lịch sử biểu diễn tới 800 cm) là miền biểu diễn, không đủ xác nhận phép đo mặt nước hợp lệ.
 
 Toàn bộ dữ liệu trao đổi giữa Backend và Frontend được chuẩn hóa dưới dạng JSON (UTF-8). Mỗi trường dữ liệu đều được định nghĩa rõ kiểu dữ liệu, đơn vị, nguồn tạo và quy tắc xử lý khi thiếu hoặc ngoài miền giá trị.
 
@@ -64,9 +64,9 @@ Toàn bộ dữ liệu trao đổi giữa Backend và Frontend được chuẩn 
 | Tên trường | Ý nghĩa | Kiểu dữ liệu | Đơn vị / Miền giá trị | Bắt buộc | Nguồn tạo | Quy tắc Null & Validation |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
 | `battery_pct` | Mức dung lượng pin của tải | `integer` hoặc `null` | % (0 .. 100) | Có | Thiết bị MCU | Giá trị 255 trên phần cứng ánh xạ thành `null` (Unknown). Ngoài 0..100 là invalid. |
-| `lidar_range_cm` | Khoảng cách đo dọc tia LiDAR | `integer` hoặc `null` | cm (20 .. 800) | Có | Cảm biến LiDAR | Giá trị 65535 hoặc khi `LIDAR_VALID=0` ánh xạ thành `null`. Không tự ý coi là độ cao thẳng đứng. |
+| `lidar_range_cm` | Khoảng cách đo mặt nước từ cảm biến siêu âm (tên trường schema lịch sử) | `integer` hoặc `null` | cm (20 .. 800) | Có | Cảm biến siêu âm AJ-SR04M | Giá trị 65535 hoặc khi `ALT_VALID=0` ánh xạ thành `null`. Không tự ý coi là độ cao thẳng đứng. |
 | `gps_valid` | Trạng thái cảm biến GNSS | `boolean` | `true` / `false` | Có | Cảm biến GNSS | Trích xuất từ Bit 0 của cờ Flags. |
-| `lidar_valid` | Trạng thái cảm biến LiDAR | `boolean` | `true` / `false` | Có | Cảm biến LiDAR | Trích xuất từ Bit 1 của cờ Flags. |
+| `lidar_valid` | Trạng thái cự ly siêu âm hợp lệ (ALT_VALID) | `boolean` | `true` / `false` | Có | Cảm biến siêu âm AJ-SR04M | Trích xuất từ Bit 1 của cờ Flags (ALT_VALID). |
 | `imu_valid` | Trạng thái tư thế cảm biến IMU | `boolean` | `true` / `false` | Có | Cảm biến IMU | Trích xuất từ Bit 2 của cờ Flags. |
 | `ai_detected` | Cờ phát hiện đối tượng từ AI | `boolean` | `true` / `false` | Có | Accelerator AI | Trích xuất từ Bit 3 của cờ Flags. |
 | `packet_rssi_dbm` | Cường độ tín hiệu thu RF | `integer` hoặc `null` | dBm (-127 .. 0) | Có | MCU trạm đất | Đọc từ thanh ghi SX1278. Giá trị -128 ánh xạ thành `null`. Không tự tạo số giả. |
@@ -363,8 +363,8 @@ CREATE INDEX IF NOT EXISTS idx_records_session ON telemetry_records(session_id);
 
 ---
 
-### Ví dụ 4: Cảm biến LiDAR và IMU Bị Lỗi (Sensor INVALID)
-*Mô tả:* Tải gặp sự cố cảm biến: Cáp LiDAR bị lỏng dẫn đến ngoài tầm đo (`lidar_valid=false`, range=65535 $\rightarrow$ null), góc nghiêng IMU vượt ngưỡng cho phép (`imu_valid=false`). Dù AI có phát hiện đối tượng, hệ thống bắt buộc hạ cờ `pos_valid=false` và không xuất tọa độ.
+### Ví dụ 4: Cảm biến Siêu âm và IMU Bị Lỗi (Sensor INVALID)
+*Mô tả:* Tải gặp sự cố cảm biến: Cáp cảm biến siêu âm bị lỏng dẫn đến ngoài tầm đo (`lidar_valid=false`, range=65535 $\rightarrow$ null), góc nghiêng IMU vượt ngưỡng cho phép (`imu_valid=false`). Dù AI có phát hiện đối tượng, hệ thống bắt buộc hạ cờ `pos_valid=false` và không xuất tọa độ.
 
 ```json
 {
@@ -411,7 +411,7 @@ CREATE INDEX IF NOT EXISTS idx_records_session ON telemetry_records(session_id);
   "alert": {
     "level": "WARN",
     "code": "SENSOR_DEGRADED",
-    "message": "LiDAR ngoài dải đo và IMU mất hiệu chuẩn. Không thể tính toán tọa độ local."
+    "message": "Cảm biến siêu âm ngoài dải đo và IMU mất hiệu chuẩn. Không thể tính toán tọa độ local."
   },
   "diagnostics": {
     "packets_received_total": 198,
@@ -629,7 +629,7 @@ Ví dụ sequence application (mỗi event còn có schema_version/session/sourc
 ]
 ```
 
-LINK_STATUS/ALERT_EVENT trên không xóa target hay sensors. Pin null chỉ clear pin và giữ LiDAR. Event cuối clear target nhưng vẫn giữ telemetry. LOCAL_GRID `(0,0)` hợp lệ khi có origin/validity phù hợp; camera/WGS84 vẫn N/A. MOCK target không tuyên bố tracker thật: track_id null, target_confirmed false.
+LINK_STATUS/ALERT_EVENT trên không xóa target hay sensors. Pin null chỉ clear pin và giữ cự ly siêu âm. Event cuối clear target nhưng vẫn giữ telemetry. LOCAL_GRID `(0,0)` hợp lệ khi có origin/validity phù hợp; camera/WGS84 vẫn N/A. MOCK target không tuyên bố tracker thật: track_id null, target_confirmed false.
 
 ### 7.3. Clock và reconnect freshness
 

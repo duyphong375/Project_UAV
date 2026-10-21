@@ -4,7 +4,6 @@ import {
   ArrowRight,
   CheckCircle2,
   Play,
-  Radio,
   Video,
 } from 'lucide-react'
 import { toast } from 'sonner'
@@ -173,16 +172,16 @@ export const OverviewPage: React.FC = () => {
           <div className="flex items-center gap-2">
             <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
             <span className="text-foreground font-bold uppercase tracking-wider">KVC LIVE CONSOLE:</span>
-            <span className="text-primary font-bold">PHIÊN #{session_id || 'SES-REAL-001'}</span>
+            <span className="text-primary font-bold">PHIÊN #{session_id || (source_mode === 'MOCK' ? 'MOCK-SESSION' : 'CHƯA CÓ PHIÊN')}</span>
             <InfoTip text="Băng thông tin tóm lược luồng dữ liệu thời gian thực: Mã phiên bay, kênh RF LoRa 433MHz, cổng Gateway ESP32-C3 và trạng thái kết nối tổng thể." />
           </div>
           <div className="flex items-center gap-1.5">
             <span className="text-muted-foreground">KÊNH TRUYỀN:</span>
-            <span className="text-foreground font-bold">LoRa Ra-02 SX1278 (433MHz)</span>
+            <span className="text-foreground font-bold">{source_mode === 'REAL' ? 'LoRa Ra-02 SX1278 (433MHz)' : 'Virtual Bus / Mock'}</span>
           </div>
           <div className="flex items-center gap-1.5">
             <span className="text-muted-foreground">TRẠM ĐẤT:</span>
-            <span className="text-foreground font-bold">ESP32-C3 SoftAP (:8080)</span>
+            <span className="text-foreground font-bold">{source_mode === 'REAL' ? (hardware_link.status === 'CONNECTED' ? 'ESP32-C3 SoftAP (:8080)' : 'Chưa có Ingress') : 'Localhost Backend (:8000)'}</span>
           </div>
           <div className="flex items-center gap-1.5">
             <span className="text-muted-foreground">LIÊN KẾT:</span>

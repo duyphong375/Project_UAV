@@ -10,10 +10,10 @@ Việc còn lại là xây phần FPGA/MCU, nối thiết bị thật, đo kiể
 
 ### 1.1. Chuẩn bị project MCU
 
-- [ ] Xác định đúng chip Sonix, phiên bản bo, công cụ lập trình và tài liệu sử dụng.
+- [x] Xác định đúng chip Sonix (`SN34F788FG`), phiên bản bo (`SN34F780 Starter-Kit V1.1`), công cụ lập trình (Keil MDK v5) và tài liệu sử dụng.
 - [ ] Tạo project riêng cho KVC, kiểm chương trình khởi động và cấu hình clock.
 - [ ] Build chương trình tối thiểu; khi có bo và thao tác nạp được cho phép, thử khởi động và xuất thông tin chẩn đoán.
-- [ ] Kiểm đủ cổng giao tiếp cho FPGA, cảm biến và LoRa theo sơ đồ đã chốt.
+- [x] Kiểm đủ cổng giao tiếp cho FPGA, cảm biến và LoRa theo sơ đồ đã chốt (Xem [KVC_MASTER_PINOUT_WIRING.md](../hardware/KVC_MASTER_PINOUT_WIRING.md) và [firmware/mcu_uav/inc/kvc_pinout.h](../../firmware/mcu_uav/inc/kvc_pinout.h)).
 
 ### 1.2. Nhận dữ liệu từ FPGA
 
@@ -25,7 +25,7 @@ Việc còn lại là xây phần FPGA/MCU, nối thiết bị thật, đo kiể
 
 ### 1.3. Đọc và kiểm tra cảm biến
 
-- [ ] Viết phần đọc LiDAR, IMU và GNSS theo module thực tế đã chốt; thử lần lượt từng cảm biến.
+- [ ] Viết phần đọc cảm biến siêu âm AJ-SR04M, IMU (GY-87 I2C0) và GNSS (NEO-M8N) theo module thực tế đã chốt; thử lần lượt từng cảm biến.
 - [ ] Kiểm đơn vị, phạm vi đo, hướng trục và thời gian của dữ liệu.
 - [ ] Xử lý dữ liệu lỗi, quá cũ, mất kết nối và khôi phục sau khi cảm biến kết nối lại.
 - [ ] GNSS không có fix hợp lệ thì không xuất tọa độ GPS hợp lệ.
@@ -36,7 +36,7 @@ Việc còn lại là xây phần FPGA/MCU, nối thiết bị thật, đo kiể
 - [ ] Xác nhận thông số camera, góc lắp, hướng trục và mốc tọa độ dùng cho khu vực thử.
 - [ ] Kiểm phép đổi điểm ảnh sang vị trí bằng dữ liệu mẫu có đáp án biết trước.
 - [ ] Xử lý tia gần song song mặt phẳng, điểm phía sau camera và thông số lắp đặt không hợp lệ.
-- [ ] Kết hợp khoảng cách và góc nghiêng; không coi cự ly LiDAR luôn là độ cao thẳng đứng.
+- [ ] Kết hợp khoảng cách và góc nghiêng; không coi cự ly siêu âm luôn là độ cao thẳng đứng.
 - [ ] So kết quả với 20 vị trí thực đo tại bể bơi; báo sai số và các mẫu không tính được.
 - [ ] Phân biệt phát hiện đối tượng, theo dõi và xác nhận mục tiêu; chỉ hiển thị trạng thái đã có cơ sở.
 
@@ -56,7 +56,7 @@ Việc còn lại là xây phần FPGA/MCU, nối thiết bị thật, đo kiể
 
 ### 2.1. Xác nhận bo và công cụ
 
-- [ ] Cùng Kiên xác nhận chip, phiên bản bo FPGA, camera và giao diện camera thực tế.
+- [x] Cùng Kiên xác nhận chip, phiên bản bo FPGA: Bo mạch OneKiwi Primer 20K V1.1 (GW2A-LV18PG256C8/I7); đã tạo file ràng buộc chân Header J2 sang Sonix MCU ([fpga/constraints/pins.cst](../../fpga/constraints/pins.cst)).
 - [ ] Dùng OneKiwi Primer 20K V1.1 nhóm đã có; xác minh camera/cáp, bộ nhớ thực và pin map, không dùng cấu hình Tang/DVP cũ.
 - [ ] Tạo project KVC đúng bo, khai báo clock/reset và chân tín hiệu theo bản đã xác nhận.
 - [ ] Kiểm công cụ Gowin/GoAI, giấy phép và IP cần dùng; ghi rõ phần còn thiếu.
@@ -197,8 +197,8 @@ Việc còn lại là xây phần FPGA/MCU, nối thiết bị thật, đo kiể
 ### 5.2. Lắp và thử cảm biến
 
 - [ ] Cùng Kiên kiểm nguồn/mức điện trước khi nối từng cảm biến.
-- [ ] Lắp LiDAR, IMU và GNSS theo module thực có và sơ đồ đã duyệt.
-- [ ] Cùng Phong thử đọc từng cảm biến; kiểm chip GY-87 thực nhận, GNSS/anten và TF-Luna trên mặt nước (amp, góc, timeout), không chỉ đối chiếu khoảng 0,2–8 m.
+- [ ] Lắp cảm biến siêu âm AJ-SR04M, IMU và GNSS theo module thực có và sơ đồ đã duyệt.
+- [ ] Cùng Phong thử đọc từng cảm biến; kiểm chip GY-87 thực nhận, GNSS/anten và AJ-SR04M trên mặt nước (góc mở chùm sóng, mép bờ, timeout), không chỉ đối chiếu khoảng 0,2–6 m.
 - [ ] Thử mất kết nối và khôi phục từng module, ghi kết quả.
 - [ ] Ghi vị trí/góc cảm biến so với camera để dùng khi tính vị trí.
 

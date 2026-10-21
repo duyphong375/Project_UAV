@@ -16,9 +16,15 @@ export const DetectionOverlay: React.FC<DetectionOverlayProps> = ({
     return null
   }
 
+  // Chỉ vẽ BBox khi dữ liệu đồng bộ frame hợp lệ (box.is_synced === true)
+  const syncedBoxes = boxes.filter((box) => box.is_synced)
+  if (syncedBoxes.length === 0) {
+    return null
+  }
+
   return (
     <div className="absolute inset-0 pointer-events-none overflow-hidden z-10">
-      {boxes.map((box) => {
+      {syncedBoxes.map((box) => {
         // Tọa độ chuẩn hóa theo tỷ lệ phần trăm % của khung hình
         const leftPct = `${(box.x * 100).toFixed(2)}%`
         const topPct = `${(box.y * 100).toFixed(2)}%`

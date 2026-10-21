@@ -50,7 +50,7 @@ export const DevicesPage: React.FC = () => {
       <PageHeader
         breadcrumb="Hệ thống · Chẩn đoán thiết bị"
         title="Thiết bị & kết nối phần cứng"
-        infoTip="Trang chẩn đoán chi tiết phần cứng: Gateway ESP32-C3, vi điều khiển MCU STM32 tải bay, FPGA, cụm cảm biến LiDAR/GNSS và liên kết RF LoRa."
+        infoTip="Trang chẩn đoán chi tiết phần cứng: Gateway ESP32-C3, vi điều khiển MCU Sonix SN34F788 tải bay, FPGA, cụm cảm biến LiDAR/GNSS và liên kết RF LoRa."
         subtitle="Theo dõi tình trạng liên kết truyền thông, cụm cảm biến và thiết bị suy luận AI trên trạm giám sát GCS."
         badge={
           <Badge
@@ -158,7 +158,7 @@ export const DevicesPage: React.FC = () => {
             <div className="flex items-center justify-between py-1 border-b border-border/40">
               <span className="text-muted-foreground">Cổng kết nối / Endpoint:</span>
               <span className="font-mono text-foreground font-semibold">
-                {hardware_link.port || (source_mode === 'MOCK' ? 'Virtual Serial / Mock Bus' : 'ws://192.168.4.1:8080/telemetry')}
+                {hardware_link.port || (source_mode === 'MOCK' ? (APP_CONFIG.MOCK_TRANSPORT === 'LOCAL' ? 'Kịch bản nội bộ offline' : 'Backend Loopback') : 'Chưa cấu hình Ingress (Chưa triển khai)')}
               </span>
             </div>
             <div className="flex items-start justify-between py-1 border-b border-border/40 gap-2">
@@ -397,7 +397,7 @@ export const DevicesPage: React.FC = () => {
                   {diagnostics.logger_status === 'OK' ? 'Ghi liên tục bình thường' : 'Lỗi thiết bị ghi'}
                 </TableCell>
                 <TableCell className="text-xs text-muted-foreground py-3">
-                  Lưu trữ dữ liệu chuyến bay trên thẻ SD tải.
+                  Lưu trữ dữ liệu chuyến bay trên SQLite tại trạm GCS.
                 </TableCell>
               </TableRow>
             </TableBody>

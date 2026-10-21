@@ -5,7 +5,13 @@ describe('getEsp32PhysicalStatus', () => {
   it('returns MOCK status when source_mode is MOCK regardless of network state', () => {
     const res = getEsp32PhysicalStatus('MOCK', false, { status: 'UNKNOWN' }, false, 0)
     expect(res.status).toBe('MOCK')
-    expect(res.shortLabel).toBe('MÔ PHỎNG')
+    expect(res.shortLabel).toContain('MÔ PHỎNG')
+  })
+
+  it('returns REPLAY status when source_mode is REPLAY', () => {
+    const res = getEsp32PhysicalStatus('REPLAY', true, { status: 'UNKNOWN' }, false, 0)
+    expect(res.status).toBe('REPLAY')
+    expect(res.shortLabel).toBe('REPLAY')
   })
 
   it('returns BACKEND_DOWN when source_mode is REAL but wsConnected is false', () => {
@@ -18,7 +24,7 @@ describe('getEsp32PhysicalStatus', () => {
   it('returns WAITING when source_mode is REAL, wsConnected is true, but ESP32 has not connected', () => {
     const res = getEsp32PhysicalStatus('REAL', true, { status: 'UNKNOWN' }, true, 0)
     expect(res.status).toBe('WAITING')
-    expect(res.shortLabel).toBe('CHƯA KẾT NỐI')
+    expect(res.shortLabel).toBe('CHƯA KHẢ DỤNG')
     expect(res.badgeVariant).toBe('destructive')
   })
 

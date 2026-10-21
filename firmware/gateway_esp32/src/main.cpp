@@ -34,6 +34,35 @@
 // Thư viện ArduinoJson: hỗ trợ tuần tự hóa và đóng gói chuỗi JSON chuẩn mực, an toàn bộ nhớ
 #include <ArduinoJson.h>
 
+// Thư viện điều khiển module truyền thông LoRa SX1278 (Ra-02) qua bus SPI
+#include <SPI.h>
+#include <LoRa.h>
+
+// ======================================================================================
+// 1.1. CẤU HÌNH CHÂN PHẦN CỨNG LORA RA-02 (SX1278) TRẠM MẶT ĐẤT
+// Đối chiếu đặc tả chuẩn: docs/hardware/KVC_MASTER_PINOUT_WIRING.md (Mục 4)
+// ======================================================================================
+#if defined(CONFIG_IDF_TARGET_ESP32C3) || defined(ARDUINO_ESP32C3_DEV)
+// Cấu hình chuẩn khuyến nghị cho bo mạch ESP32-C3
+static const int LORA_PIN_NSS  = 7;  // SPI Chip Select (CS / NSS)
+static const int LORA_PIN_SCK  = 4;  // SPI Clock (SCK)
+static const int LORA_PIN_MOSI = 6;  // SPI Master Out Slave In (MOSI)
+static const int LORA_PIN_MISO = 5;  // SPI Master In Slave Out (MISO)
+static const int LORA_PIN_RST  = 1;  // Hardware Reset (RST)
+static const int LORA_PIN_DIO0 = 3;  // Ngắt báo nhận xong gói tin (DIO0 / RxDone)
+#else
+// Cấu hình dự phòng cho bo mạch ESP32-WROOM-32 (NodeMCU 30/38 pins)
+static const int LORA_PIN_NSS  = 5;
+static const int LORA_PIN_SCK  = 18;
+static const int LORA_PIN_MOSI = 23;
+static const int LORA_PIN_MISO = 19;
+static const int LORA_PIN_RST  = 14;
+static const int LORA_PIN_DIO0 = 2;
+#endif
+
+// Tần số sóng mang LoRa RF chuẩn KVC (433 MHz)
+static const long LORA_BAND_HZ = 433E6;
+
 // ======================================================================================
 // 2. CẤU HÌNH THÔNG SỐ WI-FI BẮT CHUNG (STATION MODE - STA)
 // ======================================================================================
@@ -42,8 +71,8 @@
  * Cấu hình mạng Wi-Fi cục bộ để ESP32 và Laptop cùng bắt chung.
  * Lưu ý: ESP32-C3 chỉ hỗ trợ băng tần 2.4GHz.
  */
-const char *WIFI_SSID = "HA";         // <-- Tên Wi-Fi nhà bạn / phòng Lab
-const char *WIFI_PASS = "ha150574";   // <-- Mật khẩu Wi-Fi của bạn
+const char *WIFI_SSID = "KTKH 207 B1 5G";         // <-- Tên Wi-Fi nhà bạn / phòng Lab
+const char *WIFI_PASS = "duyphongnguyen";   // <-- Mật khẩu Wi-Fi của bạn
 
 // ======================================================================================
 // 3. CẤU HÌNH DỊCH VỤ WEBSOCKET SERVER
@@ -92,8 +121,11 @@ struct __attribute__((packed)) RfTelemetryPacket32 {
   // Byte 18..19: Tọa độ Y tương đối so với mốc sa bàn/bể bơi thực nghiệm (cm)
   int16_t target_y_local;
 
-  // Byte 20..21: Khoảng cách laser đo mặt nước từ cảm biến LiDAR TF-Luna (cm)
-  uint16_t lidar_dist_cm;
+  // Byte 20..21: Khoảng cách cảm biến đo mặt nước từ AJ-SR04M siêu âm (cm) [tiền thân LiDAR TF-Luna]
+  union {
+    uint16_t alt_dist_cm;
+    uint16_t lidar_dist_cm; // Bí danh tương thích mã nguồn hiện hành
+  };
 
   // Byte 22: Phân loại mục tiêu do AI nhận diện (1 = Người/person, 2 = Phao/tàu thuyền)
   uint8_t class_id;
@@ -101,7 +133,7 @@ struct __attribute__((packed)) RfTelemetryPacket32 {
   // Byte 23: Độ tin cậy nhận diện của AI (0 đến 100%)
   uint8_t confidence;
 
-  // Byte 24: Cờ trạng thái cảm biến (Bit 0: GPS, Bit 1: LiDAR, Bit 2: IMU, Bit 3: Khóa AI)
+  // Byte 24: Cờ trạng thái cảm biến (Bit 0: GPS, Bit 1: Siêu âm ALT, Bit 2: IMU, Bit 3: Khóa AI)
   uint8_t sensor_flags;
 
   // Byte 25: Điện áp Pin UAV (Đơn vị: 0.1V/bit, ví dụ 126 tương đương 12.6V)
@@ -119,7 +151,7 @@ struct __attribute__((packed)) RfTelemetryPacket32 {
 // ======================================================================================
 
 // Cấu hình chế độ Self-Mock cho Giai đoạn 3 (Khi chưa cắm module LoRa phần cứng)
-static const bool ENABLE_SELF_MOCK = true;
+static const bool ENABLE_SELF_MOCK = false;
 
 // Chu kỳ phát bản tin Self-Mock (1000ms = 1.0 giây / gói tin)
 static const uint32_t SELF_MOCK_INTERVAL_MS = 1000;
@@ -150,6 +182,9 @@ static uint32_t gatewaySequence = 0;
 
 // Bộ đếm số lượng gói tin bị vứt bỏ do sai lệch mã kiểm tra CRC-16 hoặc sai Sync Header
 static uint32_t rxDropCount = 0;
+
+// Trạng thái phần cứng module LoRa Ra-02 (SX1278) sau khi khởi tạo SPI
+static bool loraHardwareReady = false;
 
 // ======================================================================================
 // 6. CÁC HÀM XỬ LÝ DỮ LIỆU: THUẬT TOÁN CRC-16, CHUYỂN ĐỔI HEX & ĐÓNG GÓI JSON
@@ -592,6 +627,29 @@ void setup() {
                   WiFi.softAPIP().toString().c_str(), WS_PORT);
   }
   Serial.println("=======================================================\n");
+
+  // BƯỚC 4: KHỞI TẠO MODULE PHẦN CỨNG LORA RA-02 (SX1278) THEO MASTER PINOUT
+  Serial.println("-------------------------------------------------------");
+  Serial.println("[LORA] Khoi tao module LoRa Ra-02 theo Master Pinout (Muc 4)...");
+  Serial.printf("[LORA] Cau hinh: NSS=%d, SCK=%d, MOSI=%d, MISO=%d, RST=%d, DIO0=%d | Tan so: 433 MHz\n",
+                LORA_PIN_NSS, LORA_PIN_SCK, LORA_PIN_MOSI, LORA_PIN_MISO, LORA_PIN_RST, LORA_PIN_DIO0);
+
+  SPI.begin(LORA_PIN_SCK, LORA_PIN_MISO, LORA_PIN_MOSI, LORA_PIN_NSS);
+  LoRa.setPins(LORA_PIN_NSS, LORA_PIN_RST, LORA_PIN_DIO0);
+
+  if (LoRa.begin(LORA_BAND_HZ)) {
+    loraHardwareReady = true;
+    LoRa.setSpreadingFactor(7);
+    LoRa.setSignalBandwidth(125E3);
+    LoRa.setCodingRate4(5);
+    LoRa.enableCrc();
+    LoRa.setSyncWord(0x12); // Đồng bộ khóa mạng nội bộ KVC (IF_MCU_LORA_RF.md)
+    Serial.println("[LORA] >>> PHAT HIEN VA KHOI TAO PHAN CUNG LORA RA-02 THANH CONG! [OK]");
+  } else {
+    loraHardwareReady = false;
+    Serial.println("[LORA-WARN] Chua phat hien phan cung LoRa Ra-02 (hoac day cam chua noi).");
+    Serial.println("[LORA-WARN] Gateway tiep tuc hoat dong voi che do Self-Mock Ingress.");
+  }
 }
 
 // ======================================================================================
@@ -610,6 +668,35 @@ void loop() {
   if (ENABLE_SELF_MOCK && (now - lastSelfMockMs >= SELF_MOCK_INTERVAL_MS)) {
     lastSelfMockMs = now;
     generateAndSendSelfMockTelemetry();
+  }
+
+  // ----------------------------------------------------------------------------------
+  // GIAI ĐOẠN 4: THU NHẬN GÓI TIN LORA RF THỰC TẾ TỪ UAV (KHI ĐÃ CẮM MODULE RA-02)
+  // ----------------------------------------------------------------------------------
+  if (loraHardwareReady) {
+    int packetSize = LoRa.parsePacket();
+    if (packetSize > 0) {
+      uint8_t rxBuffer[64];
+      int bytesRead = 0;
+      while (LoRa.available() && bytesRead < (int)sizeof(rxBuffer)) {
+        rxBuffer[bytesRead++] = LoRa.read();
+      }
+
+      int16_t rssiDbm = LoRa.packetRssi();
+      float snrDb = LoRa.packetSnr();
+
+      if (validatePacketCrc(rxBuffer, bytesRead)) {
+        String hexPayload = bytesToHexString(rxBuffer, bytesRead);
+        String jsonEnv = buildJsonEnvelope(hexPayload, rssiDbm, snrDb);
+        webSocket.broadcastTXT(jsonEnv);
+        Serial.printf("[RX-LORA #%03u] Nhan thanh cong %d bytes | RSSI: %d dBm | SNR: %.1f dB\n",
+                      gatewaySequence, bytesRead, rssiDbm, snrDb);
+      } else {
+        rxDropCount++;
+        Serial.printf("[RX-LORA-ERR] Tu choi goi %d bytes do sai ma CRC-16! (Tong drop: %u)\n",
+                      bytesRead, rxDropCount);
+      }
+    }
   }
 
   // ----------------------------------------------------------------------------------
