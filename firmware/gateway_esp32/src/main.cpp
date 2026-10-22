@@ -714,15 +714,20 @@ void loop() {
           String jsonEnv = buildJsonEnvelope(hexPayload, rssiDbm, snrDb);
           webSocket.broadcastTXT(jsonEnv);
           const RfTelemetryPacket32 *rxPkt = (const RfTelemetryPacket32 *)rxBuffer;
-          if (rxPkt->sensor_flags & (1U << 2)) {
+          bool altValid = (rxPkt->sensor_flags & (1U << 1)) != 0;
+          bool imuValid = (rxPkt->sensor_flags & (1U << 2)) != 0;
+
+          char imuStr[28] = "IMU:N/A";
+          if (imuValid) {
             int16_t roll = (int16_t)(rxPkt->reserved[0] | (rxPkt->reserved[1] << 8));
             int16_t pitch = (int16_t)(rxPkt->reserved[2] | (rxPkt->reserved[3] << 8));
-            Serial.printf("[RX-LORA #%03u] Nhan %d bytes | RSSI: %d dBm | SNR: %.1f dB | IMU: Roll=%+.1f deg, Pitch=%+.1f deg\n",
-                          gatewaySequence, bytesRead, rssiDbm, snrDb, (float)roll / 10.0f, (float)pitch / 10.0f);
-          } else {
-            Serial.printf("[RX-LORA #%03u] Nhan thanh cong %d bytes | RSSI: %d dBm | SNR: %.1f dB\n",
-                          gatewaySequence, bytesRead, rssiDbm, snrDb);
+            snprintf(imuStr, sizeof(imuStr), "R:%+.1f P:%+.1f", (float)roll / 10.0f, (float)pitch / 10.0f);
           }
+
+          Serial.printf("[RX-LORA #%03u] Seq:%-3u | %ddBm SNR:%+.1f | Alt:%3u cm [%s] | %s | Pin:%.1fV\n",
+                        gatewaySequence, rxPkt->seq_num, rssiDbm, snrDb,
+                        rxPkt->alt_dist_cm, altValid ? "ALT_VALID" : "ALT_INVALID",
+                        imuStr, (float)rxPkt->battery_raw / 10.0f);
         }
       } else {
         rxDropCount++;
