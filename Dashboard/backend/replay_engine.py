@@ -12,8 +12,12 @@ from pathlib import Path
 from typing import Any, Awaitable, Callable
 from uuid import uuid4
 
-from .schemas import Event
-from .state import MissionStore
+try:
+    from .schemas import Event
+    from .state import MissionStore
+except (ImportError, ValueError):
+    from schemas import Event
+    from state import MissionStore
 
 
 _SAFE_SESSION = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$")

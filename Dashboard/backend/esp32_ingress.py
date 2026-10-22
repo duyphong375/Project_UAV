@@ -78,6 +78,13 @@ def parse_rf_payload(rf_payload_hex: str) -> dict[str, Any]:
                 "origin_id": 1,
             }
 
+    roll_deg = None
+    pitch_deg = None
+    if imu_valid and isinstance(reserved, (bytes, bytearray)) and len(reserved) >= 4:
+        r_raw, p_raw = struct.unpack("<hh", reserved[:4])
+        roll_deg = round(r_raw / 10.0, 1)
+        pitch_deg = round(p_raw / 10.0, 1)
+
     return {
         "sync_valid": sync == b"\xaa\x55",
         "msg_id": msg_id,
@@ -91,6 +98,10 @@ def parse_rf_payload(rf_payload_hex: str) -> dict[str, Any]:
             "imu_valid": imu_valid,
             "ai_detected": ai_detected,
         },
+        "imu": {
+            "roll_deg": roll_deg,
+            "pitch_deg": pitch_deg,
+        } if imu_valid else None,
         "has_target": has_target,
         "target": target_data,
     }
@@ -140,7 +151,7 @@ async def probe_gateway_url(ip: str) -> str | None:
 async def discover_esp32_gateway() -> str | None:
     """Auto-discover ESP32 Gateway WebSocket URL across common subnets."""
     # 1. First probe known static IPs
-    for ip in ("192.168.1.175", "192.168.4.1", "192.168.1.15"):
+    for ip in ("10.254.44.101", "192.168.4.1", "192.168.1.175", "192.168.1.15"):
         res = await probe_gateway_url(ip)
         if res:
             return res
@@ -154,7 +165,7 @@ async def discover_esp32_gateway() -> str | None:
     return None
 
 
-async def run_esp32_ingress(hub: Any, ws_url: str = "ws://192.168.1.175:8080/telemetry") -> None:
+async def run_esp32_ingress(hub: Any, ws_url: str = "ws://10.254.44.101:8080/telemetry") -> None:
     """Async task connecting to ESP32 Gateway WebSocket with automatic reconnect and auto-discovery."""
     reconnect_delay = 2.0
     last_status = None

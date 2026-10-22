@@ -7,8 +7,12 @@ from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from uuid import uuid4
 
-from .config import Settings
-from .schemas import Alert, CameraPosition, Diagnostics, Event, HardwareLink, Target, Telemetry
+try:
+    from .config import Settings
+    from .schemas import Alert, CameraPosition, Diagnostics, Event, HardwareLink, Target, Telemetry
+except (ImportError, ValueError):
+    from config import Settings
+    from schemas import Alert, CameraPosition, Diagnostics, Event, HardwareLink, Target, Telemetry
 
 
 def utc_now():

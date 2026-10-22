@@ -9,13 +9,29 @@ import anyio
 from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 
-from .config import Settings, _env_bool, _env_str
-from .esp32_ingress import inject_envelope, parse_rf_payload, run_esp32_ingress
-from .mock_source import run_mock
-from .replay_engine import ReplayEngine
-from .schemas import ReplaySeekRequest, ReplaySpeedRequest, ReplayStartRequest
-from .sqlite_logger import SQLiteLogger
-from .state import Hub, MissionStore
+import sys
+from pathlib import Path
+
+_BACKEND_DIR = Path(__file__).resolve().parent
+if str(_BACKEND_DIR) not in sys.path:
+    sys.path.insert(0, str(_BACKEND_DIR))
+
+try:
+    from .config import Settings, _env_bool, _env_str
+    from .esp32_ingress import inject_envelope, parse_rf_payload, run_esp32_ingress
+    from .mock_source import run_mock
+    from .replay_engine import ReplayEngine
+    from .schemas import ReplaySeekRequest, ReplaySpeedRequest, ReplayStartRequest
+    from .sqlite_logger import SQLiteLogger
+    from .state import Hub, MissionStore
+except (ImportError, ValueError):
+    from config import Settings, _env_bool, _env_str
+    from esp32_ingress import inject_envelope, parse_rf_payload, run_esp32_ingress
+    from mock_source import run_mock
+    from replay_engine import ReplayEngine
+    from schemas import ReplaySeekRequest, ReplaySpeedRequest, ReplayStartRequest
+    from sqlite_logger import SQLiteLogger
+    from state import Hub, MissionStore
 
 
 async def send_events(websocket, client, hub):
@@ -361,7 +377,7 @@ if __name__ == "__main__":
         import os
         os.environ["KVC_ENABLE_MOCK"] = "0"
     enable_esp32 = False if args.no_esp32 else _env_bool("KVC_ENABLE_ESP32", True)
-    esp32_url = args.esp32_url or _env_str("KVC_ESP32_WS_URL", "ws://192.168.1.175:8080/telemetry")
+    esp32_url = args.esp32_url or _env_str("KVC_ESP32_WS_URL", "ws://10.254.44.101:8080/telemetry")
 
     settings_kwargs = {
         "enable_mock": enable_mock,

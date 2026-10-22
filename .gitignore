@@ -58,6 +58,11 @@ Listings/
 
 # Local acquired session databases (keep schema and migrations in source)
 /data/sessions/
+**/data/sessions/
+*.db
+*.db-wal
+*.db-shm
+*build_log.txt
 
 # Large/local datasets and demo media; keep dataset configuration in source
 /ai_training/dataset_4k_yolo/images/

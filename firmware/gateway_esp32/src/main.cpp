@@ -71,7 +71,7 @@ static const long LORA_BAND_HZ = 433E6;
  * Cấu hình mạng Wi-Fi cục bộ để ESP32 và Laptop cùng bắt chung.
  * Lưu ý: ESP32-C3 chỉ hỗ trợ băng tần 2.4GHz.
  */
-const char *WIFI_SSID = "KTKH 207 B1 5G";         // <-- Tên Wi-Fi nhà bạn / phòng Lab
+const char *WIFI_SSID = "KTKH 207 B1 2.4G";         // <-- Tên Wi-Fi nhà bạn / phòng Lab
 const char *WIFI_PASS = "duyphongnguyen";   // <-- Mật khẩu Wi-Fi của bạn
 
 // ======================================================================================
@@ -256,17 +256,29 @@ bool validatePacketCrc(const uint8_t *packetBuffer, size_t length) {
  * 
  * @param data Con trỏ trỏ tới mảng dữ liệu nhị phân.
  * @param length Số byte cần chuyển đổi (32 bytes sẽ tạo thành chuỗi 64 ký tự).
- * @return String Chuỗi ký tự Hex biểu diễn dữ liệu.
+ * @param output Vùng đệm nhận chuỗi Hex; cần tối thiểu length * 2 + 1 byte.
+ * @param outputSize Kích thước vùng đệm output.
+ * @return true nếu chuyển đổi thành công; false nếu tham số hoặc vùng đệm không hợp lệ.
  */
-String bytesToHexString(const uint8_t *data, size_t length) {
-  String hexStr = "";
-  hexStr.reserve(length * 2); // Cấp phát trước bộ nhớ để tránh phân mảnh heap
-  const char hexChars[] = "0123456789abcdef";
-  for (size_t i = 0; i < length; i++) {
-    hexStr += hexChars[(data[i] >> 4) & 0x0F]; // 4 bit cao
-    hexStr += hexChars[data[i] & 0x0F];        // 4 bit thấp
+bool bytesToHexString(const uint8_t *data, size_t length, char *output, size_t outputSize) {
+  if (data == nullptr || output == nullptr || outputSize == 0) {
+    return false;
   }
-  return hexStr;
+
+  // Kiểm tra theo phép chia để tránh tràn khi tính length * 2 + 1.
+  if (length > (outputSize - 1) / 2) {
+    output[0] = '\0';
+    return false;
+  }
+
+  const char hexChars[] = "0123456789abcdef";
+  size_t outputIndex = 0;
+  for (size_t i = 0; i < length; i++) {
+    output[outputIndex++] = hexChars[(data[i] >> 4) & 0x0F]; // 4 bit cao
+    output[outputIndex++] = hexChars[data[i] & 0x0F];        // 4 bit thấp
+  }
+  output[outputIndex] = '\0';
+  return true;
 }
 
 /**
@@ -277,7 +289,7 @@ String bytesToHexString(const uint8_t *data, size_t length) {
  * @param snrDb Tỷ số tín hiệu trên nhiễu (dB).
  * @return String Chuỗi JSON định dạng chuẩn gửi qua WebSocket lên Backend.
  */
-String buildJsonEnvelope(const String &hexPayload, int16_t rssiDbm, float snrDb) {
+String buildJsonEnvelope(const char *hexPayload, int16_t rssiDbm, float snrDb) {
   // Tạo tài liệu JSON sử dụng ArduinoJson v7
   JsonDocument doc;
 
@@ -292,6 +304,7 @@ String buildJsonEnvelope(const String &hexPayload, int16_t rssiDbm, float snrDb)
 
   // Chuyển đối tượng JSON thành chuỗi ký tự String
   String output;
+  output.reserve(measureJson(doc)); // Chỉ cấp phát một lần theo đúng độ dài JSON
   serializeJson(doc, output);
   return output;
 }
@@ -365,18 +378,21 @@ void runPhase2SelfTest() {
   }
 
   // TEST 4: KIỂM THỬ CHUYỂN ĐỔI CHUỖI HEX 64 KÝ TỰ
-  String hexStr = bytesToHexString((const uint8_t *)&samplePkt, sizeof(samplePkt));
+  char hexStr[sizeof(samplePkt) * 2 + 1] = {0};
+  bool hexEncoded = bytesToHexString((const uint8_t *)&samplePkt, sizeof(samplePkt),
+                                     hexStr, sizeof(hexStr));
+  size_t hexLength = hexEncoded ? sizeof(samplePkt) * 2 : 0;
   Serial.println("[TEST 4 - HEX ENCODE]  Chuoi Hex 64 ky tu xuat ra:");
-  Serial.printf("                       %s\n", hexStr.c_str());
-  Serial.printf("                       Do dai: %u ky tu ", hexStr.length());
-  if (hexStr.length() == 64) {
+  Serial.printf("                       %s\n", hexStr);
+  Serial.printf("                       Do dai: %u ky tu ", (unsigned int)hexLength);
+  if (hexEncoded && hexLength == 64) {
     Serial.println("-> DUNG CHUAN 64 KY TU! [PASS]");
   } else {
     Serial.println("-> [FAIL] SAI DO DAI CHUOI HEX!");
   }
 
   // TEST 5: KIỂM THỬ ĐÓNG GÓI JSON TRANSPORT ENVELOPE V1
-  String jsonEnv = buildJsonEnvelope(hexStr, -76, 8.5);
+  String jsonEnv = buildJsonEnvelope(hexStr, -76, 8.5f);
   Serial.println("[TEST 5 - JSON ENVELOPE] Mau goi tin JSON phat qua WebSocket:");
   Serial.printf("                         %s\n", jsonEnv.c_str());
 
@@ -471,7 +487,11 @@ void generateAndSendSelfMockTelemetry() {
   pkt.crc16 = calculateCrc16((const uint8_t *)&pkt, 30);
 
   // 4. CHUYỂN ĐỔI SANG CHUỖI HEX 64 KÝ TỰ THƯỜNG
-  String hexPayload = bytesToHexString((const uint8_t *)&pkt, sizeof(pkt));
+  char hexPayload[sizeof(pkt) * 2 + 1];
+  if (!bytesToHexString((const uint8_t *)&pkt, sizeof(pkt), hexPayload, sizeof(hexPayload))) {
+    Serial.println("[TX-WS-ERR] Khong du bo dem de ma hoa payload Hex.");
+    return;
+  }
 
   // 5. ĐÓNG GÓI JSON TRANSPORT ENVELOPE V1
   String jsonEnv = buildJsonEnvelope(hexPayload, rssiDbm, snrDb);
@@ -686,11 +706,24 @@ void loop() {
       float snrDb = LoRa.packetSnr();
 
       if (validatePacketCrc(rxBuffer, bytesRead)) {
-        String hexPayload = bytesToHexString(rxBuffer, bytesRead);
-        String jsonEnv = buildJsonEnvelope(hexPayload, rssiDbm, snrDb);
-        webSocket.broadcastTXT(jsonEnv);
-        Serial.printf("[RX-LORA #%03u] Nhan thanh cong %d bytes | RSSI: %d dBm | SNR: %.1f dB\n",
-                      gatewaySequence, bytesRead, rssiDbm, snrDb);
+        char hexPayload[sizeof(RfTelemetryPacket32) * 2 + 1];
+        if (!bytesToHexString(rxBuffer, bytesRead, hexPayload, sizeof(hexPayload))) {
+          rxDropCount++;
+          Serial.println("[RX-LORA-ERR] Khong du bo dem de ma hoa payload Hex.");
+        } else {
+          String jsonEnv = buildJsonEnvelope(hexPayload, rssiDbm, snrDb);
+          webSocket.broadcastTXT(jsonEnv);
+          const RfTelemetryPacket32 *rxPkt = (const RfTelemetryPacket32 *)rxBuffer;
+          if (rxPkt->sensor_flags & (1U << 2)) {
+            int16_t roll = (int16_t)(rxPkt->reserved[0] | (rxPkt->reserved[1] << 8));
+            int16_t pitch = (int16_t)(rxPkt->reserved[2] | (rxPkt->reserved[3] << 8));
+            Serial.printf("[RX-LORA #%03u] Nhan %d bytes | RSSI: %d dBm | SNR: %.1f dB | IMU: Roll=%+.1f deg, Pitch=%+.1f deg\n",
+                          gatewaySequence, bytesRead, rssiDbm, snrDb, (float)roll / 10.0f, (float)pitch / 10.0f);
+          } else {
+            Serial.printf("[RX-LORA #%03u] Nhan thanh cong %d bytes | RSSI: %d dBm | SNR: %.1f dB\n",
+                          gatewaySequence, bytesRead, rssiDbm, snrDb);
+          }
+        }
       } else {
         rxDropCount++;
         Serial.printf("[RX-LORA-ERR] Tu choi goi %d bytes do sai ma CRC-16! (Tong drop: %u)\n",

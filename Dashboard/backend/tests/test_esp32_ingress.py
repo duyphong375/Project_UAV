@@ -50,6 +50,24 @@ def test_parse_rf_payload_boat():
     assert parsed["target"]["class_name"] == "boat"
 
 
+def test_parse_rf_payload_with_imu():
+    # Roll = +15.2 deg (152), Pitch = -3.5 deg (-35) đóng gói trong 4 byte reserved
+    import struct
+    fmt = "<2sBBIIIhhHBBBB4sH"
+    reserved = struct.pack("<hh", 152, -35)
+    raw = struct.pack(
+        fmt, b"\xaa\x55", 1, 44, 3000,
+        107723450, 1066578900,
+        0, 0, 300, 1, 95,
+        0x04, 126, reserved, 0x1234,
+    )
+    parsed = parse_rf_payload(raw.hex())
+    assert parsed["telemetry"]["imu_valid"] is True
+    assert parsed["imu"] is not None
+    assert parsed["imu"]["roll_deg"] == 15.2
+    assert parsed["imu"]["pitch_deg"] == -3.5
+
+
 def test_http_ingress_envelope_api():
     app = create_app(Settings(storage_dir=None, enable_mock=False))
     client = TestClient(app)

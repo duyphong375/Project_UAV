@@ -104,6 +104,18 @@ extern "C" {
 #define KVC_PIN_BOARD_KEY1_PORT     SN_GPIO1
 #define KVC_PIN_BOARD_KEY1_PIN      14      /* P1.14 - Pin 50 LQFP64 | JP2 Pin 29 hoặc 30 (qua JP12) */
 
+/* Theo sơ đồ nguyên lý SN34F780 Starter-Kit V1.1 (Reference Circuit):
+ * - JP10: P1.12 -> R5 (1k) -> Anode D1 -> Cathode nối GND (VSS)
+ * - JP11: P1.13 -> R6 (1k) -> Anode D2 -> Cathode nối GND (VSS)
+ * => Đèn LED là ACTIVE HIGH: Mức 1 (BSET / 3.3V) = SÁNG, Mức 0 (BCLR / 0V) = TẮT */
+#define KVC_BOARD_LED1_ON()         (SN_GPIO1->BSET = (1U << KVC_PIN_BOARD_LED1_PIN))
+#define KVC_BOARD_LED1_OFF()        (SN_GPIO1->BCLR = (1U << KVC_PIN_BOARD_LED1_PIN))
+#define KVC_BOARD_LED1_TOGGLE()     (SN_GPIO1->DATAOUT ^= (1U << KVC_PIN_BOARD_LED1_PIN))
+
+#define KVC_BOARD_LED2_ON()         (SN_GPIO1->BSET = (1U << KVC_PIN_BOARD_LED2_PIN))
+#define KVC_BOARD_LED2_OFF()        (SN_GPIO1->BCLR = (1U << KVC_PIN_BOARD_LED2_PIN))
+#define KVC_BOARD_LED2_TOGGLE()     (SN_GPIO1->DATAOUT ^= (1U << KVC_PIN_BOARD_LED2_PIN))
+
 /* ============================================================================
  * MACRO TIỆN ÍCH THAO TÁC BIT GPIO SONIX
  * ============================================================================ */

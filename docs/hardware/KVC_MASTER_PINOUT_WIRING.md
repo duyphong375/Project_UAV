@@ -153,11 +153,11 @@ Module GY-87 tích hợp 3 chip: **MPU6050** (Gia tốc + Con quay hồi chuyể
 
 | Chân Module GY-87 | Chân trên MCU Sonix | Tên chân Kit Sonix | Ghi chú kỹ thuật |
 | :--- | :--- | :--- | :--- |
-| **VCC_IN** | `VDD` (3.3V) | **`J6`** Pin 1, 2 hoặc 3 | Cấp nguồn 3.3V từ VDD; chọn nguồn bằng J4 |
+| **3.3V** (hoặc `VCC_IN`) | `VDD` (3.3V) | **`J6`** Pin 1, 2 hoặc 3 | Cấp nguồn 3.3V trực tiếp vào chân `3.3V` trên module (tránh sụt áp qua LDO) |
 | **GND** | `VSS` (GND) | **`J5`** Pin 1, 2, 3 hoặc 4 | Nối chung GND |
-| **SCL** | `P0.10` (Pin 38) | `JP1` Pin 7 hoặc 8 | I2C Clock (100 kHz hoặc 400 kHz); pull-up `R3` = 1 kΩ đã có trên kit |
-| **SDA** | `P0.11` (Pin 39) | `JP1` Pin 9 hoặc 10 | I2C Data; pull-up `R4` = 1 kΩ đã có trên kit |
-| **AD0** | `VSS` (GND) | **`J5`** Pin 1, 2, 3 hoặc 4 | **Nối GND** để khóa địa chỉ I2C của MPU6050 là `0x68` |
+| **SCL** | `P0.10` (Pin 38) | `JP1` Pin 7 hoặc 8 | I2C Clock 100 kHz; SCL Push-Pull |
+| **SDA** | `P0.11` (Pin 39) | `JP1` Pin 9 hoặc 10 | I2C Data; SDA Open-Drain có pull-up nội |
+| *(AD0 - Không có trên header)* | *(Đã nối ngầm trên bo GY-87)* | — | Module GY-87 đã tự động hàn chân AD0 xuống GND trên mạch in, địa chỉ mặc định luôn là `0x68` (Không cần cắm dây này) |
 
 ---
 

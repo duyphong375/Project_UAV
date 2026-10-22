@@ -26,7 +26,7 @@ class Settings:
     storage_dir: Path | None = Path("data/sessions")
     logger_queue_capacity: int = 1024
     logger_flush_timeout_sec: float = 5.0
-    esp32_ws_url: str = field(default_factory=lambda: _env_str("KVC_ESP32_WS_URL", "ws://192.168.1.175:8080/telemetry"))
+    esp32_ws_url: str = field(default_factory=lambda: _env_str("KVC_ESP32_WS_URL", "ws://10.254.44.101:8080/telemetry"))
     enable_esp32_ingress: bool = field(default_factory=lambda: _env_bool("KVC_ENABLE_ESP32", False))
 
     def __post_init__(self):
