@@ -581,6 +581,17 @@ void onWebSocketEvent(uint8_t num, WStype_t type, uint8_t *payload, size_t lengt
   }
 }
 
+// Đọc thanh ghi RegVersion (0x42) của chip LoRa SX1278 trực tiếp qua SPI để kiểm tra phần cứng
+static uint8_t readSx1278Version() {
+  digitalWrite(LORA_PIN_NSS, LOW);
+  SPI.beginTransaction(SPISettings(8E6, MSBFIRST, SPI_MODE0));
+  SPI.transfer(0x42 & 0x7F);
+  uint8_t ver = SPI.transfer(0x00);
+  SPI.endTransaction();
+  digitalWrite(LORA_PIN_NSS, HIGH);
+  return ver;
+}
+
 // ======================================================================================
 // 10. HÀM KHỞI TẠO HỆ THỐNG SETUP() - CHỈ CHẠY 1 LẦN DUY NHẤT KHI BẬT NGUỒN
 // ======================================================================================
@@ -606,6 +617,8 @@ void setup() {
   Serial.println(WIFI_SSID);
 
   WiFi.mode(WIFI_STA);
+  WiFi.setAutoReconnect(true);
+  WiFi.persistent(true);
   WiFi.begin(WIFI_SSID, WIFI_PASS);
 
   // Vòng lặp chờ kết nối (cho phép chờ tối đa 10 giây)
@@ -683,6 +696,18 @@ void loop() {
   uint32_t now = millis();
 
   // ----------------------------------------------------------------------------------
+  // TỰ ĐỘNG KẾT NỐI LẠI WI-FI NẾU BỊ MẤT SÓNG TRONG CHẾ ĐỘ STA
+  // ----------------------------------------------------------------------------------
+  if (WiFi.getMode() == WIFI_STA && WiFi.status() != WL_CONNECTED) {
+    static uint32_t lastReconnectAttempt = 0;
+    if (now - lastReconnectAttempt >= 5000) {
+      lastReconnectAttempt = now;
+      Serial.println("[WIFI-STA-WARN] Mat ket noi Wi-Fi STA! Dang tu dong ket noi lai...");
+      WiFi.reconnect();
+    }
+  }
+
+  // ----------------------------------------------------------------------------------
   // GIAI ĐOẠN 3: BỘ PHÁT DỮ LIỆU TELEMETRY TỰ SINH (SELF-MOCK) MỖI 1.0 GIÂY
   // ----------------------------------------------------------------------------------
   if (ENABLE_SELF_MOCK && (now - lastSelfMockMs >= SELF_MOCK_INTERVAL_MS)) {
@@ -696,43 +721,72 @@ void loop() {
   if (loraHardwareReady) {
     int packetSize = LoRa.parsePacket();
     if (packetSize > 0) {
-      uint8_t rxBuffer[64];
-      int bytesRead = 0;
-      while (LoRa.available() && bytesRead < (int)sizeof(rxBuffer)) {
-        rxBuffer[bytesRead++] = LoRa.read();
-      }
-
-      int16_t rssiDbm = LoRa.packetRssi();
-      float snrDb = LoRa.packetSnr();
-
-      if (validatePacketCrc(rxBuffer, bytesRead)) {
-        char hexPayload[sizeof(RfTelemetryPacket32) * 2 + 1];
-        if (!bytesToHexString(rxBuffer, bytesRead, hexPayload, sizeof(hexPayload))) {
-          rxDropCount++;
-          Serial.println("[RX-LORA-ERR] Khong du bo dem de ma hoa payload Hex.");
-        } else {
-          String jsonEnv = buildJsonEnvelope(hexPayload, rssiDbm, snrDb);
-          webSocket.broadcastTXT(jsonEnv);
-          const RfTelemetryPacket32 *rxPkt = (const RfTelemetryPacket32 *)rxBuffer;
-          bool altValid = (rxPkt->sensor_flags & (1U << 1)) != 0;
-          bool imuValid = (rxPkt->sensor_flags & (1U << 2)) != 0;
-
-          char imuStr[28] = "IMU:N/A";
-          if (imuValid) {
-            int16_t roll = (int16_t)(rxPkt->reserved[0] | (rxPkt->reserved[1] << 8));
-            int16_t pitch = (int16_t)(rxPkt->reserved[2] | (rxPkt->reserved[3] << 8));
-            snprintf(imuStr, sizeof(imuStr), "R:%+.1f P:%+.1f", (float)roll / 10.0f, (float)pitch / 10.0f);
-          }
-
-          Serial.printf("[RX-LORA #%03u] Seq:%-3u | %ddBm SNR:%+.1f | Alt:%3u cm [%s] | %s | Pin:%.1fV\n",
-                        gatewaySequence, rxPkt->seq_num, rssiDbm, snrDb,
-                        rxPkt->alt_dist_cm, altValid ? "ALT_VALID" : "ALT_INVALID",
-                        imuStr, (float)rxPkt->battery_raw / 10.0f);
-        }
-      } else {
+      // 1. Kiểm tra kích thước gói chuẩn 32 bytes (KvcTelemetryPacket32)
+      if (packetSize != (int)sizeof(RfTelemetryPacket32)) {
         rxDropCount++;
-        Serial.printf("[RX-LORA-ERR] Tu choi goi %d bytes do sai ma CRC-16! (Tong drop: %u)\n",
-                      bytesRead, rxDropCount);
+        while (LoRa.available()) {
+          LoRa.read(); // Xả sạch bộ đệm gói tin rác/nhiễu
+        }
+        Serial.printf("[RX-LORA-ERR] Tu choi goi bat thuong %d bytes (Khac chuan 32B)! (Tong drop: %u)\n",
+                      packetSize, rxDropCount);
+      } else {
+        uint8_t rxBuffer[sizeof(RfTelemetryPacket32)];
+        int bytesRead = 0;
+        while (LoRa.available() && bytesRead < (int)sizeof(rxBuffer)) {
+          rxBuffer[bytesRead++] = LoRa.read();
+        }
+        // Xả sạch mọi byte dư thừa nếu còn
+        while (LoRa.available()) {
+          LoRa.read();
+        }
+
+        int16_t rssiDbm = LoRa.packetRssi();
+        float snrDb = LoRa.packetSnr();
+
+        if (validatePacketCrc(rxBuffer, bytesRead)) {
+          char hexPayload[sizeof(RfTelemetryPacket32) * 2 + 1];
+          if (!bytesToHexString(rxBuffer, bytesRead, hexPayload, sizeof(hexPayload))) {
+            rxDropCount++;
+            Serial.println("[RX-LORA-ERR] Khong du bo dem de ma hoa payload Hex.");
+          } else {
+            String jsonEnv = buildJsonEnvelope(hexPayload, rssiDbm, snrDb);
+            webSocket.broadcastTXT(jsonEnv);
+            const RfTelemetryPacket32 *rxPkt = (const RfTelemetryPacket32 *)rxBuffer;
+            bool gnssValid = (rxPkt->sensor_flags & (1U << 0)) != 0;
+            bool altValid  = (rxPkt->sensor_flags & (1U << 1)) != 0;
+            bool imuValid  = (rxPkt->sensor_flags & (1U << 2)) != 0;
+            bool aiValid   = (rxPkt->sensor_flags & (1U << 3)) != 0;
+
+            char imuStr[28] = "IMU:N/A";
+            if (imuValid) {
+              int16_t roll = (int16_t)(rxPkt->reserved[0] | (rxPkt->reserved[1] << 8));
+              int16_t pitch = (int16_t)(rxPkt->reserved[2] | (rxPkt->reserved[3] << 8));
+              snprintf(imuStr, sizeof(imuStr), "R:%+.1f P:%+.1f", (float)roll / 10.0f, (float)pitch / 10.0f);
+            }
+
+            char gnssStr[36] = "GPS:NO_FIX";
+            if (gnssValid && (rxPkt->target_lat != 0 || rxPkt->target_lon != 0)) {
+              snprintf(gnssStr, sizeof(gnssStr), "GPS:%.5f,%.5f",
+                       (double)rxPkt->target_lat / 1e7, (double)rxPkt->target_lon / 1e7);
+            }
+
+            char aiStr[24] = "AI:IDLE";
+            if (aiValid || rxPkt->class_id != 0) {
+              const char *clsName = (rxPkt->class_id == 1) ? "PERSON" :
+                                    (rxPkt->class_id == 2) ? "BOAT" : "TARGET";
+              snprintf(aiStr, sizeof(aiStr), "AI:%s(%u%%)", clsName, rxPkt->confidence);
+            }
+
+            Serial.printf("[RX-LORA #%03u] Seq:%-3u | %ddBm SNR:%+.1f | Alt:%3u cm [%s] | %s | %s | %s | Pin:%.1fV\n",
+                          gatewaySequence, rxPkt->seq_num, rssiDbm, snrDb,
+                          rxPkt->alt_dist_cm, altValid ? "ALT_VALID" : "ALT_INVALID",
+                          imuStr, gnssStr, aiStr, (float)rxPkt->battery_raw / 10.0f);
+          }
+        } else {
+          rxDropCount++;
+          Serial.printf("[RX-LORA-ERR] Tu choi goi %d bytes do sai ma CRC-16! (Tong drop: %u)\n",
+                        bytesRead, rxDropCount);
+        }
       }
     }
   }
@@ -742,6 +796,25 @@ void loop() {
   // ----------------------------------------------------------------------------------
   if (now - lastHeartbeatMs >= HEARTBEAT_INTERVAL_MS) {
     lastHeartbeatMs = now;
+
+    // Giám sát sức khỏe phần cứng LoRa SX1278 (Ra-02)
+    if (loraHardwareReady) {
+      uint8_t loraVersion = readSx1278Version(); // RegVersion của SX1278 phải là 0x12
+      if (loraVersion != 0x12) {
+        Serial.printf("[LORA-WARN] Mat ket noi SPI voi Ra-02! (Version=0x%02X != 0x12). Dang khoi tao lai...\n", loraVersion);
+        LoRa.setPins(LORA_PIN_NSS, LORA_PIN_RST, LORA_PIN_DIO0);
+        if (LoRa.begin(LORA_BAND_HZ)) {
+          LoRa.setSpreadingFactor(7);
+          LoRa.setSignalBandwidth(125E3);
+          LoRa.setCodingRate4(5);
+          LoRa.enableCrc();
+          LoRa.setSyncWord(0x12);
+          Serial.println("[LORA] >>> Khoi phuc ket noi LoRa Ra-02 THANH CONG! [OK]");
+        } else {
+          Serial.println("[LORA-ERR] Khoi phuc LoRa that bai! Kiem tra lai day jumper SPI.");
+        }
+      }
+    }
 
     // Tính toán giờ, phút, giây hoạt động liên tục (Uptime) của bo mạch
     uint32_t hours = now / 3600000;
@@ -755,8 +828,10 @@ void loop() {
       ipStr = WiFi.softAPIP().toString();
     }
 
-    Serial.printf("[HEARTBEAT] UpTime: %02u:%02u:%02u | IP: %s | Clients: %u | Drops: %u\n",
-                  hours, minutes, seconds, ipStr.c_str(), connectedClientCount, rxDropCount);
+    int activeClients = webSocket.connectedClients();
+
+    Serial.printf("[HEARTBEAT] UpTime: %02u:%02u:%02u | IP: %s | Clients: %d | Drops: %u\n",
+                  hours, minutes, seconds, ipStr.c_str(), activeClients, rxDropCount);
   }
 }
 
