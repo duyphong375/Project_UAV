@@ -71,8 +71,8 @@ static const long LORA_BAND_HZ = 433E6;
  * Cấu hình mạng Wi-Fi cục bộ để ESP32 và Laptop cùng bắt chung.
  * Lưu ý: ESP32-C3 chỉ hỗ trợ băng tần 2.4GHz.
  */
-const char *WIFI_SSID = "KTKH 207 B1 2.4G";         // <-- Tên Wi-Fi nhà bạn / phòng Lab
-const char *WIFI_PASS = "duyphongnguyen";   // <-- Mật khẩu Wi-Fi của bạn
+const char *WIFI_SSID = "Galaxy A15 11C8";         // <-- Tên Wi-Fi nhà bạn / phòng Lab
+const char *WIFI_PASS = "321123321";   // <-- Mật khẩu Wi-Fi của bạn
 
 // ======================================================================================
 // 3. CẤU HÌNH DỊCH VỤ WEBSOCKET SERVER
@@ -185,6 +185,9 @@ static uint32_t rxDropCount = 0;
 
 // Trạng thái phần cứng module LoRa Ra-02 (SX1278) sau khi khởi tạo SPI
 static bool loraHardwareReady = false;
+
+// Thời điểm gần nhất nhận được gói tin LoRa hợp lệ (mili-giây)
+static uint32_t lastRxPacketMs = 0;
 
 // ======================================================================================
 // 6. CÁC HÀM XỬ LÝ DỮ LIỆU: THUẬT TOÁN CRC-16, CHUYỂN ĐỔI HEX & ĐÓNG GÓI JSON
@@ -581,15 +584,43 @@ void onWebSocketEvent(uint8_t num, WStype_t type, uint8_t *payload, size_t lengt
   }
 }
 
-// Đọc thanh ghi RegVersion (0x42) của chip LoRa SX1278 trực tiếp qua SPI để kiểm tra phần cứng
-static uint8_t readSx1278Version() {
+// Đọc thanh ghi bất kỳ của chip LoRa SX1278 trực tiếp qua bus SPI
+static uint8_t readSx1278Reg(uint8_t addr) {
   digitalWrite(LORA_PIN_NSS, LOW);
   SPI.beginTransaction(SPISettings(8E6, MSBFIRST, SPI_MODE0));
-  SPI.transfer(0x42 & 0x7F);
-  uint8_t ver = SPI.transfer(0x00);
+  SPI.transfer(addr & 0x7F);
+  uint8_t val = SPI.transfer(0x00);
   SPI.endTransaction();
   digitalWrite(LORA_PIN_NSS, HIGH);
-  return ver;
+  return val;
+}
+
+// Đọc thanh ghi RegVersion (0x42) của chip LoRa SX1278 (luôn là 0x12)
+static uint8_t readSx1278Version() {
+  return readSx1278Reg(0x42);
+}
+
+// Khởi tạo hoặc tái thiết lập lại toàn bộ cấu hình module LoRa Ra-02 (SX1278)
+static bool initLoRaHardware() {
+  // 1. Reset cứng phần cứng qua chân RST để dập tắt mọi trạng thái kẹt SPI/FSM
+  pinMode(LORA_PIN_RST, OUTPUT);
+  digitalWrite(LORA_PIN_RST, LOW);
+  delay(15);
+  digitalWrite(LORA_PIN_RST, HIGH);
+  delay(30);
+
+  LoRa.setPins(LORA_PIN_NSS, LORA_PIN_RST, LORA_PIN_DIO0);
+  if (LoRa.begin(LORA_BAND_HZ)) {
+    LoRa.setSpreadingFactor(7);
+    LoRa.setSignalBandwidth(125E3);
+    LoRa.setCodingRate4(5);
+    LoRa.enableCrc();
+    LoRa.setSyncWord(0x12); // Đồng bộ khóa mạng nội bộ KVC
+    loraHardwareReady = true;
+    return true;
+  }
+  loraHardwareReady = false;
+  return false;
 }
 
 // ======================================================================================
@@ -668,18 +699,9 @@ void setup() {
                 LORA_PIN_NSS, LORA_PIN_SCK, LORA_PIN_MOSI, LORA_PIN_MISO, LORA_PIN_RST, LORA_PIN_DIO0);
 
   SPI.begin(LORA_PIN_SCK, LORA_PIN_MISO, LORA_PIN_MOSI, LORA_PIN_NSS);
-  LoRa.setPins(LORA_PIN_NSS, LORA_PIN_RST, LORA_PIN_DIO0);
-
-  if (LoRa.begin(LORA_BAND_HZ)) {
-    loraHardwareReady = true;
-    LoRa.setSpreadingFactor(7);
-    LoRa.setSignalBandwidth(125E3);
-    LoRa.setCodingRate4(5);
-    LoRa.enableCrc();
-    LoRa.setSyncWord(0x12); // Đồng bộ khóa mạng nội bộ KVC (IF_MCU_LORA_RF.md)
+  if (initLoRaHardware()) {
     Serial.println("[LORA] >>> PHAT HIEN VA KHOI TAO PHAN CUNG LORA RA-02 THANH CONG! [OK]");
   } else {
-    loraHardwareReady = false;
     Serial.println("[LORA-WARN] Chua phat hien phan cung LoRa Ra-02 (hoac day cam chua noi).");
     Serial.println("[LORA-WARN] Gateway tiep tuc hoat dong voi che do Self-Mock Ingress.");
   }
@@ -744,6 +766,7 @@ void loop() {
         float snrDb = LoRa.packetSnr();
 
         if (validatePacketCrc(rxBuffer, bytesRead)) {
+          lastRxPacketMs = now; // Cập nhật mốc thời gian nhận gói hợp lệ thành công
           char hexPayload[sizeof(RfTelemetryPacket32) * 2 + 1];
           if (!bytesToHexString(rxBuffer, bytesRead, hexPayload, sizeof(hexPayload))) {
             rxDropCount++;
@@ -756,6 +779,15 @@ void loop() {
             bool altValid  = (rxPkt->sensor_flags & (1U << 1)) != 0;
             bool imuValid  = (rxPkt->sensor_flags & (1U << 2)) != 0;
             bool aiValid   = (rxPkt->sensor_flags & (1U << 3)) != 0;
+
+            // Giám sát tính toàn vẹn chuỗi số Sequence từ UAV
+            static uint8_t lastUavSeq = 0;
+            if (lastUavSeq > 0 && rxPkt->seq_num != (uint8_t)(lastUavSeq + 1)) {
+              uint8_t gap = (uint8_t)(rxPkt->seq_num - lastUavSeq - 1);
+              Serial.printf("[LORA-GAP] Canh bao: Mat nhay coc %u goi tin! (UAV Seq: %u -> %u)\n",
+                            gap, lastUavSeq, rxPkt->seq_num);
+            }
+            lastUavSeq = rxPkt->seq_num;
 
             char imuStr[28] = "IMU:N/A";
             if (imuValid) {
@@ -792,6 +824,25 @@ void loop() {
   }
 
   // ----------------------------------------------------------------------------------
+  // WATCHDOG TỰ ĐỘNG PHỤC HỒI KHI CHỈNH DÂY / RUNG LẮC (CHỐNG TREO BỘ THU LORA)
+  // ----------------------------------------------------------------------------------
+  // Nếu đã từng nhận được gói tin từ UAV mà quá 4.0 giây không có gói mới (do sụt nguồn/lỏng dây)
+  if (loraHardwareReady && lastRxPacketMs > 0 && (now - lastRxPacketMs >= 4000)) {
+    static uint32_t lastRecoveryAttempt = 0;
+    if (now - lastRecoveryAttempt >= 3000) {
+      lastRecoveryAttempt = now;
+      uint8_t opMode = readSx1278Reg(0x01);
+      Serial.printf("[LORA-WATCHDOG] Phat hien mat song qua 4s hoac rot OpMode=0x%02X! Dang tu dong reset va nap lai Ra-02...\n", opMode);
+      if (initLoRaHardware()) {
+        Serial.println("[LORA-WATCHDOG] >>> KHOI PHUC VA TAI NAP LAI PHAN CUNG RA-02 THANH CONG! [OK]");
+        lastRxPacketMs = now; // Tránh gọi lặp lại dồn dập
+      } else {
+        Serial.println("[LORA-WATCHDOG-ERR] Khoi phuc that bai! Vui long kiem tra lai tiep xuc day jumper.");
+      }
+    }
+  }
+
+  // ----------------------------------------------------------------------------------
   // HEARTBEAT ĐỊNH KỲ MỖI 5.0 GIÂY
   // ----------------------------------------------------------------------------------
   if (now - lastHeartbeatMs >= HEARTBEAT_INTERVAL_MS) {
@@ -800,15 +851,13 @@ void loop() {
     // Giám sát sức khỏe phần cứng LoRa SX1278 (Ra-02)
     if (loraHardwareReady) {
       uint8_t loraVersion = readSx1278Version(); // RegVersion của SX1278 phải là 0x12
-      if (loraVersion != 0x12) {
-        Serial.printf("[LORA-WARN] Mat ket noi SPI voi Ra-02! (Version=0x%02X != 0x12). Dang khoi tao lai...\n", loraVersion);
-        LoRa.setPins(LORA_PIN_NSS, LORA_PIN_RST, LORA_PIN_DIO0);
-        if (LoRa.begin(LORA_BAND_HZ)) {
-          LoRa.setSpreadingFactor(7);
-          LoRa.setSignalBandwidth(125E3);
-          LoRa.setCodingRate4(5);
-          LoRa.enableCrc();
-          LoRa.setSyncWord(0x12);
+      uint8_t opMode = readSx1278Reg(0x01);      // RegOpMode bit 7 phải là 1 (LoRa Mode)
+      bool loraModeLost = ((opMode & 0x80) == 0); // Nếu bit 7 = 0 tức là chip bị sụt nguồn rớt về FSK
+
+      if (loraVersion != 0x12 || loraModeLost) {
+        Serial.printf("[LORA-WARN] Ra-02 gap su co (Ver=0x%02X, OpMode=0x%02X)! Dang tai nap lai phan cung...\n",
+                      loraVersion, opMode);
+        if (initLoRaHardware()) {
           Serial.println("[LORA] >>> Khoi phuc ket noi LoRa Ra-02 THANH CONG! [OK]");
         } else {
           Serial.println("[LORA-ERR] Khoi phuc LoRa that bai! Kiem tra lai day jumper SPI.");
@@ -833,5 +882,8 @@ void loop() {
     Serial.printf("[HEARTBEAT] UpTime: %02u:%02u:%02u | IP: %s | Clients: %d | Drops: %u\n",
                   hours, minutes, seconds, ipStr.c_str(), activeClients, rxDropCount);
   }
+
+  // Nghỉ 2ms mỗi chu kỳ để giải phóng nhân CPU, hạ nhiệt độ chip và ổn định nguồn 3.3V
+  delay(2);
 }
 
