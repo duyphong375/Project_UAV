@@ -1,14 +1,15 @@
 import React, { useState } from 'react'
 import {
   AlertTriangle,
+  ArrowDownUp,
   BookmarkPlus,
   ChevronDown,
   ChevronUp,
+  Compass,
   Copy,
   Crosshair,
   LifeBuoy,
   MapPin,
-  Mountain,
   Radio,
   User,
   Video,
@@ -159,7 +160,7 @@ export const BottomTacticalDock: React.FC<BottomTacticalDockProps> = ({
             </button>
             <span className="text-slate-500">•</span>
             <span className={isLidarDangerLow ? 'text-rose-400 font-bold animate-pulse' : 'text-slate-300'}>
-              LiDAR: {lidarDistM !== null ? `${lidarDistM.toFixed(2)}m` : '—'}
+              Siêu âm: {lidarDistM !== null ? `${lidarDistM.toFixed(2)}m` : '—'}
             </span>
             <span className="text-slate-500">•</span>
             <span className="text-slate-300">
@@ -266,49 +267,94 @@ export const BottomTacticalDock: React.FC<BottomTacticalDockProps> = ({
               Tất cả các trường dữ liệu luôn hiển thị cố định ở mọi thời điểm
               ======================================================== */}
           <div className="flex flex-col gap-2">
-            {/* HÀNG 1: TỌA ĐỘ MỤC TIÊU WGS-84 (GPS) & SA BÀN (LOCAL GRID) */}
+            {/* HÀNG 1: TỌA ĐỘ VỊ TRÍ UAV (GPS GNSS) & MỤC TIÊU CỨU NẠN SAR */}
             <div className="grid grid-cols-2 gap-2 bg-white/5 p-2 rounded-xl border border-white/10">
-              {/* Cột WGS-84 (Toàn cầu) */}
+              {/* Cột 1: Vị trí UAV theo GPS */}
               <div className="flex flex-col min-w-0">
-                <span className="text-[10px] font-bold text-cyan-400 uppercase tracking-wider flex items-center gap-1">
-                  <MapPin className="h-3 w-3 shrink-0" />
-                  MỤC TIÊU WGS-84 (GPS)
-                </span>
-                <span className="font-mono text-xs font-bold text-white truncate mt-0.5">
-                  {target?.latitude != null && target?.longitude != null
-                    ? `${target.latitude.toFixed(6)}° N, ${target.longitude.toFixed(6)}° E`
-                    : <span className="text-slate-500 font-normal">N/A (Chờ GNSS Fix)</span>}
-                </span>
+                <div className="flex items-center justify-between gap-1">
+                  <span className="text-[10px] font-bold text-cyan-400 uppercase tracking-wider flex items-center gap-1">
+                    <MapPin className="h-3 w-3 shrink-0" />
+                    TỌA ĐỘ UAV (GPS GNSS)
+                  </span>
+                  <span className={`text-[9px] font-mono font-bold px-1.5 py-0.2 rounded ${hasGpsFix ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30' : 'bg-amber-500/20 text-amber-300'}`}>
+                    {hasGpsFix ? '3D FIX' : 'NO FIX'}
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleCopyUavCoord}
+                  className="text-left font-mono text-xs font-bold text-white hover:text-cyan-300 truncate mt-0.5 cursor-pointer"
+                  title="Nhấp để sao chép tọa độ UAV"
+                >
+                  {hasGpsFix
+                    ? `${camera_position.latitude?.toFixed(6)}° N, ${camera_position.longitude?.toFixed(6)}° E`
+                    : <span className="text-slate-500 font-normal">Chờ khóa vệ tinh GNSS...</span>}
+                </button>
               </div>
 
-              {/* Cột Sa Bàn (Local Grid) */}
+              {/* Cột 2: Tọa độ Mục tiêu SAR (WGS-84 / Sa bàn) */}
               <div className="flex flex-col min-w-0 border-l border-white/10 pl-2">
-                <span className="text-[10px] font-bold text-emerald-400 uppercase tracking-wider flex items-center gap-1">
-                  <Crosshair className="h-3 w-3 shrink-0" />
-                  MỤC TIÊU SA BÀN (LOCAL)
-                </span>
-                <span className="font-mono text-xs font-bold text-white truncate mt-0.5">
-                  {target?.local_x_cm != null && target?.local_y_cm != null
-                    ? `X: ${target.local_x_cm > 0 ? `+${target.local_x_cm}` : target.local_x_cm} cm | Y: ${target.local_y_cm > 0 ? `+${target.local_y_cm}` : target.local_y_cm} cm`
-                    : <span className="text-slate-500 font-normal">N/A (Chế độ GPS)</span>}
-                </span>
+                <div className="flex items-center justify-between gap-1">
+                  <span className="text-[10px] font-bold text-emerald-400 uppercase tracking-wider flex items-center gap-1">
+                    <Crosshair className="h-3 w-3 shrink-0" />
+                    MỤC TIÊU SAR ({isLocalGrid ? 'SA BÀN' : 'WGS-84'})
+                  </span>
+                  {hasTarget && (
+                    <span className="text-[9px] font-mono font-bold px-1.5 py-0.2 rounded bg-rose-500/20 text-rose-300 border border-rose-500/30">
+                      {target?.class_id === 1 ? 'PERSON' : target?.class_id === 2 ? 'BOAT' : 'TARGET'}
+                    </span>
+                  )}
+                </div>
+                <button
+                  type="button"
+                  onClick={handleCopyTargetCoord}
+                  className="text-left font-mono text-xs font-bold text-white hover:text-emerald-300 truncate mt-0.5 cursor-pointer"
+                  title="Nhấp để sao chép tọa độ mục tiêu SAR"
+                >
+                  {isLocalGrid ? (
+                    target?.local_x_cm != null && target?.local_y_cm != null
+                      ? `X: ${target.local_x_cm > 0 ? `+${target.local_x_cm}` : target.local_x_cm} cm | Y: ${target.local_y_cm > 0 ? `+${target.local_y_cm}` : target.local_y_cm} cm`
+                      : <span className="text-slate-500 font-normal">Chưa có tọa độ sa bàn</span>
+                  ) : (
+                    target?.latitude != null && target?.longitude != null
+                      ? `${target.latitude.toFixed(6)}° N, ${target.longitude.toFixed(6)}° E`
+                      : <span className="text-slate-500 font-normal">Đang quét dòng nước...</span>
+                  )}
+                </button>
               </div>
             </div>
 
-            {/* HÀNG 2: THÔNG SỐ CẢM BIẾN, AI, PIN & SÓNG (3 CỘT CỐ ĐỊNH) */}
+            {/* HÀNG 2: BẢNG THÔNG SỐ GÓI TIN ĐO XA (3 CỘT CỐ ĐỊNH) */}
             <div className="grid grid-cols-3 gap-2 text-xs font-mono bg-white/5 p-2 rounded-xl border border-white/10">
-              {/* Ô 1: LiDAR khoảng cách mặt nước */}
+              {/* Ô 1: Cảm biến Siêu âm AJ-SR04M khoảng cách mặt nước */}
               <div className="flex flex-col">
                 <span className="text-[10px] text-slate-400 font-sans flex items-center gap-1">
-                  <Mountain className={`h-3 w-3 shrink-0 ${isLidarDangerLow ? 'text-rose-400 animate-pulse' : 'text-cyan-400'}`} />
-                  LiDAR TF-Luna:
+                  <ArrowDownUp className={`h-3 w-3 shrink-0 ${isLidarDangerLow ? 'text-rose-400 animate-pulse' : 'text-cyan-400'}`} />
+                  Siêu âm AJ-SR04M:
                 </span>
                 <span className={`font-bold mt-0.5 ${isLidarDangerLow ? 'text-rose-400 animate-pulse' : telemetry.lidar_range_cm !== null ? 'text-white' : 'text-slate-500 font-normal'}`}>
                   {telemetry.lidar_range_cm !== null ? `${(telemetry.lidar_range_cm / 100).toFixed(2)}m (${telemetry.lidar_range_cm}cm)` : 'N/A'}
                 </span>
               </div>
 
-              {/* Ô 2: Đối tượng AI & Độ tin cậy */}
+              {/* Ô 2: Tư thế góc nghiêng IMU GY-87 (MPU-6050) */}
+              <div className="flex flex-col">
+                <span className="text-[10px] text-slate-400 font-sans flex items-center gap-1">
+                  <Compass className="h-3 w-3 text-amber-400 shrink-0" />
+                  Tư thế IMU GY-87:
+                </span>
+                <span className="font-bold text-white mt-0.5 truncate">
+                  {telemetry.imu_valid ? (
+                    <span className="text-amber-300">
+                      R:{telemetry.roll_deg != null ? (telemetry.roll_deg > 0 ? `+${telemetry.roll_deg}` : telemetry.roll_deg) : 0}° P:{telemetry.pitch_deg != null ? (telemetry.pitch_deg > 0 ? `+${telemetry.pitch_deg}` : telemetry.pitch_deg) : 0}°
+                    </span>
+                  ) : (
+                    <span className="text-slate-500 font-normal">N/A (Chưa sẵn sàng)</span>
+                  )}
+                </span>
+              </div>
+
+              {/* Ô 3: Đối tượng AI nhận diện & Độ tin cậy */}
               <div className="flex flex-col">
                 <span className="text-[10px] text-slate-400 font-sans flex items-center gap-1">
                   {target?.class_id === 1 ? (
@@ -319,55 +365,47 @@ export const BottomTacticalDock: React.FC<BottomTacticalDockProps> = ({
                   AI Nhận diện:
                 </span>
                 <span className="font-bold text-white mt-0.5 truncate">
-                  {target?.class_name ? (
+                  {target?.class_name && target?.class_name !== 'unknown' ? (
                     <span className={target.class_id === 1 ? 'text-rose-400' : 'text-amber-400'}>
                       {target.class_id === 1 ? 'Người' : target.class_id === 2 ? 'Tàu thuyền' : target.class_name}
                       <span className="text-cyan-300 ml-1">({target.confidence ?? 0}%)</span>
                     </span>
                   ) : (
-                    <span className="text-slate-500 font-normal">N/A</span>
+                    <span className="text-slate-500 font-normal">Quét quang học...</span>
                   )}
                 </span>
               </div>
 
-              {/* Ô 3: Cờ cảm biến Sensor Flags */}
-              <div className="flex flex-col">
+              {/* Ô 4: Cờ cảm biến Sensor Flags */}
+              <div className="flex flex-col pt-1.5 border-t border-white/5">
                 <span className="text-[10px] text-slate-400 font-sans flex items-center gap-1">
                   <Radio className="h-3 w-3 text-emerald-400 shrink-0" />
                   Cờ Sensor (0x{((telemetry.gps_valid ? 1 : 0) | (telemetry.lidar_valid ? 2 : 0) | (telemetry.imu_valid ? 4 : 0) | (telemetry.ai_detected ? 8 : 0)).toString(16).toUpperCase()}):
                 </span>
                 <div className="flex items-center gap-1 text-[10px] mt-0.5 font-bold">
-                  <span className={telemetry.gps_valid ? 'text-emerald-400' : 'text-slate-600'}>GPS</span>
+                  <span className={telemetry.gps_valid ? 'text-emerald-400' : 'text-slate-600'} title="GPS 3D Fix">GPS</span>
                   <span className="text-slate-600">•</span>
-                  <span className={telemetry.lidar_valid ? 'text-emerald-400' : 'text-slate-600'}>LiDAR</span>
+                  <span className={telemetry.lidar_valid ? 'text-emerald-400' : 'text-slate-600'} title="Siêu âm ALT hợp lệ">ALT</span>
                   <span className="text-slate-600">•</span>
-                  <span className={telemetry.imu_valid ? 'text-emerald-400' : 'text-slate-600'}>IMU</span>
+                  <span className={telemetry.imu_valid ? 'text-emerald-400' : 'text-slate-600'} title="IMU góc nghiêng hợp lệ">IMU</span>
                   <span className="text-slate-600">•</span>
-                  <span className={telemetry.ai_detected ? 'text-rose-400' : 'text-slate-600'}>AI</span>
+                  <span className={telemetry.ai_detected ? 'text-rose-400' : 'text-slate-600'} title="AI nhận diện">AI</span>
                 </div>
               </div>
 
-              {/* Ô 4: Điện áp Pin UAV */}
+              {/* Ô 5: Điện áp Pin UAV */}
               <div className="flex flex-col pt-1.5 border-t border-white/5">
-                <span className="text-[10px] text-slate-400 font-sans">Pin UAV:</span>
+                <span className="text-[10px] text-slate-400 font-sans">Nguồn Pin UAV:</span>
                 <span className="font-bold text-white mt-0.5">
                   {telemetry.battery_pct !== null ? `${telemetry.battery_pct}%` : <span className="text-slate-500 font-normal">N/A</span>}
                 </span>
               </div>
 
-              {/* Ô 5: Sóng LoRa SX1278 */}
+              {/* Ô 6: Sóng LoRa SX1278 & Gói tin */}
               <div className="flex flex-col pt-1.5 border-t border-white/5">
-                <span className="text-[10px] text-slate-400 font-sans">Sóng LoRa:</span>
-                <span className="font-bold text-indigo-300 mt-0.5">
+                <span className="text-[10px] text-slate-400 font-sans">LoRa #{state.sequence_number ?? 0}:</span>
+                <span className="font-bold text-indigo-300 mt-0.5 truncate">
                   {rssiStr} <span className="text-slate-400 text-[10px] font-normal">({snrStr})</span>
-                </span>
-              </div>
-
-              {/* Ô 6: Số thứ tự gói Seq Num */}
-              <div className="flex flex-col pt-1.5 border-t border-white/5">
-                <span className="text-[10px] text-slate-400 font-sans">Gói vô tuyến:</span>
-                <span className="font-bold text-cyan-300 mt-0.5">
-                  {state.sequence_number != null ? `#${state.sequence_number}` : <span className="text-slate-500 font-normal">N/A</span>}
                 </span>
               </div>
             </div>

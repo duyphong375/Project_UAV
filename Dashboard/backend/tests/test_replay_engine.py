@@ -50,6 +50,7 @@ def fixture_events(session_id="SES-REPLAY-FIXTURE"):
         "battery_pct": 90, "lidar_range_cm": 240, "gps_valid": True,
         "lidar_valid": True, "imu_valid": True, "ai_detected": False,
         "packet_rssi_dbm": None, "packet_snr_db": None,
+        "roll_deg": None, "pitch_deg": None,
     }
     diagnostics = {
         "packets_received_total": 1, "decode_errors_total": 0,

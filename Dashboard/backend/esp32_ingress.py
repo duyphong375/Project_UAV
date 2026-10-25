@@ -86,6 +86,9 @@ def parse_rf_payload(rf_payload_hex: str) -> dict[str, Any]:
         roll_deg = round(r_raw / 10.0, 1)
         pitch_deg = round(p_raw / 10.0, 1)
 
+    uav_lat = round(lat_scaled / 1e7, 7) if (lat_scaled != 0 and gps_valid) else None
+    uav_lon = round(lon_scaled / 1e7, 7) if (lon_scaled != 0 and gps_valid) else None
+
     return {
         "sync_valid": sync == b"\xaa\x55",
         "msg_id": msg_id,
@@ -98,7 +101,13 @@ def parse_rf_payload(rf_payload_hex: str) -> dict[str, Any]:
             "lidar_valid": lidar_valid,
             "imu_valid": imu_valid,
             "ai_detected": ai_detected,
+            "roll_deg": roll_deg,
+            "pitch_deg": pitch_deg,
         },
+        "uav_gps": {
+            "latitude": uav_lat,
+            "longitude": uav_lon,
+        } if (uav_lat is not None and uav_lon is not None) else None,
         "imu": {
             "roll_deg": roll_deg,
             "pitch_deg": pitch_deg,
@@ -125,8 +134,37 @@ def inject_envelope(hub: Any, data: dict[str, Any]) -> dict[str, Any]:
     if snr is not None:
         telem["packet_snr_db"] = float(snr)
 
+    cam_pos = None
+    uav_gps = parsed.get("uav_gps")
+    if uav_gps and uav_gps["latitude"] is not None and uav_gps["longitude"] is not None:
+        alt_m = None
+        if telem.get("lidar_range_cm") is not None:
+            alt_m = round(telem["lidar_range_cm"] / 100.0, 2)
+        cam_pos = {
+            "latitude": uav_gps["latitude"],
+            "longitude": uav_gps["longitude"],
+            "altitude_m": alt_m,
+            "altitude_reference": "MSL",
+            "heading_deg": None,
+            "is_valid": True,
+            "last_updated_iso": None,
+        }
+    elif not telem.get("gps_valid"):
+        cam_pos = {
+            "latitude": None,
+            "longitude": None,
+            "altitude_m": None,
+            "altitude_reference": "UNKNOWN",
+            "heading_deg": None,
+            "is_valid": False,
+            "last_updated_iso": None,
+        }
+
     hub.publish("LINK_STATUS", hardware_link={"status": "CONNECTED", "port": "ESP32_WIFI"})
-    hub.publish("TELEMETRY_UPDATE", telemetry=telem)
+    telemetry_kwargs = {"telemetry": telem}
+    if cam_pos is not None:
+        telemetry_kwargs["camera_position"] = cam_pos
+    hub.publish("TELEMETRY_UPDATE", **telemetry_kwargs)
 
     if parsed["has_target"]:
         hub.publish("TARGET_UPDATE", has_target=True, target=parsed["target"])
@@ -140,8 +178,8 @@ async def probe_gateway_url(ip: str) -> str | None:
     """Probe an IP address for active KVC ESP32 Gateway WebSocket."""
     url = f"ws://{ip}:8080/telemetry"
     try:
-        async with websockets.connect(url, open_timeout=0.35, close_timeout=0.35) as ws:
-            msg = await asyncio.wait_for(ws.recv(), timeout=0.5)
+        async with websockets.connect(url, open_timeout=1.5, close_timeout=0.5) as ws:
+            msg = await asyncio.wait_for(ws.recv(), timeout=1.0)
             if "KVC_ESP32_GATEWAY" in msg or "transport_version" in msg:
                 return url
     except Exception:
@@ -149,24 +187,42 @@ async def probe_gateway_url(ip: str) -> str | None:
     return None
 
 
-async def discover_esp32_gateway() -> str | None:
+async def discover_esp32_gateway(preferred_url: str = "") -> str | None:
     """Auto-discover ESP32 Gateway WebSocket URL across common subnets."""
+    # 0. Check preferred_url if given
+    if preferred_url:
+        host = preferred_url.replace("ws://", "").replace("http://", "").split("/")[0].split(":")[0]
+        if host:
+            res = await probe_gateway_url(host)
+            if res:
+                return res
+
     # 1. First probe known static IPs
-    for ip in ("10.254.44.101", "192.168.4.1", "192.168.1.175", "192.168.1.15"):
+    for ip in ("10.136.131.101", "192.168.4.1", "192.168.1.175", "192.168.1.15"):
         res = await probe_gateway_url(ip)
         if res:
             return res
 
-    # 2. Fast parallel scan on 192.168.1.1-254
-    tasks = [probe_gateway_url(f"192.168.1.{i}") for i in range(1, 255)]
-    results = await asyncio.gather(*tasks, return_exceptions=True)
-    for r in results:
-        if isinstance(r, str) and r:
-            return r
+    # 2. Try local subnet based on machine's current IP
+    try:
+        import socket
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        s.connect(("8.8.8.8", 80))
+        local_ip = s.getsockname()[0]
+        s.close()
+        subnet_prefix = ".".join(local_ip.split(".")[:3])
+        if subnet_prefix not in {"127.0.0", "0.0.0"}:
+            for host_num in (101, 1, 100, 102, 103, 105, 110, 15, 175):
+                res = await probe_gateway_url(f"{subnet_prefix}.{host_num}")
+                if res:
+                    return res
+    except Exception:
+        pass
+
     return None
 
 
-async def run_esp32_ingress(hub: Any, ws_url: str = "ws://10.254.44.101:8080/telemetry") -> None:
+async def run_esp32_ingress(hub: Any, ws_url: str = "ws://10.136.131.101:8080/telemetry") -> None:
     """Async task connecting to ESP32 Gateway WebSocket with automatic reconnect and auto-discovery."""
     reconnect_delay = 2.0
     last_status = None
@@ -176,7 +232,7 @@ async def run_esp32_ingress(hub: Any, ws_url: str = "ws://10.254.44.101:8080/tel
     while True:
         try:
             logger.info("Connecting to ESP32 Gateway at %s...", current_url)
-            async with websockets.connect(current_url, close_timeout=1.0) as ws:
+            async with websockets.connect(current_url, open_timeout=5.0, close_timeout=1.0) as ws:
                 fail_count = 0
                 last_status = "CONNECTED"
                 hub.publish("LINK_STATUS", hardware_link={"status": "CONNECTED", "port": current_url})
@@ -199,22 +255,22 @@ async def run_esp32_ingress(hub: Any, ws_url: str = "ws://10.254.44.101:8080/tel
                         inject_envelope(hub, envelope)
                     except Exception as err:
                         logger.warning("Error processing packet from ESP32: %s", err)
-        except (websockets.ConnectionClosed, OSError, TimeoutError) as exc:
+        except asyncio.CancelledError:
+            break
+        except Exception as exc:
             fail_count += 1
             # CHỈ publish LINK_STATUS khi trạng thái thực sự thay đổi sang DISCONNECTED (tránh spam packet mỗi 2 giây)
             if last_status != "DISCONNECTED":
                 last_status = "DISCONNECTED"
                 hub.publish("LINK_STATUS", hardware_link={"status": "DISCONNECTED", "port": current_url, "error_message": str(exc)})
 
-            # Tự động dò tìm IP mới của ESP32 nếu kết nối cũ thất bại
-            if fail_count >= 2:
-                discovered = await discover_esp32_gateway()
+            # Tự động dò tìm IP mới của ESP32 sau 5 lần thất bại liên tiếp (~10s)
+            if fail_count >= 5:
+                fail_count = 0
+                discovered = await discover_esp32_gateway(preferred_url=ws_url)
                 if discovered and discovered != current_url:
                     logger.info("ESP32 Gateway auto-discovered at %s! Updating target URL.", discovered)
                     current_url = discovered
-                    fail_count = 0
 
             await asyncio.sleep(reconnect_delay)
-        except asyncio.CancelledError:
-            break
 

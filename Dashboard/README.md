@@ -7,6 +7,7 @@
   - Thiết kế kiến trúc tổng thể: [docs/KVC_ThietKeHeThong.md](file:///d:/Project_UAV_KVC/docs/KVC_ThietKeHeThong.md)
   - Đặc tả thiết kế GCS: [docs/gcs/KVC_GCS_DESIGN_SPEC.md](file:///d:/Project_UAV_KVC/docs/gcs/KVC_GCS_DESIGN_SPEC.md)
   - Hợp đồng dữ liệu nội bộ: [docs/interfaces/IF_GCS_DATA_CONTRACT.md](file:///d:/Project_UAV_KVC/docs/interfaces/IF_GCS_DATA_CONTRACT.md)
+  - Hướng dẫn kết nối Wi-Fi & ESP32: [HUONG_DAN_KET_NOI_WIFI_VA_ESP32.md](HUONG_DAN_KET_NOI_WIFI_VA_ESP32.md)
   - Giao diện kết nối Gateway ESP32: [docs/interfaces/IF_ESP32_GCS_WS.md](file:///d:/Project_UAV_KVC/docs/interfaces/IF_ESP32_GCS_WS.md)
 
 ---

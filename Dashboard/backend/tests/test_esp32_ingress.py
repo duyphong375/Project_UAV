@@ -63,6 +63,8 @@ def test_parse_rf_payload_with_imu():
     )
     parsed = parse_rf_payload(raw.hex())
     assert parsed["telemetry"]["imu_valid"] is True
+    assert parsed["telemetry"]["roll_deg"] == 15.2
+    assert parsed["telemetry"]["pitch_deg"] == -3.5
     assert parsed["imu"] is not None
     assert parsed["imu"]["roll_deg"] == 15.2
     assert parsed["imu"]["pitch_deg"] == -3.5

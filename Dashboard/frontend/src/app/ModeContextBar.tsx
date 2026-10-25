@@ -87,7 +87,7 @@ export const ModeContextBar: React.FC = () => {
             </span>
             <span className="font-bold tracking-tight text-rose-600 dark:text-rose-400 uppercase text-[11px] flex items-center gap-1">
               <Radio className="h-3.5 w-3.5" />
-              REAL: Chưa có Ingress ESP32
+              REAL: ESP32 Chưa Kết Nối
             </span>
             <span className="text-muted-foreground hidden sm:inline">•</span>
           </div>
@@ -219,7 +219,7 @@ export const ModeContextBar: React.FC = () => {
               ) : (
                 <>
                   <AlertTriangle className="h-3.5 w-3.5" />
-                  <span>CHƯA CÓ INGRESS (REAL)</span>
+                  <span>ESP32 CHƯA KẾT NỐI</span>
                 </>
               )}
             </div>

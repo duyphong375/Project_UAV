@@ -183,4 +183,26 @@ describe('telemetryAdapter - Kiểm tra hợp đồng dữ liệu KVC-GCS-CONTRA
     expect(packet?.has_target).toBeUndefined()
     expect(packet?.telemetry).toBeUndefined()
   })
+
+  it('giải mã chính xác góc nghiêng Roll và Pitch của IMU, reset khi imu_valid = false', () => {
+    const telemValid = parsePayloadTelemetry({
+      imu_valid: true,
+      roll_deg: 15.2,
+      pitch_deg: -3.5,
+    })
+    expect(telemValid).not.toBeNull()
+    expect(telemValid?.imu_valid).toBe(true)
+    expect(telemValid?.roll_deg).toBe(15.2)
+    expect(telemValid?.pitch_deg).toBe(-3.5)
+
+    const telemInvalid = parsePayloadTelemetry({
+      imu_valid: false,
+      roll_deg: 15.2,
+      pitch_deg: -3.5,
+    })
+    expect(telemInvalid).not.toBeNull()
+    expect(telemInvalid?.imu_valid).toBe(false)
+    expect(telemInvalid?.roll_deg).toBeNull()
+    expect(telemInvalid?.pitch_deg).toBeNull()
+  })
 })

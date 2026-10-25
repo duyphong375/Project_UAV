@@ -21,6 +21,8 @@ const createMockMissionState = (overrides?: Partial<MissionState>): MissionState
     lidar_valid: true,
     imu_valid: true,
     ai_detected: true,
+    roll_deg: null,
+    pitch_deg: null,
     packet_rssi_dbm: -80,
     packet_snr_db: 8.5,
   },

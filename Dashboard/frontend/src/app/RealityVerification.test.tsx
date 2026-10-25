@@ -53,7 +53,7 @@ describe('KVC Reality Verification (KVC-GCS-UI-REALITY-001)', () => {
     expect(screen.getByText(/Chế độ Mô phỏng/i)).toBeDefined()
   })
 
-  it('AC2: REAL hiển thị rõ CHƯA KHẢ DỤNG khi chưa có Ingress từ ESP32-C3', () => {
+  it('AC2: REAL hiển thị rõ CHƯA KẾT NỐI khi chưa có Ingress từ ESP32-C3', () => {
     renderWithMissionState(
       {
         source_mode: 'REAL',
@@ -66,10 +66,10 @@ describe('KVC Reality Verification (KVC-GCS-UI-REALITY-001)', () => {
       </>
     )
 
-    // Nút REAL ở AppHeader phải hiện rõ CHƯA KHẢ DỤNG
-    expect(screen.getAllByText(/CHƯA KHẢ DỤNG/i).length).toBeGreaterThan(0)
+    // Nút REAL ở AppHeader hoặc badge phải hiện rõ CHƯA KẾT NỐI
+    expect(screen.getAllByText(/CHƯA KẾT NỐI/i).length).toBeGreaterThan(0)
     // ModeContextBar phải thông báo chưa có Ingress ESP32
-    expect(screen.getByText(/REAL: Chưa có Ingress ESP32/i)).toBeDefined()
+    expect(screen.getByText(/REAL: ESP32 Chưa Kết Nối/i)).toBeDefined()
     expect(screen.getByText(/Chưa cấu hình Ingress/i)).toBeDefined()
   })
 
@@ -111,8 +111,8 @@ describe('KVC Reality Verification (KVC-GCS-UI-REALITY-001)', () => {
 
     // Browser WS thì OK
     expect(screen.getByText('WS BACKEND OK')).toBeDefined()
-    // Nhưng ESP32 Hardware link thì CHƯA KHẢ DỤNG
-    expect(screen.getByText('CHƯA KHẢ DỤNG (CHƯA CÓ INGRESS)')).toBeDefined()
+    // Nhưng ESP32 Hardware link thì cờ CHƯA KẾT NỐI
+    expect(screen.getByText('ESP32: CHƯA KẾT NỐI')).toBeDefined()
   })
 
   it('AC5: Không tự đặt FPS, độ phân giải giả mạo trong VideoPanel', () => {

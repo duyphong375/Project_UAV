@@ -21,6 +21,8 @@ class Telemetry(StrictModel):
     ai_detected: bool = False
     packet_rssi_dbm: Annotated[int, Field(ge=-127, le=0)] | None = None
     packet_snr_db: float | None = None
+    roll_deg: float | None = None
+    pitch_deg: float | None = None
 
 
 class Target(StrictModel):

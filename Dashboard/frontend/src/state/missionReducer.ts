@@ -46,6 +46,8 @@ export const INITIAL_MISSION_STATE: MissionState = {
     ai_detected: false,
     packet_rssi_dbm: null,
     packet_snr_db: null,
+    roll_deg: null,
+    pitch_deg: null,
   },
   telemetry_age_ms: null,
 
@@ -326,8 +328,8 @@ export function missionReducer(state: MissionState, action: MissionAction): Miss
       // Replay ages are derived from the backend virtual clock. Browser wall time,
       // including a long pause, must never age replay data.
       if (state.source_mode === 'REPLAY') return state
-      const delta = Number.isFinite(action.payload) ? Math.max(0, action.payload) : 0
-      const newAge = state.rx_age_ms + delta
+      const delta = Number.isFinite(action.payload) ? Math.max(0, Math.round(action.payload)) : 0
+      const newAge = Math.round(state.rx_age_ms + delta)
       const isStale = !state.ws_connected || newAge > APP_CONFIG.STALE_THRESHOLD_MS
       return {
         ...state,

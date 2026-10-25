@@ -49,6 +49,8 @@ export interface PayloadTelemetry {
   ai_detected: boolean
   packet_rssi_dbm: number | null // dBm (-127..0)
   packet_snr_db: number | null // dB
+  roll_deg: number | null // Roll góc nghiêng ngang (° -180..180)
+  pitch_deg: number | null // Pitch góc chúc ngẩng (° -90..90)
 }
 
 export interface DiagnosticsInfo {
