@@ -21,7 +21,7 @@ flowchart TD
         subgraph SENSORS ["Cụm Cảm Biến Định Vị"]
             JSN["Cảm biến Siêu âm JSN-SR04T<br/>5V Power, UART 9600 bps"]
             GY87["Module IMU 10-DOF GY-87<br/>3.3V, I2C 400 kHz"]
-            GNSS["Module NEO-M8N<br/>2.7–3.6V bare module; 5V only via verified LDO carrier"]
+            GNSS["Module NEO-M10 (NEO-M10N)<br/>5V Power (LDO on-board hạ 3.3V), UART 9600 bps logic 3.3V"]
         end
 
         subgraph AI_BLOCK ["Khối Xử Lý Quang Học & AI"]
@@ -81,8 +81,8 @@ Vi điều khiển **Sonix SN34F788FG** (gói LQFP 64 chân) bố trí các cổ
 | | `SONIX_UTXD2` | **Pin 30** | `P2.14` | `JP3` Pin 29 hoặc 30 | `UTXD2` | Gửi xung kích hoạt `RX/Trig` (nếu dùng chế độ xung) |
 | **IMU GY-87 (I2C0)** | `I2C0_SCL` | **Pin 38** | `P0.10` | `JP1` Pin 7 hoặc 8 | `SCL0` | Pull-up `R3` = 1 kΩ đã có trên kit; kiểm tra pull-up trên module |
 | | `I2C0_SDA` | **Pin 39** | `P0.11` | `JP1` Pin 9 hoặc 10 | `SDA0` | Pull-up `R4` = 1 kΩ đã có trên kit; kiểm tra pull-up trên module |
-| **GNSS NEO-M8N (UART3)**| `GNSS_RXD` | **Pin 15** | `P2.1` | `JP3` Pin 3 hoặc 4 | `URXD3` | Nhận dữ liệu NMEA từ chân `TXD` của NEO-M8N |
-| | `GNSS_TXD` | **Pin 14** | `P2.0` | `JP3` Pin 1 hoặc 2 | `UTXD3` | Gửi cấu hình sang chân `RXD` của NEO-M8N |
+| **GNSS NEO-M10N (UART3)**| `GNSS_RXD` | **Pin 15** | `P2.1` | `JP3` Pin 3 hoặc 4 | `URXD3` | Nhận dữ liệu NMEA từ chân `TX` của NEO-M10N |
+| | `GNSS_TXD` | **Pin 14** | `P2.0` | `JP3` Pin 1 hoặc 2 | `UTXD3` | Gửi cấu hình sang chân `RX` của NEO-M10N |
 | **FPGA BBox (UART1)** | `FPGA_URXD` | **Pin 17** | `P2.3` | `JP3` Pin 7 hoặc 8 | `URXD1` | Nhận luồng khung BBox từ `UART_TX` của FPGA OneKiwi |
 | | `FPGA_UTXD` | **Pin 16** | `P2.2` | `JP3` Pin 5 hoặc 6 | `UTXD1` | Gửi lệnh phản hồi sang `UART_RX` của FPGA (dự phòng) |
 | | `DATA_READY` | **Pin 3** | `P0.12` | `JP1` Pin 11 hoặc 12 | GPIO Input (EXTI) | Chân báo ngắt khung ảnh sẵn sàng từ FPGA |
@@ -140,8 +140,8 @@ Chân TX (JSN-SR04T, mức 5V) ────[ Điện trở R1: 1.0 kΩ ]──�
 | :--- | :--- | :--- | :---: | :--- |
 | **5V / VCC** | Ngõ ra 5V Buck DC-DC | - | 5.0 V | **Không cắm vào chân 3.3V** của Sonix (thiếu áp cảm biến không đo được) |
 | **GND** | `VSS` (GND) | **`J5`** Pin 1, 2, 3 hoặc 4 | 0 V | Nối chung đất toàn hệ thống |
-| **TX / Echo** | `P2.15` (URXD2, Pin 31) | `JP3` Pin 31 hoặc 32 | **3.3 V (sau phân áp)** | Hàn điện trở 47 kΩ tại vị trí `R27` trên bo JSN-SR04T để tự phát Serial 9600 bps |
-| **RX / Trig** | `P2.14` (UTXD2, Pin 30) | `JP3` Pin 29 hoặc 30 | 3.3 V | Bỏ trống nếu dùng chế độ tự phát Serial (chế độ 2), hoặc nối để gửi xung kích hoạt |
+| **TX / Echo** | `P2.15` (URXD2, Pin 31) | `JP3` Pin 31 hoặc 32 | **3.3 V (sau phân áp)** | Hàn điện trở 47 kΩ tại vị trí **`R19`** (trên bo AJ-SR04M v3.0) hoặc **`R27`** (trên bo JSN-SR04T v2.0) để kích hoạt chế độ tự phát Serial 9600 bps |
+| **RX / Trig** | `P2.14` (UTXD2, Pin 30) | `JP3` Pin 29 hoặc 30 | 3.3 V | Kết nối để gửi byte kích hoạt dự phòng (0x01) khi cần |
 
 ---
 
@@ -161,16 +161,16 @@ Module GY-87 tích hợp 3 chip: **MPU6050** (Gia tốc + Con quay hồi chuyể
 
 ---
 
-### 3.4. Module Định Vị Vệ Tinh NEO-M8N GNSS ↔ Sonix MCU
+### 3.4. Module Định Vị Vệ Tinh NEO-M10 (NEO-M10N) GNSS ↔ Sonix MCU
 
-NEO-M8N dạng module trần yêu cầu `VCC = 2.7–3.6 V` (tối đa 3.6 V). Chỉ cấp 5 V vào **đầu vào carrier/breakout** khi xác định đúng bo và datasheet của carrier xác nhận có LDO 3.3 V cùng đầu vào 5 V. Giữ mức logic `TXD/RXD` ở 3.3 V; không đưa tín hiệu 5 V vào GPIO Sonix. [u-blox NEO-M8 data sheet UBX-15031086 R14, §§4.1–4.2](https://content.u-blox.com/sites/default/files/NEO-M8-FW3_DataSheet_UBX-15031086.pdf).
+Bo breakout NEO-M10N tích hợp sẵn IC hạ áp LDO và diode bảo vệ với chân nguồn được in rõ nhãn **`5V`**. Yêu cầu cấp nguồn **5.0 V DC** vào chân `5V` (không cấp 3.3 V vào chân này vì sụt áp qua LDO sẽ khiến chip hoạt động chập chờn). Tín hiệu `TX`/`RX` hoạt động ở mức logic **3.3 V LVTTL**, cắm trực tiếp an toàn vào GPIO Sonix SN34F788. [u-blox NEO-M10N Integration Manual / Data Sheet UBX-21035619](https://content.u-blox.com/sites/default/files/NEO-M10N_DataSheet_UBX-21035619.pdf).
 
-| Chân Module NEO-M8N | Chân trên MCU Sonix | Tên chân Kit Sonix | Ghi chú kỹ thuật |
+| Chân Module NEO-M10N | Chân trên MCU Sonix | Tên chân Kit Sonix | Ghi chú kỹ thuật |
 | :--- | :--- | :--- | :--- |
-| **VCC** | `VDD` 3.3 V | **`J6` Pin 1, 2 hoặc 3** | Bare NEO-M8N: 2.7–3.6 V (max 3.6 V). 5 V chỉ được đưa vào carrier có LDO 3.3 V khi datasheet của đúng carrier cho phép; TXD/RXD vẫn ở mức logic 3.3 V. |
-| **GND** | `VSS` (GND) | **`J5`** Pin 1, 2, 3 hoặc 4 | Nối chung GND |
-| **TXD (Module)** | `P2.1` (URXD3, Pin 15) | `JP3` Pin 3 hoặc 4 | Tín hiệu NMEA truyền về MCU Sonix (Baudrate mặc định: 9600 bps) |
-| **RXD (Module)** | `P2.0` (UTXD3, Pin 14) | `JP3` Pin 1 hoặc 2 | Cấu hình tần số lấy mẫu (1 Hz – 5 Hz) |
+| **5V** | Nguồn 5V DC | Mạch Buck 5V hoặc chân 5V Kit | Cấp nguồn 5.0 V DC (IC LDO trên bo hạ áp xuống 3.3 V nuôi chip) |
+| **GND** | `VSS` (GND) | **`J5`** Pin 1, 2, 3 hoặc 4 | Nối chung GND toàn hệ thống |
+| **TX (Module)** | `P2.1` (URXD3, Pin 15) | `JP3` Pin 3 hoặc 4 | Tín hiệu NMEA truyền về MCU Sonix (Baudrate mặc định: 9600 bps, logic 3.3 V) |
+| **RX (Module)** | `P2.0` (UTXD3, Pin 14) | `JP3` Pin 1 hoặc 2 | Cấu hình tần số lấy mẫu (1 Hz – 10 Hz, logic 3.3 V) |
 
 ---
 
@@ -238,19 +238,18 @@ Tại trạm mặt đất, module LoRa Ra-02 thứ hai kết nối với chip vi
          ▼
 [ Khối Hạ Áp Buck DC-DC 5V / 3A ]
          │
-         ├───► [ 5.0V ]: Cấp cho Cảm biến Siêu âm JSN-SR04T (VCC)
+         ├───► [ 5.0V ]: Cấp cho Cảm biến Siêu âm JSN-SR04T và Module GNSS NEO-M10N (chân 5V)
          │
          └───► [ Khối Hạ Áp LDO 3.3V / 2A ]
                    │
                    └───► [ 3.3V đã ổn áp ]: `J6` Pin 4 (`3V3_EXT`) → `J4` đóng 2–3 → `VDD`
                                                         │
-                                                        ├───► `J6` Pin 1–3: Kit Sonix và module 3.3 V (LoRa, GY-87, NEO-M8N)
-                                                        └───► NEO-M8N bare module: chỉ cấp 2.7–3.6 V
+                                                        └───► `J6` Pin 1–3: Kit Sonix và module 3.3 V (LoRa Ra-02, GY-87)
 
 Nguồn USB SN-Link dùng lựa chọn khác: `J4` đóng 1–2 (`3V3_LINK`). `3V3_EXT` phải là nguồn 3.3 V đã ổn áp từ buck/LDO; tuyệt đối không đưa pin LiPo thô vào J6 Pin 4.
 
 [ ĐƯỜNG TIẾP ĐỊA CHUNG - STAR GROUND ]:
-Nối toàn bộ chân GND của Pin, Buck 5V, LDO 3.3V, Sonix, JSN-SR04T, GY-87, NEO-M8N, OneKiwi về 1 điểm chung.
+Nối toàn bộ chân GND của Pin, Buck 5V, LDO 3.3V, Sonix, JSN-SR04T, GY-87, NEO-M10N, OneKiwi về 1 điểm chung.
 ```
 
 ---
@@ -264,7 +263,7 @@ Nối toàn bộ chân GND của Pin, Buck 5V, LDO 3.3V, Sonix, JSN-SR04T, GY-87
 - [ ] **J6:** Dùng chân 1–3 làm ngõ ra `VDD`; chỉ dùng chân 4 làm ngõ vào `3V3_EXT`, với J4 đóng 2–3.
 - [ ] **Tiếp địa (GND):** Đã kiểm tra thông mạch giữa tất cả các điểm GND của các bo mạch bằng đồng hồ đo VOM chưa?
 - [ ] **Trở kéo I2C:** `R3`/`R4` = 1 kΩ đã có sẵn trên Starter-Kit cho I2C0; **không cắm thêm trở kéo ngoài**. Nếu GY-87 có pull-up tích hợp, xác minh và cô lập một bộ nếu điện trở song song quá thấp.
-- [ ] **Cực tính nguồn:** Đã kiểm tra đúng chiều (+) và (-), đồng thời xác nhận module NEO-M8N trần chỉ nhận 2.7–3.6 V; 5 V chỉ vào carrier đã xác minh LDO và thông số đầu vào.
+- [ ] **Cực tính nguồn:** Đã kiểm tra đúng chiều (+) và (-), đồng thời xác nhận module NEO-M10N được cấp đúng nguồn 5.0 V DC vào chân 5V (LDO trên bo hạ về 3.3 V), các đường tín hiệu TX/RX giữ chuẩn logic 3.3 V.
 
 ---
 *Trạng thái: DRAFT HARDWARE SPECIFICATION (DESIGN BASELINE - SOURCE-VERIFIED). SOURCE-VERIFIED chỉ phản ánh đối chiếu tài liệu/sơ đồ; chưa có phép đo hoặc xác minh trên bo thật. Chờ Human approval trước khi dùng làm wiring release.*

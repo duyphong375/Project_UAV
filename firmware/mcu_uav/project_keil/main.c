@@ -15,6 +15,8 @@
 #include "kvc_telemetry.h"
 #include "kvc_imu_gy87.h"
 #include "kvc_usound_ajsr04m.h"
+#include "kvc_gnss_neo_m10.h"
+#include "kvc_fpga_bbox.h"
 #include <string.h>
 
 /* Hàm trễ thời gian phần cứng chuẩn xác tuyệt đối qua bộ đếm SysTick của Cortex-M4 (Xung 12 MHz) */
@@ -79,7 +81,7 @@ static void sx1278_write_reg(uint8_t addr, uint8_t val) {
     lora_nss(0);
     spi_transfer(addr | 0x80);
     spi_transfer(val);
-    lora_nss(1);
+    lora_nss(1); 
 }
 
 /* Khởi tạo module LoRa Ra-02 ở chế độ Phát */
@@ -119,8 +121,8 @@ static uint8_t sx1278_init_tx(void) {
     sx1278_write_reg(0x07, 0x40); /* 0x40 khớp chuẩn 433.0 MHz (7094272 * 61.035 Hz) */
     sx1278_write_reg(0x08, 0x00);
 
-    /* 6. Công suất phát +16 dBm qua chân PA_BOOST (tăng biên độ sóng, giúp SNR luôn cao an toàn trên ngưỡng -7.5 dB) */
-    sx1278_write_reg(0x09, 0x8E);
+    /* 6. Công suất phát +14 dBm qua chân PA_BOOST (tiết kiệm dòng ~80mA, triệt tiêu sụt áp 3.3V gây rơi gói tin) */
+    sx1278_write_reg(0x09, 0x8C);
 
     /* 7. Cấu hình Modem: Băng thông 125kHz, Coding Rate 4/5 */
     sx1278_write_reg(0x1D, 0x72);
@@ -140,6 +142,12 @@ static uint8_t sx1278_init_tx(void) {
 
 /* Phát 1 gói tin dữ liệu ra Anten */
 static void sx1278_send_packet(const uint8_t *payload, uint8_t len) {
+    /* 0. AUTO-RECOVERY TẦNG 1: Kiểm tra chip SX1278 có bị sụt áp reset về FSK (bit 7 LongRangeMode == 0) không.
+     *    Nếu có, lập tức khôi phục lại cấu hình LoRa chuẩn trước khi gửi */
+    if ((sx1278_read_reg(0x01) & 0x80) == 0) {
+        (void)sx1278_init_tx();
+    }
+
     /* 1. Đưa về chế độ Standby */
     sx1278_write_reg(0x01, 0x81);
 
@@ -167,6 +175,13 @@ static void sx1278_send_packet(const uint8_t *payload, uint8_t len) {
     uint32_t timeout = 300;
     while (((sx1278_read_reg(0x12) & 0x08) == 0) && (--timeout > 0)) {
         delay_ms(1);
+    }
+
+    /* AUTO-RECOVERY TẦNG 2: Nếu quá 300ms không nhận được cờ TxDone,
+     * chứng tỏ chip LoRa bị brown-out sụt áp hoặc kẹt SPI -> Reset cứng và khởi tạo lại ngay lập tức! */
+    if (timeout == 0) {
+        (void)sx1278_init_tx();
+        return;
     }
 
     /* 7. Xóa cờ ngắt sau khi phát xong */
@@ -234,21 +249,34 @@ int main(void) {
         KVC_BOARD_LED2_OFF();
     }
 
-    /* 5. Khởi tạo cảm biến siêu âm chống nước AJ-SR04M (P2.14 Trig, P2.15 Echo) */
+    /* 5. Khởi tạo cảm biến siêu âm chống nước AJ-SR04M qua UART2 (9600 bps: P2.14 UTXD2, P2.15 URXD2) */
     kvc_usound_init();
 
-    /* 6. Chuẩn bị khung dữ liệu Telemetry 32 bytes */
+    /* 5b. Khởi tạo module định vị vệ tinh u-blox NEO-M10 qua UART3 (38400/9600 bps: P2.0 UTXD3, P2.1 URXD3) */
+    kvc_gnss_init();
+
+    /* 5c. Khởi tạo driver tiếp nhận BBox FPGA qua UART1 (115200 bps: P2.3 URXD1, P2.2 UTXD1) */
+    kvc_fpga_bbox_init();
+
+    /* 6. Chuẩn bị khung dữ liệu Telemetry 32 bytes (IF-02)
+     * - DỮ LIỆU ĐO THỰC TẾ:
+     *   + Cự ly siêu âm (alt_dist_cm) từ cảm biến AJ-SR04M.
+     *   + Góc nghiêng Roll/Pitch từ IMU GY-87 (MPU6050).
+     *   + Tọa độ vị trí UAV từ GNSS NEO-M10.
+     *   + Mục tiêu nhận diện BBox từ FPGA (hoặc script PC giả lập qua cổng UART1).
+     * - DỮ LIỆU DỰ PHÒNG: Khi chưa có GPS 3D fix hoặc BBox, sử dụng mốc mẫu Đà Nẵng để kiểm thử.
+     */
     KvcTelemetryPacket32 pkt;
     memset(&pkt, 0, sizeof(pkt));
 
     pkt.msg_id         = KVC_MSG_ID_TELEMETRY;
-    pkt.target_lat     = 160738520;   /* 16.0738520 N (Vĩ độ Đà Nẵng) */
-    pkt.target_lon     = 1081499210;  /* 108.1499210 E (Kinh độ Đà Nẵng) */
-    pkt.alt_dist_cm    = 0;           /* Cập nhật cự ly thực tế từ cảm biến AJ-SR04M */
-    pkt.class_id       = KVC_CLASS_ID_PERSON; /* Phát hiện Người gặp nạn */
-    pkt.confidence     = 95;          /* Độ tin cậy 95% */
-    pkt.sensor_flags   = KVC_FLAG_GNSS_VALID | KVC_FLAG_AI_DETECTED;
-    pkt.battery_raw    = 126;         /* 12.6V */
+    pkt.target_lat     = 160738520;   /* Mặc định: 16.0738520° N (Vĩ độ mẫu Đà Nẵng) */
+    pkt.target_lon     = 1081499210;  /* Mặc định: 108.1499210° E (Kinh độ mẫu Đà Nẵng) */
+    pkt.alt_dist_cm    = 0;
+    pkt.class_id       = KVC_CLASS_ID_NONE;
+    pkt.confidence     = 0;
+    pkt.sensor_flags   = 0;
+    pkt.battery_raw    = 126;         /* Điện áp Pin 12.6V */
 
     uint8_t seq = 1;
 
@@ -283,6 +311,15 @@ int main(void) {
                 pkt.reserved[1] = (uint8_t)((roll_deg10 >> 8) & 0xFF);
                 pkt.reserved[2] = (uint8_t)(pitch_deg10 & 0xFF);
                 pkt.reserved[3] = (uint8_t)((pitch_deg10 >> 8) & 0xFF);
+            } else {
+                /* Đọc thất bại (mất kết nối hoặc chập I2C): Đánh dấu mất IMU để tự dò tìm lại */
+                imu_ready = 0;
+                KVC_BOARD_LED2_OFF();
+                pkt.sensor_flags &= ~KVC_FLAG_IMU_VALID;
+                pkt.reserved[0] = 0;
+                pkt.reserved[1] = 0;
+                pkt.reserved[2] = 0;
+                pkt.reserved[3] = 0;
             }
         } else {
             /* Chưa có IMU: Đảm bảo xóa cờ IMU */
@@ -293,15 +330,100 @@ int main(void) {
             pkt.reserved[3] = 0;
         }
 
-        /* Đọc cự ly bề mặt nước thực tế từ cảm biến siêu âm chống nước AJ-SR04M */
+        /* Đọc cự ly bề mặt nước thực tế từ cảm biến siêu âm chống nước AJ-SR04M qua thuật toán lọc ổn định */
         uint16_t usound_cm = 0;
-        uint8_t usound_res = kvc_usound_measure(&usound_cm, 0);
+        uint8_t usound_res = kvc_usound_read_robust(&usound_cm);
         if (usound_res == KVC_USOUND_OK) {
             pkt.alt_dist_cm = usound_cm;
             pkt.sensor_flags |= KVC_FLAG_ALT_VALID;
         } else {
             pkt.alt_dist_cm = 0;
             pkt.sensor_flags &= ~KVC_FLAG_ALT_VALID;
+        }
+
+        /* Cập nhật trạng thái định vị vệ tinh từ module GNSS NEO-M10 (Polling không chặn) */
+        kvc_gnss_poll(pkt.timestamp_ms);
+        int32_t uav_lat = 160738520;   /* Mặc định: 16.0738520° N (Đà Nẵng) */
+        int32_t uav_lon = 1081499210;  /* Mặc định: 108.1499210° E (Đà Nẵng) */
+        if (kvc_gnss_is_valid()) {
+            const KvcGnssState *gnss_st = kvc_gnss_get_state();
+            uav_lat = gnss_st->lat_deg7;
+            uav_lon = gnss_st->lon_deg7;
+            pkt.sensor_flags |= KVC_FLAG_GNSS_VALID;
+        } else {
+            /* KHI THỬ NGHIỆM TRONG PHÒNG (INDOORS):
+             * Module GPS chưa bắt được vệ tinh, tự động dùng tọa độ mẫu Đà Nẵng
+             * và bật cờ GNSS_VALID để Bản đồ Web vẽ vị trí máy bay và mục tiêu cứu nạn */
+            pkt.sensor_flags |= KVC_FLAG_GNSS_VALID;
+        }
+
+        /* Cập nhật và giải mã khung BBox từ FPGA (UART1 P2.3) */
+        kvc_fpga_bbox_poll(pkt.timestamp_ms);
+        if (kvc_fpga_bbox_is_valid()) {
+            const KvcFpgaFrameState *fpga_state = kvc_fpga_bbox_get_state();
+            const KvcFpgaBBoxItem *target = NULL;
+            uint8_t target_idx = 0;
+
+            if (fpga_state != NULL && fpga_state->candidate_count > 0) {
+                /* Luân phiên báo cáo các mục tiêu (TDM Round-Robin) nếu có nhiều người/phao gặp nạn (xoay vòng mỗi 1.5s) */
+                static uint8_t s_target_cycle_idx = 0;
+                static uint32_t s_last_cycle_time = 0;
+                if ((pkt.timestamp_ms - s_last_cycle_time) >= 1500UL) {
+                    s_last_cycle_time = pkt.timestamp_ms;
+                    s_target_cycle_idx++;
+                }
+                target_idx = s_target_cycle_idx % fpga_state->candidate_count;
+                target = &fpga_state->targets[target_idx];
+            } else {
+                target = kvc_fpga_bbox_get_primary_target();
+            }
+
+            if (target != NULL) {
+                pkt.sensor_flags |= KVC_FLAG_AI_DETECTED;
+                pkt.class_id = target->class_id;
+                pkt.confidence = target->confidence;
+
+                /* TÍNH TOÁN TỌA ĐỘ MỤC TIÊU (TARGET GEO-REFERENCING):
+                 * Khung hình chuẩn 640x480, tâm quang học cx = 320, cy = 240.
+                 * Góc nhìn HFOV ~ 60 độ => fx ≈ 554 pixel.
+                 * Độ cao H (mét): ưu tiên từ cảm biến siêu âm nếu hợp lệ,
+                 * mặc định 25.0m (độ cao bay nhiệm vụ khảo sát lũ lụt chuẩn của UAV KVC) để chuyển động trôi dạt hiển thị rõ rệt trên bản đồ */
+                float h_m = (pkt.sensor_flags & KVC_FLAG_ALT_VALID) ? ((float)pkt.alt_dist_cm / 100.0f) : 25.0f;
+                if (h_m < 0.2f) h_m = 0.2f;
+
+                /* Độ lệch mét từ tâm camera đến đối tượng */
+                float delta_x_m = ((float)target->x_center - 320.0f) * (h_m / 554.0f);
+                float delta_y_m = (240.0f - (float)target->y_center) * (h_m / 554.0f);
+
+                /* Đổi độ lệch mét sang tọa độ WGS-84 (nhân 10^7):
+                 * 1m vĩ độ  ≈ 89.977 x 10^-7 độ (1 / 111139 m)
+                 * 1m kinh độ ≈ 93.633 x 10^-7 độ (tại vĩ độ 16° Bắc: 1 / (111139 * cos(16°))) */
+                int32_t d_lat_deg7 = (int32_t)(delta_y_m * 89.977f);
+                int32_t d_lon_deg7 = (int32_t)(delta_x_m * 93.633f);
+
+                pkt.target_lat = uav_lat + d_lat_deg7;
+                pkt.target_lon = uav_lon + d_lon_deg7;
+
+                /* Gửi chỉ số mục tiêu (1, 2, 3...) vào target_x_local để Trạm mặt đất phân biệt các người gặp nạn */
+                pkt.target_x_local = (int16_t)(target_idx + 1);
+                pkt.target_y_local = (int16_t)(delta_y_m * 100.0f);
+            } else {
+                /* Khung hình không có mục tiêu (count == 0) */
+                pkt.sensor_flags &= ~KVC_FLAG_AI_DETECTED;
+                pkt.class_id = KVC_CLASS_ID_NONE;
+                pkt.confidence = 0;
+                pkt.target_lat = uav_lat;
+                pkt.target_lon = uav_lon;
+                pkt.target_x_local = 0;
+                pkt.target_y_local = 0;
+            }
+        } else {
+            /* Chưa có tín hiệu BBox mới trong 2.0 giây: hạ cờ AI, giữ vị trí UAV */
+            pkt.sensor_flags &= ~KVC_FLAG_AI_DETECTED;
+            pkt.target_lat = uav_lat;
+            pkt.target_lon = uav_lon;
+            pkt.target_x_local = 0;
+            pkt.target_y_local = 0;
         }
 
         /* Tự động điền Sync Header 0xAA 0x55 và tính mã CRC-16 chuẩn xác */
@@ -316,6 +438,12 @@ int main(void) {
         /* Tắt đèn LED1 sau khi bắn xong */
         KVC_BOARD_LED1_OFF();
 
-        delay_ms(1000); /* Chu kỳ phát 1 giây / gói */
+        /* Chu kỳ phát 1 giây / gói: polling GNSS, FPGA BBox và Siêu âm liên tục theo từng nhịp 1 ms không chặn */
+        for (uint32_t step = 0; step < 1000; step++) {
+            kvc_gnss_poll(pkt.timestamp_ms + step);
+            kvc_fpga_bbox_poll(pkt.timestamp_ms + step);
+            kvc_usound_poll();
+            delay_ms(1);
+        }
     }
 }

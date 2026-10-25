@@ -23,7 +23,7 @@ export const GnssSatelliteSheet: React.FC<GnssSatelliteSheetProps> = ({ open, on
             <Satellite className="h-5 w-5 text-cyan-500" />
             <SheetTitle>Phần Vệ Tinh GNSS Định Vị</SheetTitle>
           </div>
-          <SheetDescription>GNSS NEO-M8N / ATGM336H — module thực tế cần xác nhận</SheetDescription>
+          <SheetDescription>GNSS u-blox M10 (bo mạch ghi NEO-M10N) — cấu hình carrier cần xác nhận</SheetDescription>
           <div className="flex gap-2">
             <Badge variant="outline">{source_mode}</Badge>
             <Badge variant="outline">{is_stale ? 'DỮ LIỆU CŨ' : hasFix ? 'FIX HỢP LỆ' : 'CHƯA CÓ FIX HỢP LỆ'}</Badge>

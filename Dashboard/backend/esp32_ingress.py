@@ -48,8 +48,9 @@ def parse_rf_payload(rf_payload_hex: str) -> dict[str, Any]:
     if has_target:
         # Determine coordinate frame
         if gps_valid and lat_scaled != 0 and lon_scaled != 0:
+            target_id = x_local_cm if (1 <= x_local_cm <= 10) else (seq_num or 1)
             target_data = {
-                "track_id": seq_num or 1,
+                "track_id": target_id,
                 "class_id": class_id,
                 "class_name": class_name,
                 "confidence": min(100, max(0, confidence)),

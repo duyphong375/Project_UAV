@@ -493,7 +493,7 @@ Bo mạch phát triển chính thức **SN34F780 Starter-Kit Board V1.1** tích 
 | **LED2 (Xanh lục)** | `P1.13` (LQFP64 Pin 51), qua `JP11`; header `JP2` Pin 27/28 | LED người dùng theo khối KEY TEST của Starter-Kit V1.1 |
 
 > 📌 **Bản đồ phân bổ chân chi tiết cho dự án KVC:**
-> Toàn bộ kết nối phần cứng từ Kit Sonix SN34F780 Starter-Kit V1.1 tới module LoRa Ra-02, cụm cảm biến (AJ-SR04M, GY-87 I2C0, NEO-M8N) và bo FPGA OneKiwi được chuẩn hóa tại:
+> Toàn bộ kết nối phần cứng từ Kit Sonix SN34F780 Starter-Kit V1.1 tới module LoRa Ra-02, cụm cảm biến (AJ-SR04M, GY-87 I2C0, NEO-M10N) và bo FPGA OneKiwi được chuẩn hóa tại:
 > 👉 **[KVC_MASTER_PINOUT_WIRING.md](KVC_MASTER_PINOUT_WIRING.md)**<br/>Header mã nguồn C tương ứng: [firmware/mcu_uav/inc/kvc_pinout.h](../../firmware/mcu_uav/inc/kvc_pinout.h).
 
 ---

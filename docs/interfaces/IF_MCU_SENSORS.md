@@ -10,10 +10,10 @@
 
 > ⚠️ **CẢNH BÁO CHỐNG CHÁY CHIP SONIX:**
 > 1. Vi điều khiển Sonix SN34F788 hoạt động ở dải điện áp **VDD = 2,4 V – 3,6 V (Chuẩn 3,3 V)**. Các chân GPIO của chip **KHÔNG chịu được mức điện áp 5 V**. Tuyệt đối không cắm nguồn 5 V trực tiếp vào chân GPIO của Sonix (chân TX của module cảm biến nếu có mức 5V cần dùng cầu phân áp hoặc chọn mức 3.3V).
-> 2. **Nối chung GND (Ground):** Toàn bộ dây GND của Kit Sonix, AJ-SR04M, GY-87, NEO-M8N và nguồn hạ áp Buck DC-DC phải được nối chung với nhau để tạo mốc điện áp chuẩn.
+> 2. **Nối chung GND (Ground):** Toàn bộ dây GND của Kit Sonix, AJ-SR04M, GY-87, NEO-M10N và nguồn hạ áp Buck DC-DC phải được nối chung với nhau để tạo mốc điện áp chuẩn.
 > 3. Cụm cảm biến và MCU tải phải dùng nguồn từ mạch Buck hạ áp riêng (cấp dòng tối thiểu 2 A), **không dùng chân 3.3V của mạch nạp SN-Link hoặc mạch nạp CP2102** để nuôi toàn bộ cảm biến.
 
-> **NEO-M8N:** Datasheet u-blox quy định VCC hoạt động 2.7–3.6 V, tối đa tuyệt đối 3.6 V. Chỉ cấp 5 V vào carrier/breakout khi xác định đúng bo và datasheet của carrier xác nhận có LDO 3.3 V cùng đầu vào 5 V. Giữ TX/RX ở mức logic 3.3 V; không đưa tín hiệu 5 V vào GPIO Sonix. [u-blox NEO-M8 data sheet UBX-15031086 R14, §§4.1–4.2](https://content.u-blox.com/sites/default/files/NEO-M8-FW3_DataSheet_UBX-15031086.pdf).
+> **NEO-M10N:** Bo breakout NEO-M10N tích hợp sẵn IC hạ áp LDO với chân nguồn ghi rõ nhãn **`5V`**. Cấp nguồn **5.0 V DC** từ rail Buck vào chân `5V` của module (không cấp 3.3 V vào chân `5V` này vì sụt áp qua LDO sẽ khiến GPS thiếu áp hoạt động chập chờn). Tín hiệu UART TX/RX xuất/nhận ở mức logic chuẩn **3.3 V LVTTL**, an toàn tuyệt đối khi kết nối trực tiếp với GPIO Sonix SN34F788. [u-blox NEO-M10N Data Sheet UBX-21035619](https://content.u-blox.com/sites/default/files/NEO-M10N_DataSheet_UBX-21035619.pdf).
 
 ---
 
@@ -25,7 +25,7 @@
 | :--- | :---: | :---: | :---: | :---: | :--- |
 | **AJ-SR04M / JSN-SR04T (Siêu âm IP67)** | UART (9.600 bps) / Trig-Echo | 3,3 V / 5,0 V TTL | **5,0 V** (Buck DC-DC) | TXD (qua phân áp) ➔ RXD<br>RXD ◄ TXD | **UART2_RX** (`P2.15` - Pin 31)<br>**UART2_TX** (`P2.14` - Pin 30) |
 | **GY-87 IMU 10-DOF** | I2C (100 / 400 kHz) | 3,3 V CMOS | **3,3 V** | SCL (Clock)<br>SDA (Data) | **I2C0_SCL** (`P0.10` - Pin 38)<br>**I2C0_SDA** (`P0.11` - Pin 39)<br>*(Kit có R3/R4 = 1 kΩ cho I2C0; không thêm pull-up ngoài. Kiểm tra pull-up có sẵn trên module và cô lập một bộ nếu cần.)* |
-| **NEO-M8N GNSS** | UART (9.600 bps) | 3,3 V logic | **2,7–3,6 V bare module (max 3,6 V)** | TXD ➔ RXD<br>RXD ◄ TXD; giữ logic 3,3 V | **UART3_RX** (`P2.1` - Pin 15)<br>**UART3_TX** (`P2.0` - Pin 14) |
+| **NEO-M10N GNSS** | UART (9.600 bps) | 3,3 V logic | **5,0 V DC** (LDO trên bo hạ về 3,3 V) | TXD ➔ RXD<br>RXD ◄ TXD; logic 3,3 V | **UART3_RX** (`P2.1` - Pin 15)<br>**UART3_TX** (`P2.0` - Pin 14) |
 | **LoRa Ra-02 (SX1278)** | SPI (1–4 MHz) | 3,3 V CMOS | **3,3 V** (DC-DC) | NSS, SCK, MISO, MOSI<br>DIO0 (Ngắt)<br>RST | **SPI0** (`P2.4..P2.7` - Pin 20..23)<br>**DIO0** (`P2.8` - Pin 24)<br>**RST** (`P2.9` - Pin 25) |
 | **FPGA BBox Data** | UART (115.200 bps) | 3,3 V CMOS | Chung nguồn | RXD ◄ TXD (FPGA)<br>DATA_READY | **UART1_RX** (`P2.3` - Pin 17)<br>**DATA_READY** (`P0.12` - Pin 3) |
 | **Debug Console PC** | UART (115.200 bps) | 3,3 V TTL | Chung GND | TXD ➔ RXD<br>RXD ◄ TXD | **UART5_TX** (`P0.15` - Pin 6)<br>**UART5_RX** (`P0.14` - Pin 5) |
@@ -83,14 +83,15 @@ Mô-đun GY-87 tích hợp 3 chip trên cùng 1 bus I2C:
 
 ---
 
-### 3.3. Module định vị vệ tinh NEO-M8N GNSS
+### 3.3. Module định vị vệ tinh NEO-M10N GNSS
 
-* **Nguồn:** Module trần nhận 2.7–3.6 V (tối đa 3.6 V). Nguồn 5 V chỉ dùng tại đầu vào của carrier có LDO 3.3 V khi datasheet của đúng carrier cho phép.
-* **Logic UART:** Giữ TXD/RXD ở mức 3.3 V tại giao tiếp với Sonix; nếu carrier có mức logic khác hoặc chưa rõ thì xác minh/chuyển mức trước kết nối.
-* **Nguồn tham chiếu:** [u-blox NEO-M8 data sheet UBX-15031086 R14, §§4.1–4.2](https://content.u-blox.com/sites/default/files/NEO-M8-FW3_DataSheet_UBX-15031086.pdf).
+* **Nguồn:** Cấp **5.0 V DC** vào chân `5V` của bo breakout (IC LDO on-board hạ áp xuống 3.3 V nuôi chip u-blox NEO-M10-0-10 và mạch RF/anten). Không cấp 3.3 V vào chân `5V` để tránh sụt áp qua LDO làm suy giảm độ nhạy hoặc gián đoạn hoạt động.
+* **Logic UART:** Chân `TX` và `RX` hoạt động ở mức chuẩn **3.3 V LVTTL**, kết nối trực tiếp an toàn với chân `P2.1` (`URXD3`) và `P2.0` (`UTXD3`) của MCU Sonix SN34F788.
+* **Khả năng thu vệ tinh:** Nền tảng u-blox M10 hỗ trợ thu đồng thời **4 chòm vệ tinh** (GPS, GLONASS, Galileo, BeiDou), độ nhạy tracking cực cao (-167 dBm), công suất tiêu thụ thấp (~15 mW).
+* **Nguồn tham chiếu:** [u-blox NEO-M10N Data Sheet UBX-21035619](https://content.u-blox.com/sites/default/files/NEO-M10N_DataSheet_UBX-21035619.pdf).
 
-* **Chuẩn truyền thông:** UART 9.600 bps (mặc định xuất xưởng) hoặc cấu hình lên 38.400 / 115.200 bps, 8N1.
-* **Giao thức:** NMEA-0183 (Câu `$GNGGA` hoặc `$GNRMC` xuất định kỳ 1–5 Hz).
+* **Chuẩn truyền thông:** UART 9.600 bps (mặc định xuất xưởng) hoặc cấu hình lên 38.400 / 115.200 bps qua phần mềm u-center 2, 8N1.
+* **Giao thức:** NMEA-0183 v4.11 (Câu `$GNGGA` hoặc `$GNRMC` xuất định kỳ 1–10 Hz, mặc định 1 Hz).
 * **Trường dữ liệu cần trích xuất:**
   * **Fix Status:** Trường chất lượng định vị ($0$: No Fix, $1$: GPS 2D/3D Fix, $2$: DGPS Fix). Chỉ chấp nhận khi $\ge 1$.
   * **Latitude & Longitude:** Tọa độ địa lý WGS-84 (độ phút sang độ thập phân $\times 10^7$).

@@ -2,7 +2,7 @@
 
 - **Mã giao diện:** `IF-02`
 - **Hai đầu kết nối:** MCU Sonix SN34F788 trên UAV (**Nguyễn Tá Duy Phong** - Đầu phát TX) ↔ ESP32-C3 Gateway Trạm Đất (kit/board TBD; **Đoàn Thanh Trường Thịnh** - Đầu thu RX)
-- **Trạng thái:** `DRAFT ABI` (Dự thảo kỹ thuật theo mục IV.3 [KVC_ThietKeHeThong.md](../KVC_ThietKeHeThong.md); Phong và Thịnh cần thống nhất trước khi nạp phần cứng)
+- **Trạng thái:** `CONFIRMED ABI` (Đã chuẩn hóa 32-byte, thay thế hoàn toàn chuẩn 20-byte cũ; kiểm thử thông luồng thành công giữa MCU Sonix, Gateway ESP32 và Backend GCS)
 
 ---
 
@@ -14,11 +14,11 @@ Hệ thống sử dụng 02 module **LoRa Ra-02 (chip Semtech SX1278)** giao ti�
 | :--- | :---: | :--- |
 | **Tần số trung tâm (Frequency)** | **433.0 MHz** | Băng tần ISM không cần xin phép, phù hợp module Ra-02 |
 | **Băng thông (Bandwidth - BW)** | **125 kHz** | Cân bằng giữa độ nhạy thu và tốc độ truyền |
-| **Hệ số trải phổ (Spreading Factor - SF)** | **Candidate SF7/SF8; PENDING** | Khớp các phép tính airtime trong thiết kế; chưa được duyệt hoặc đo trên module thực |
-| **Tỷ lệ mã sửa sai (Coding Rate - CR)** | **4/7** (hoặc 4/5) | Bảo vệ chống nhiễu xung vô tuyến |
+| **Hệ số trải phổ (Spreading Factor - SF)** | **SF7** | Thời gian truyền trên không (Airtime) khoảng 67 ms cho gói 32 byte |
+| **Tỷ lệ mã sửa sai (Coding Rate - CR)** | **4/5** | Chuẩn cấu hình hoạt động |
 | **Độ dài Preamble** | **8 symbols** | Preamble tiêu chuẩn cho SX1278 |
 | **Sync Word** | **`0x12`** | Phân biệt mạng nội bộ KVC (tránh xung đột mạng LoRaWAN 0x34) |
-| **Công suất phát (Tx Power)** | **+17 dBm** (tối đa +20 dBm) | Điều chỉnh theo quy định và giới hạn dòng nguồn |
+| **Công suất phát (Tx Power)** | **+16 dBm** | Kích hoạt chân PA_BOOST, đảm bảo SNR an toàn |
 | **CRC phần cứng SX1278** | **BẬT (Enabled)** | Tự động loại bỏ gói lỗi ở tầng PHY |
 
 ---
@@ -64,7 +64,7 @@ Hệ thống sử dụng 02 module **LoRa Ra-02 (chip Semtech SX1278)** giao ti�
 | **23** | 1 byte | Confidence | `uint8` | Độ tin cậy nhận diện (0–100%) |
 | **24** | 1 byte | Sensor Status Flags | `uint8` | Bit 0: GNSS 3D Fix hợp lệ<br>Bit 1: Cự ly siêu âm hợp lệ (ALT_VALID)<br>Bit 2: IMU hợp lệ<br>Bit 3: FPGA BBox có mục tiêu<br>Bit 4–7: Dự phòng |
 | **25** | 1 byte | Battery / Status | `uint8` | Điện áp pin UAV (0,1 V / bit, vd: 126 = 12.6V) |
-| **26–29** | 4 byte | Dự phòng mở rộng | `uint8[4]` | Đệm mở rộng cho độ cao barometer / nhiệt độ |
+| **26–29** | 4 byte | Dự phòng mở rộng / Góc IMU | `uint8[4]` | Khi cờ IMU hợp lệ (Bit 2): Byte 26–27 là Roll (int16 LE, 0.1°), Byte 28–29 là Pitch (int16 LE, 0.1°); hoặc đệm mở rộng độ cao áp kế |
 | **30–31** | 2 byte | CRC-16 Checksum | `uint16` | **CRC-16/CCITT-FALSE** (Poly `0x1021`, Init `0xFFFF`) tính từ byte 0 đến byte 29 |
 
 ---

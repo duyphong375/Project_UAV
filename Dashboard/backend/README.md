@@ -1,6 +1,8 @@
-# KVC MOCK application backend
+# KVC Application Backend (Mock & ESP32 Ingress)
 
-Tasks KVC-PRE-GCS-BACKEND-001, KVC-PRE-GCS-LOGGER-001 and KVC-PRE-GCS-REPLAY-001. Live acquisition in this slice is MOCK with inference SIMULATED. Replay reads committed application events and exposes them as source REPLAY while preserving `original_source_mode` and `inference_device`. HTTP/WS connectivity is independent of hardware status; hardware is UNKNOWN and no device link is opened. Ingress from the ESP32 ground gateway over Wi-Fi/WebSocket and RF decoding remain unimplemented. MOCK counters are application event counts (`mock_events_emitted`); hardware packet/CRC counters remain zero.
+Dịch vụ Backend GCS tiếp nhận dữ liệu đo xa Telemetry và trạng thái mục tiêu UAV. Hệ thống hỗ trợ hai nguồn dữ liệu:
+1. **Chế độ Giả lập (MOCK):** Tự sinh kịch bản chu kỳ phục vụ kiểm thử đơn vị, giao diện và chức năng phát lại (Replay Engine).
+2. **Chế độ Thu nhận Thực tế (ESP32 Ingress):** Module `esp32_ingress.py` kết nối trực tiếp vào WebSocket Server của Gateway ESP32 (`ws://<IP>:8080/telemetry`), tiếp nhận Transport Envelope v1, thẩm định và giải mã khung nhị phân 32-byte Little-Endian (`RfTelemetryPacket32`), trích xuất tọa độ GPS, cự ly siêu âm mặt nước, góc nghiêng IMU (Roll/Pitch từ 4 byte reserved), cờ cảnh báo cảm biến và phát sự kiện vào Hub thời gian thực. Bật chế độ này bằng biến môi trường `$env:KVC_ENABLE_ESP32="true"`.
 
 From repository root (Windows PowerShell):
 

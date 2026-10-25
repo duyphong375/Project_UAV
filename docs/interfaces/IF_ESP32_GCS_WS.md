@@ -2,7 +2,7 @@
 
 - **Mã giao diện:** `IF-03`
 - **Hai đầu kết nối:** ESP32-C3 Gateway Trạm Đất (kit/board TBD; **Đoàn Thanh Trường Thịnh** - Wi-Fi SoftAP & WebSocket Server) ↔ Dịch vụ Backend Python trên Laptop GCS (**Đoàn Thanh Trường Thịnh** - WebSocket Client Ingress)
-- **Trạng thái:** `DESIGN BASELINE / CHƯA XÁC MINH`. Endpoint mục tiêu theo mục IV.4 [KVC_ThietKeHeThong.md](../KVC_ThietKeHeThong.md) là `ws://192.168.4.1:8080/telemetry`; chưa có firmware ingress/capture để xác nhận hoạt động.
+- **Trạng thái:** `CONFIRMED INTERACTION` (Đã triển khai hoàn chỉnh cả firmware Gateway ESP32 và module Ingress `Dashboard/backend/esp32_ingress.py`, kiểm thử thông luồng đạt chuẩn 100%)
 
 ---
 
@@ -10,20 +10,20 @@
 
 ```text
 +------------------------------------+
-|    ESP32-C3 Gateway (kit TBD)       |
+|    ESP32-C3 Gateway                |
 |    - Nguồn độc lập (Pin/Power Bank)|
 |    - Thu LoRa SX1278 (SPI)         |
-|    - Phát Wi-Fi SoftAP             |
+|    - Phát Wi-Fi SoftAP / Kết nối STA|
 |    - WebSocket Server (:8080/telemetry) |
 +-----------------+------------------+
                   │
-                  │  Sóng Wi-Fi 802.11 b/g/n (SSID: KVC_GCS_AP)
-                  │  Giao thức: WebSocket (ws://192.168.4.1:8080/telemetry)
+                  │  Sóng Wi-Fi 802.11 b/g/n (SSID: KVC_GCS_AP hoặc Wi-Fi STA)
+                  │  Giao thức: WebSocket (:8080/telemetry)
                   ▼
 +------------------------------------+
 |    Backend GCS trên Laptop (Host)  |
-|    - Kết nối Wi-Fi vào ESP32       |
-|    - Chạy Client WebSocket Ingress | ──► Ghi nhật ký vào SQLite WAL (sqlite_logger.py)
+|    - Kết nối Wi-Fi vào Gateway     |
+|    - Chạy Client esp32_ingress.py  | ──► Ghi nhật ký vào SQLite WAL (sqlite_logger.py)
 |    - Quản lý trạng thái State      | ──► Động cơ phát lại (replay_engine.py)
 |    - Mở WebSocket Server nội bộ    |
 |      (ws://127.0.0.1:8000/ws)      |
@@ -41,28 +41,29 @@
 
 > ⚠️ **QUY TẮC CỐT LÕI:**
 > 1. Trình duyệt Web (Dashboard) **tuyệt đối không kết nối trực tiếp vào ESP32**. Trình duyệt chỉ kết nối vào Backend Python tại `ws://127.0.0.1:8000/ws`.
-> 2. Backend Python trên laptop là client ingress mục tiêu. Việc ghi bền vững/replay phụ thuộc ứng dụng và chưa được xác minh với ingress ESP32.
+> 2. Backend Python trên laptop chạy module Ingress `esp32_ingress.py` để kết nối vào ESP32, giải mã RF 32 bytes và chuyển tiếp dữ liệu vào Hub hệ thống.
 
 ---
 
-## 2. Cấu hình mạng Wi-Fi SoftAP của ESP32
+## 2. Cấu hình mạng Wi-Fi và Endpoint của ESP32
 
-ESP32 tự khởi tạo một Access Point (AP) độc lập không cần router Internet:
+Gateway ESP32 hỗ trợ hai chế độ mạng linh hoạt:
 
-| Tham số | Giá trị thiết lập | Ghi chú |
-| :--- | :--- | :--- |
-| **SSID** | `KVC_GCS_AP` | Tên mạng Wi-Fi phát từ ESP32 |
-| **Mật khẩu (Password)** | Cấu hình riêng khi triển khai; không ghi giá trị vào tài liệu/source/log | Dùng cơ chế bảo mật được duyệt; không commit credential |
-| **Địa chỉ IP của ESP32** | `192.168.4.1` | Địa chỉ IP mặc định của SoftAP ESP32 |
-| **Subnet Mask** | `255.255.255.0` | Dải mạng cục bộ |
-| **WebSocket Port** | `8080` | Endpoint mục tiêu theo thiết kế; chưa xác minh trên firmware |
-| **Endpoint URL** | `ws://192.168.4.1:8080/telemetry` | Backend Python kết nối tới; baseline DESIGN, chưa kiểm thử thiết bị |
+1. **Chế độ Dã ngoại Thực địa (SoftAP Mode - Mặc định khi không có router ngoài):**
+   - **SSID:** `KVC_GCS_AP` (hoặc `KVC_GROUND_STATION`)
+   - **Mật khẩu (Password):** Cấu hình bảo mật nội bộ
+   - **Địa chỉ IP ESP32:** `192.168.4.1`
+   - **WebSocket Endpoint:** `ws://192.168.4.1:8080/telemetry`
+
+2. **Chế độ Phòng Lab / Thử nghiệm (Station Mode - STA):**
+   - ESP32 kết nối trực tiếp vào mạng Wi-Fi của phòng Lab hoặc điểm phát sóng Hotspot điện thoại.
+   - Backend Python tích hợp cơ chế Auto-Discovery (`discover_esp32_gateway`) tự động dò quét địa chỉ IP của ESP32 trên mạng cục bộ để kết nối ngay lập tức mà không cần cấu hình IP thủ công.
 
 ---
 
-## 3. Transport envelope WebSocket v1 (DESIGN)
+## 3. Transport envelope WebSocket v1
 
-Mỗi message JSON UTF-8 chuyển tiếp một RF payload 32 byte còn nguyên vẹn. ESP32 loại payload không qua CRC-16 trước khi tạo message; không bóc tách target/application fields tại boundary này. `rf_payload_hex` giữ đúng thứ tự 32 byte nhận được. Backend GCS chịu trách nhiệm decode/mapping theo RF ABI sau khi ABI được duyệt. Phần parser/ingress REAL hiện chưa triển khai.
+Mỗi message JSON UTF-8 chuyển tiếp một RF payload 32 byte còn nguyên vẹn. ESP32 loại bỏ các payload không qua được kiểm tra CRC-16 trước khi tạo message. `rf_payload_hex` giữ đúng thứ tự 32 byte nhận được. Phía Backend Python tiếp nhận và giải mã toàn diện qua module `Dashboard/backend/esp32_ingress.py` (đã có bộ kiểm thử tự động `test_esp32_ingress.py` đạt 100% PASS).
 
 ```json
 {

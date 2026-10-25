@@ -27,7 +27,7 @@ export const UavHardwareGaugeCard: React.FC<{ className?: string }> = ({ classNa
       ? 'PHÁT LẠI'
       : 'CÓ DỮ LIỆU'
   const subsystems = [
-    { id: 'gnss', title: '1. GNSS NEO-M8N / ATGM336H', detail: !is_stale && telemetry.gps_valid ? 'Fix hợp lệ theo nguồn' : source_mode === 'REAL' ? 'Chờ gói RF tải bay' : 'Fix: Chờ vệ tinh', status: !is_stale && telemetry.gps_valid ? dataStatus : 'N/A' },
+    { id: 'gnss', title: '1. GNSS u-blox M10 (NEO-M10N)', detail: !is_stale && telemetry.gps_valid ? 'Fix hợp lệ theo nguồn' : source_mode === 'REAL' ? 'Chờ gói RF tải bay' : 'Fix: Chờ vệ tinh', status: !is_stale && telemetry.gps_valid ? dataStatus : 'N/A' },
     { id: 'lidar', title: '2. LiDAR TF-Luna', detail: !is_stale && telemetry.lidar_valid && telemetry.lidar_range_cm !== null ? 'Cự ly dọc tia: ' + (telemetry.lidar_range_cm / 100).toFixed(2) + ' m' : source_mode === 'REAL' ? 'Chờ gói RF tải bay' : 'Cự ly: Chờ đo', status: !is_stale && telemetry.lidar_valid ? dataStatus : 'N/A' },
     { id: 'imu', title: '3. IMU GY-87', detail: 'Tư thế & góc nghiêng UAV', status: !is_stale && telemetry.imu_valid ? dataStatus : 'N/A' },
     { id: 'camera', title: '4. Camera RGB', detail: 'Kênh video độc lập • Chờ tích hợp', status: 'CHƯA TÍCH HỢP' },

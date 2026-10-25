@@ -162,6 +162,7 @@ export const Map2DView: React.FC<Map2DViewProps> = ({
   const mapContainerRef = useRef<HTMLDivElement | null>(null)
   const cameraMarkerRef = useRef<L.Marker | null>(null)
   const targetMarkerRef = useRef<L.Marker | null>(null)
+  const targetMarkersMapRef = useRef<Map<string | number, { marker: L.Marker; lastSeen: number }>>(new Map())
   const trailPolylineRef = useRef<L.Polyline | null>(null)
   const lineToTargetRef = useRef<L.Polyline | null>(null)
   const fovPolygonRef = useRef<L.Polygon | null>(null)
@@ -275,6 +276,10 @@ export const Map2DView: React.FC<Map2DViewProps> = ({
       tileLayerRef.current = null
       cameraMarkerRef.current = null
       targetMarkerRef.current = null
+      targetMarkersMapRef.current.forEach((val) => {
+        map.removeLayer(val.marker)
+      })
+      targetMarkersMapRef.current.clear()
       trailPolylineRef.current = null
       lineToTargetRef.current = null
       fovPolygonRef.current = null
@@ -397,17 +402,30 @@ export const Map2DView: React.FC<Map2DViewProps> = ({
         </div>
       `
 
-      if (!targetMarkerRef.current) {
+      const targetId = target.track_id ?? target.class_id ?? 1
+      const now = Date.now()
+      const existing = targetMarkersMapRef.current.get(targetId)
+
+      if (!existing) {
         const marker = L.marker(pos, { icon, zIndexOffset: 200 }).addTo(map)
         marker.bindTooltip(targetTooltipContent, { permanent: false, direction: 'top', offset: [0, -16] })
-        targetMarkerRef.current = marker
+        targetMarkersMapRef.current.set(targetId, { marker, lastSeen: now })
       } else {
-        targetMarkerRef.current.setLatLng(pos)
-        targetMarkerRef.current.setIcon(icon)
-        targetMarkerRef.current.setTooltipContent(targetTooltipContent)
+        existing.marker.setLatLng(pos)
+        existing.marker.setIcon(icon)
+        existing.marker.setTooltipContent(targetTooltipContent)
+        existing.lastSeen = now
       }
 
-      // Cập nhật đường nối đơn giản giữa UAV và Mục tiêu
+      // Tự động thu dọn các mục tiêu cũ quá 20 giây không có tín hiệu cập nhật
+      targetMarkersMapRef.current.forEach((val, id) => {
+        if (now - val.lastSeen > 20000) {
+          map.removeLayer(val.marker)
+          targetMarkersMapRef.current.delete(id)
+        }
+      })
+
+      // Cập nhật đường nối đơn giản giữa UAV và Mục tiêu gần nhất
       if (
         lineToTargetRef.current &&
         hasGpsFix &&
@@ -420,6 +438,12 @@ export const Map2DView: React.FC<Map2DViewProps> = ({
         ])
       }
     } else {
+      if (!hasTarget) {
+        targetMarkersMapRef.current.forEach((val) => {
+          map.removeLayer(val.marker)
+        })
+        targetMarkersMapRef.current.clear()
+      }
       if (targetMarkerRef.current) {
         map.removeLayer(targetMarkerRef.current)
         targetMarkerRef.current = null

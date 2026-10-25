@@ -87,7 +87,7 @@ Source có bộ MOCK phía trình duyệt phục vụ phát triển khi chưa c�
 
 ## 5. Ý Nghĩa Kỹ Thuật & Giới Hạn Phần Cứng
 
-Cấu hình mục tiêu theo [thiết kế hệ thống](../../docs/KVC_ThietKeHeThong.md): OneKiwi Primer 20K V1.1, Sonix SN34F788, AJ-SR04M, GY-87, GNSS NEO-M8N/ATGM336H, Ra-02 hai đầu, gateway ESP32-C3 (kit/module còn TBD) và model YOLO11n hai lớp. ESP32 có nguồn riêng; baseline kết nối laptop là Wi-Fi SoftAP/WebSocket. Camera/cáp và pinout còn phải xác minh; ingress ESP32 chưa được triển khai. UI không tự tạo số vệ tinh/DOP/sai số, điện áp/cell/dòng pin hoặc hiệu năng AI khi schema không có dữ liệu; chỉ số thiếu là N/A.
+Cấu hình mục tiêu theo [thiết kế hệ thống](../../docs/KVC_ThietKeHeThong.md): OneKiwi Primer 20K V1.1, Sonix SN34F788, AJ-SR04M, GY-87, GNSS NEO-M10N, Ra-02 hai đầu, gateway ESP32-C3 (kit/module còn TBD) và model YOLO11n hai lớp. ESP32 có nguồn riêng; baseline kết nối laptop là Wi-Fi SoftAP/WebSocket. Camera/cáp và pinout còn phải xác minh; ingress ESP32 chưa được triển khai. UI không tự tạo số vệ tinh/DOP/sai số, điện áp/cell/dòng pin hoặc hiệu năng AI khi schema không có dữ liệu; chỉ số thiếu là N/A.
 
 ### 5.1. Vị Trí Camera / Tải Nhiệm Vụ
 - **Nguồn:** Trích xuất từ anten GNSS gắn trên cụm tải nhiệm vụ hoặc thân UAV do backend truyền về qua bản tin telemetry.

@@ -26,7 +26,7 @@ Rà soát 15/10/2026 (Asia/Saigon), KVC-MD-UNIFY-20261015-001; owner: Codex; SEL
 | [AI README](../ai_training/README.md) | Adapter, dataset inventory, generator/validator và giới hạn metrics | PC_REFERENCE; release BLOCKED |
 | [OneKiwi/Gowin](hardware/CHIP_ONEKIWI_20K_GOWIN_GW2A.md) | Ghi chú chip/board, tài liệu hãng và SDK | DOCUMENTED; không dùng pin candidate chưa duyệt để đấu nối |
 | [SONiX](hardware/CHIP_SONIX_SN34F788_MCU.md) | Ghi chú MCU và tài liệu hãng | DOCUMENTED; project/board mapping/build còn cần xác minh |
-| [Bản đồ chân Master](hardware/KVC_MASTER_PINOUT_WIRING.md) | Bản đồ phân bổ chân và đấu nối toàn hệ thống KVC | BASELINE RELEASE; chuẩn đấu nối cảm biến (AJ-SR04M, GY-87 I2C0, NEO-M8N), MCU, LoRa, ESP32 và FPGA |
+| [Bản đồ chân Master](hardware/KVC_MASTER_PINOUT_WIRING.md) | Bản đồ phân bổ chân và đấu nối toàn hệ thống KVC | BASELINE RELEASE; chuẩn đấu nối cảm biến (AJ-SR04M, GY-87 I2C0, GNSS u-blox M10 / NEO-M10N), MCU, LoRa, ESP32 và FPGA |
 | [Workflow AI](KVC_AI_WORKFLOW.md) | Task/owner/test/review/handoff | Quy tắc hiện hành ở đầu; setup 11/10 là lịch sử |
 | [AGENTS](../AGENTS.md) | Quy tắc chung và quyền sửa | Nguồn quy tắc AI chính |
 | [Adapter Antigravity](../.agents/rules/kvc.md) | Trỏ IDE về AGENTS | Không tạo bộ policy độc lập |

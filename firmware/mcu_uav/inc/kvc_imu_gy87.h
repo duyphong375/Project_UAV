@@ -305,8 +305,17 @@ static uint8_t mpu6050_read_accel_raw(uint8_t dev_addr, int16_t *ax, int16_t *ay
  * @brief Tính toán góc nghiêng Roll và Pitch (Đơn vị: 0.1 độ, ví dụ 152 là 15.2 độ)
  */
 static uint8_t mpu6050_read_angles(uint8_t dev_addr, int16_t *roll_deg10, int16_t *pitch_deg10) {
-    int16_t ax, ay, az;
+    int16_t ax = 0, ay = 0, az = 0;
     if (!mpu6050_read_accel_raw(dev_addr, &ax, &ay, &az)) {
+        return 0;
+    }
+
+    /* Kiểm tra tính hợp lệ của cảm biến gia tốc:
+     * Trong trường trọng lực Trái Đất (1g ~ 16384 LSB tại dải +/-2g), tổng gia tốc không thể
+     * đồng thời bằng 0 trên cả 3 trục. Nếu ax == ay == az == 0, chắc chắn đường truyền I2C
+     * bị chập mass đọc toàn byte 0x00 hoặc cảm biến bị mất nguồn.
+     */
+    if (ax == 0 && ay == 0 && az == 0) {
         return 0;
     }
 

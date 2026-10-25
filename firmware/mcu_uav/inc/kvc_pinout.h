@@ -63,7 +63,7 @@ extern "C" {
 #define KVC_PIN_IMU_SDA_PIN         11      /* P0.11 - Pin 39 LQFP64 | JP1 Pin 9 hoặc 10 (I2C0 SDA 400kHz) */
 
 /* ============================================================================
- * 4. MODULE ĐỊNH VỊ VỆ TINH NEO-M8N GNSS (UART3 - 9600 bps)
+ * 4. MODULE ĐỊNH VỊ VỆ TINH NEO-M10N GNSS (UART3 - 9600 bps)
  * ============================================================================ */
 #define KVC_PIN_GNSS_UTXD3_PORT     SN_GPIO2
 #define KVC_PIN_GNSS_UTXD3_PIN      0       /* P2.0  - Pin 14 LQFP64 | JP3 Pin 1 hoặc 2 (UART3 TX sang RX module) */

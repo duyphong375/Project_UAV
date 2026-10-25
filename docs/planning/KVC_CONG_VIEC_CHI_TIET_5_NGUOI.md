@@ -25,7 +25,7 @@ Việc còn lại là xây phần FPGA/MCU, nối thiết bị thật, đo kiể
 
 ### 1.3. Đọc và kiểm tra cảm biến
 
-- [ ] Viết phần đọc cảm biến siêu âm AJ-SR04M, IMU (GY-87 I2C0) và GNSS (NEO-M8N) theo module thực tế đã chốt; thử lần lượt từng cảm biến.
+- [ ] Viết phần đọc cảm biến siêu âm AJ-SR04M, IMU (GY-87 I2C0) và GNSS (NEO-M10N) theo module thực tế đã chốt; thử lần lượt từng cảm biến.
 - [ ] Kiểm đơn vị, phạm vi đo, hướng trục và thời gian của dữ liệu.
 - [ ] Xử lý dữ liệu lỗi, quá cũ, mất kết nối và khôi phục sau khi cảm biến kết nối lại.
 - [ ] GNSS không có fix hợp lệ thì không xuất tọa độ GPS hợp lệ.

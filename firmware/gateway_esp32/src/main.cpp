@@ -150,8 +150,8 @@ struct __attribute__((packed)) RfTelemetryPacket32 {
 // 5. CÁC BIẾN QUẢN LÝ THỜI GIAN, PHIÊN LÀM VIỆC, SELF-MOCK & THỐNG KÊ HỆ THỐNG
 // ======================================================================================
 
-// Cấu hình chế độ Self-Mock cho Giai đoạn 3 (Khi chưa cắm module LoRa phần cứng)
-static const bool ENABLE_SELF_MOCK = false;
+// Cấu hình chế độ Self-Mock cho Giai đoạn 3 (Tự động phát khi chưa nhận được sóng LoRa thực tế)
+static const bool ENABLE_SELF_MOCK = true;
 
 // Chu kỳ phát bản tin Self-Mock (1000ms = 1.0 giây / gói tin)
 static const uint32_t SELF_MOCK_INTERVAL_MS = 1000;
@@ -486,6 +486,14 @@ void generateAndSendSelfMockTelemetry() {
     }
   }
 
+  // Nạp dữ liệu góc nghiêng IMU mẫu (Roll = +12.5°, Pitch = -4.5°) vào 4 byte reserved để HUD hiển thị đầy đủ
+  int16_t mockRoll10 = 125;
+  int16_t mockPitch10 = -45;
+  pkt.reserved[0] = (uint8_t)(mockRoll10 & 0xFF);
+  pkt.reserved[1] = (uint8_t)((mockRoll10 >> 8) & 0xFF);
+  pkt.reserved[2] = (uint8_t)(mockPitch10 & 0xFF);
+  pkt.reserved[3] = (uint8_t)((mockPitch10 >> 8) & 0xFF);
+
   // 3. TÍNH TOÁN CRC-16/CCITT-FALSE TRÊN 30 BYTE ĐẦU
   pkt.crc16 = calculateCrc16((const uint8_t *)&pkt, 30);
 
@@ -643,38 +651,37 @@ void setup() {
   // BƯỚC 1: CHẠY BÀI SÁT HẠCH TỰ ĐỘNG GIAI ĐOẠN 2 (SELF-TEST UNIT)
   runPhase2SelfTest();
 
-  // BƯỚC 2: CẤU HÌNH ESP32 BẮT WI-FI CHUNG CỦA NHÀ / PHÒNG LAB (STATION MODE)
-  Serial.print("[WIFI] Dang ket noi toi mang Wi-Fi STA: ");
-  Serial.println(WIFI_SSID);
+  // BƯỚC 2: CẤU HÌNH ESP32 CHẾ ĐỘ DUAL WIFI (SOFTAP + STA)
+  // Luôn phát mạng Wi-Fi KVC_GROUND_STATION (IP cố định 192.168.4.1) ngay lập tức
+  WiFi.mode(WIFI_AP_STA);
+  WiFi.softAP("KVC_GROUND_STATION", "kvc123456");
+  delay(100);
+  Serial.println("[WIFI-AP]  Phat SoftAP KVC_GROUND_STATION THANH CONG!");
+  Serial.print("[WIFI-AP]  Ten mang (SSID): KVC_GROUND_STATION | Mat khau: kvc123456\n");
+  Serial.print("[WIFI-AP]  Dia chi IP Gateway: ");
+  Serial.println(WiFi.softAPIP());
 
-  WiFi.mode(WIFI_STA);
+  // Đồng thời thử kết nối mạng Wi-Fi ngoài nếu có
+  Serial.print("[WIFI-STA] Dang thu ket noi mang Wi-Fi ngoai: ");
+  Serial.println(WIFI_SSID);
   WiFi.setAutoReconnect(true);
   WiFi.persistent(true);
   WiFi.begin(WIFI_SSID, WIFI_PASS);
 
-  // Vòng lặp chờ kết nối (cho phép chờ tối đa 10 giây)
+  // Chờ tối đa 3 giây để không làm gián đoạn hệ thống nếu ngoài tầm phủ sóng
   uint32_t startAttemptTime = millis();
-  while (WiFi.status() != WL_CONNECTED && (millis() - startAttemptTime < 10000)) {
-    delay(500);
+  while (WiFi.status() != WL_CONNECTED && (millis() - startAttemptTime < 3000)) {
+    delay(200);
     Serial.print(".");
   }
 
-  // Kiểm tra kết quả kết nối Wi-Fi (Nếu thất bại, tự động chuyển sang SoftAP KVC_GROUND_STATION)
   if (WiFi.status() == WL_CONNECTED) {
     Serial.println("\n[WIFI-STA] Ket noi Wi-Fi STA THANH CONG!");
     Serial.print("[WIFI-STA] Dia chi IP do Router cap cho ESP32: ");
     Serial.println(WiFi.localIP());
     Serial.printf("[WIFI-STA] Cuong do song RSSI: %d dBm\n", WiFi.RSSI());
   } else {
-    Serial.println("\n[WIFI-STA] Khong the ket noi Wi-Fi STA sau 10 giay.");
-    Serial.println("[WIFI-AP]  Kich hoat che do tu phat Wi-Fi SoftAP du phong...");
-    WiFi.mode(WIFI_AP);
-    WiFi.softAP("KVC_GROUND_STATION", "kvc123456");
-    delay(500);
-    Serial.println("[WIFI-AP]  Phat SoftAP THANH CONG!");
-    Serial.print("[WIFI-AP]  Ten mang (SSID): KVC_GROUND_STATION | Mat khau: kvc123456\n");
-    Serial.print("[WIFI-AP]  Dia chi IP Gateway: ");
-    Serial.println(WiFi.softAPIP());
+    Serial.println("\n[WIFI-STA] Khong co mang STA, Gateway tiep tuc phuc vu qua SoftAP KVC_GROUND_STATION.");
   }
 
   // BƯỚC 3: KHỞI ĐỘNG DỊCH VỤ MÁY CHỦ WEBSOCKET SERVER
@@ -683,12 +690,11 @@ void setup() {
 
   Serial.println("\n=======================================================");
   Serial.printf("[WS] WebSocket Server da mo tai cong: %u\n", WS_PORT);
-  if (WiFi.getMode() == WIFI_STA && WiFi.status() == WL_CONNECTED) {
-    Serial.printf("[WS] Endpoint ket noi tu Laptop: ws://%s:%u/telemetry\n",
+  Serial.printf("[WS] Endpoint SoftAP: ws://%s:%u/telemetry\n",
+                WiFi.softAPIP().toString().c_str(), WS_PORT);
+  if (WiFi.status() == WL_CONNECTED) {
+    Serial.printf("[WS] Endpoint STA   : ws://%s:%u/telemetry\n",
                   WiFi.localIP().toString().c_str(), WS_PORT);
-  } else {
-    Serial.printf("[WS] Endpoint ket noi tu Laptop: ws://%s:%u/telemetry\n",
-                  WiFi.softAPIP().toString().c_str(), WS_PORT);
   }
   Serial.println("=======================================================\n");
 
@@ -730,9 +736,12 @@ void loop() {
   }
 
   // ----------------------------------------------------------------------------------
-  // GIAI ĐOẠN 3: BỘ PHÁT DỮ LIỆU TELEMETRY TỰ SINH (SELF-MOCK) MỖI 1.0 GIÂY
+  // GIAI ĐOẠN 3: BỘ PHÁT DỮ LIỆU TELEMETRY DỰ PHÒNG (SELF-MOCK FALLBACK) MỖI 1.0 GIÂY
   // ----------------------------------------------------------------------------------
-  if (ENABLE_SELF_MOCK && (now - lastSelfMockMs >= SELF_MOCK_INTERVAL_MS)) {
+  // Khi chưa có gói LoRa thật từ UAV (hoặc mất sóng quá 3.0s), tự động phát gói dự phòng
+  // để Web Dashboard luôn luôn có đầy đủ thông số (GPS, Siêu âm, IMU, Pin, BBox)
+  bool fallbackToMock = (lastRxPacketMs == 0) || (now - lastRxPacketMs >= 3000);
+  if (ENABLE_SELF_MOCK && fallbackToMock && (now - lastSelfMockMs >= SELF_MOCK_INTERVAL_MS)) {
     lastSelfMockMs = now;
     generateAndSendSelfMockTelemetry();
   }

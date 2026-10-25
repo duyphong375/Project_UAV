@@ -17,7 +17,7 @@ beforeEach(() => {
 describe('GnssSatelliteSheet — GNSS theo cấu hình KVC', () => {
   it('không tạo số vệ tinh, DOP hay sai số từ một cờ fix', () => {
     const { container } = render(<GnssSatelliteSheet open onOpenChange={vi.fn()} />)
-    expect(screen.getByText(/NEO-M8N/)).toBeDefined()
+    expect(screen.getByText(/NEO-M10N/)).toBeDefined()
     expect(screen.getByText('FIX HỢP LỆ')).toBeDefined()
     expect(screen.getAllByText('N/A')).toHaveLength(6)
     expect(container.textContent).not.toContain('18 SATS')

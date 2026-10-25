@@ -14,7 +14,7 @@ Tài liệu này quản lý tập trung toàn bộ các giao diện kết nối 
         │
         │  IF-01: UART BBox Frame (115.200 bps, Header 0x5A 0xA5, CRC-16)
         ▼
-[ MCU Tải Sonix SN34F788 (Phong) ] ◄── Cảm biến: Siêu âm (AJ-SR04M), IMU (GY-87), GNSS (NEO-M8N)
+[ MCU Tải Sonix SN34F788 (Phong) ] ◄── Cảm biến: Siêu âm (AJ-SR04M), IMU (GY-87), GNSS (NEO-M10N)
         │
         │  IF-02: LoRa 433 MHz RF Packet (Ra-02 SX1278, Telemetry Metadata)
         ▼

@@ -153,7 +153,7 @@ Các số dưới đây chỉ minh họa bố cục, không phải kết quả �
   - Cung đo phần trăm pin còn lại với gradient từ Xanh lục (Đầy) qua Vàng (Cảnh báo) đến Đỏ (Nguy cấp <20%).
   - Ngưỡng cảnh báo pin là thiết kế UI; KVC không gửi lệnh RTH hoặc điều khiển bay.
 * **Danh sách thiết bị theo BOM:**
-  1. GNSS NEO-M8N hoặc biến thể ATGM336H đã chọn — UART; chưa có mẫu thật thì UNKNOWN.
+  1. GNSS NEO-M10N (hoặc biến thể đã chọn) — UART; chưa có mẫu thật thì UNKNOWN.
   2. AJ-SR04M — UART/GPIO theo cấu hình; range không tự là độ cao vuông góc.
   3. GY-87 — I2C; chip thực và hiệu chuẩn cần xác minh.
   4. Camera — module/giao diện còn chờ chốt cho OneKiwi.

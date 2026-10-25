@@ -388,6 +388,16 @@
               <FileType>1</FileType>
               <FilePath>.\main.c</FilePath>
             </File>
+            <File>
+              <FileName>kvc_gnss_neo_m10.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\src\sensors\kvc_gnss_neo_m10.c</FilePath>
+            </File>
+            <File>
+              <FileName>kvc_fpga_bbox.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\src\sensors\kvc_fpga_bbox.c</FilePath>
+            </File>
           </Files>
         </Group>
         <Group>
