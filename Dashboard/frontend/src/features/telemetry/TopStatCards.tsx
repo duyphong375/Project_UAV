@@ -102,7 +102,7 @@ export const TopStatCards: React.FC<{ className?: string }> = ({ className = '' 
         </div>
       </Card>
 
-      {/* Stat 2: Độ cao LiDAR & GNSS */}
+      {/* Stat 2: Độ cao Siêu âm & GNSS */}
       <Card className="relative overflow-hidden flex flex-col justify-between p-4 sm:p-5 rounded-2xl bg-card border border-border shadow-xs hover:border-cyan-500/40 transition-colors">
         <div className="absolute -top-12 -right-12 w-28 h-28 bg-cyan-500/10 rounded-full blur-2xl pointer-events-none" />
         <div className="flex items-center justify-between">
@@ -110,10 +110,10 @@ export const TopStatCards: React.FC<{ className?: string }> = ({ className = '' 
             <span className="font-mono text-xs uppercase tracking-wider text-muted-foreground font-semibold">
               Độ cao & Cảm biến
             </span>
-            <InfoTip text="Khoảng cách từ tải bay xuống mặt nước đo bằng cảm biến quang học LiDAR TF-Luna và trạng thái khóa vệ tinh 3D Fix của module GNSS." />
+            <InfoTip text="Khoảng cách từ tải bay xuống mặt nước đo bằng cảm biến siêu âm chống nước AJ-SR04M và trạng thái khóa vệ tinh 3D Fix của module GNSS." />
           </div>
           <span className="font-mono text-[10px] font-bold text-cyan-600 dark:text-cyan-400 bg-cyan-500/10 px-2 py-0.5 rounded-full border border-cyan-500/20">
-            {isLidarLocked ? 'LIDAR KHÓA CỰ LY' : 'CHỜ DỮ LIỆU'}
+            {isLidarLocked ? 'SIÊU ÂM KHÓA CỰ LY' : 'CHỜ DỮ LIỆU'}
           </span>
         </div>
 
@@ -125,7 +125,9 @@ export const TopStatCards: React.FC<{ className?: string }> = ({ className = '' 
             <span className="text-xs font-semibold text-muted-foreground">m mặt nước</span>
           </div>
           <div className="mt-1 font-mono text-xs text-foreground truncate">
-            Cảm biến: LiDAR TF-Luna • IMU GY-87
+            {!is_stale && telemetry.imu_valid && (telemetry.roll_deg !== null || telemetry.pitch_deg !== null)
+              ? `Siêu âm AJ-SR04M • IMU (R:${telemetry.roll_deg ?? 0}°, P:${telemetry.pitch_deg ?? 0}°)`
+              : 'Cảm biến: Siêu âm AJ-SR04M • IMU GY-87'}
           </div>
         </div>
 

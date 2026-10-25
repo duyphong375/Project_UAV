@@ -25,6 +25,8 @@ def make_rf_payload(
     battery_v: float,    # 10.5V - 12.6V
     has_gps: bool = True,
     ai_detect: bool = True,
+    roll_deg: float = 1.2,
+    pitch_deg: float = -0.8,
 ) -> str:
     fmt = "<2sBBIIIhhHBBBB4sH"
     lat_scaled = int(lat * 1e7) if has_gps else 0
@@ -39,6 +41,9 @@ def make_rf_payload(
     sensor_flags |= 0x04  # IMU valid
     if ai_detect and class_id > 0:
         sensor_flags |= 0x08  # AI detected
+
+    # Pack Roll & Pitch vào 4 byte reserved (đơn vị 0.1 độ, ví dụ 12 = 1.2°)
+    reserved_bytes = struct.pack("<hh", int(round(roll_deg * 10)), int(round(pitch_deg * 10)))
 
     raw_bytes = struct.pack(
         fmt,
@@ -55,7 +60,7 @@ def make_rf_payload(
         confidence,
         sensor_flags,
         battery_raw,
-        b"\x00\x00\x00\x00",
+        reserved_bytes,
         0xABCD,  # CRC16
     )
     return raw_bytes.hex()

@@ -20,6 +20,8 @@ const DEFAULT_TELEMETRY: PayloadTelemetry = {
   ai_detected: false,
   packet_rssi_dbm: null,
   packet_snr_db: null,
+  roll_deg: null,
+  pitch_deg: null,
 }
 
 const DEFAULT_DIAGNOSTICS: DiagnosticsInfo = {
@@ -130,6 +132,21 @@ function parsePayloadTelemetryPatch(raw: unknown): Partial<PayloadTelemetry> | n
   const snr = parseOptionalNumber(raw, 'packet_snr_db')
   if (snr !== undefined) {
     result.packet_snr_db = snr === null ? null : Math.round(snr * 100) / 100
+  }
+
+  const roll = parseOptionalNumber(raw, 'roll_deg')
+  if (roll !== undefined) {
+    result.roll_deg = roll === null ? null : Math.round(roll * 10) / 10
+  }
+
+  const pitch = parseOptionalNumber(raw, 'pitch_deg')
+  if (pitch !== undefined) {
+    result.pitch_deg = pitch === null ? null : Math.round(pitch * 10) / 10
+  }
+
+  if (result.imu_valid === false) {
+    result.roll_deg = null
+    result.pitch_deg = null
   }
 
   return result

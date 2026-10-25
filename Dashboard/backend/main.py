@@ -9,8 +9,18 @@ import anyio
 from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 
+import logging
 import sys
 from pathlib import Path
+
+# Cấu hình logging console cho kvc namespace để in log ra terminal rõ ràng
+kvc_logger = logging.getLogger("kvc")
+kvc_logger.setLevel(logging.INFO)
+if not any(isinstance(h, logging.StreamHandler) for h in kvc_logger.handlers):
+    _sh = logging.StreamHandler(sys.stdout)
+    _sh.setFormatter(logging.Formatter("[%(asctime)s] [%(levelname)s] %(name)s: %(message)s", datefmt="%H:%M:%S"))
+    kvc_logger.addHandler(_sh)
+    kvc_logger.propagate = False
 
 _BACKEND_DIR = Path(__file__).resolve().parent
 if str(_BACKEND_DIR) not in sys.path:
@@ -301,6 +311,52 @@ def create_app(
             "session_id": snapshot["session_id"],
         }
 
+    @app.get("/api/esp32/status")
+    async def esp32_status():
+        hub = getattr(app.state, "hub", None)
+        link = dict(hub.store.hardware_link) if hub and hasattr(hub.store, "hardware_link") else {}
+        is_conn = link.get("status") == "CONNECTED"
+        return {
+            "status": "CONNECTED" if is_conn else "DISCONNECTED",
+            "hardware_link": link,
+            "target_url": settings.esp32_ws_url,
+            "rx_age_ms": getattr(hub.store, "rx_age_ms", None) if hub else None,
+            "message": "Gateway ESP32 đã kết nối thành công qua Wi-Fi WebSocket! Đang chờ gói tin LoRa 433MHz từ MCU Sonix." if is_conn else f"Chưa thể kết nối tới Gateway ESP32 tại {settings.esp32_ws_url}. Hãy kiểm tra IP hoặc nguồn ESP32.",
+        }
+
+    @app.post("/api/esp32/connect")
+    async def esp32_connect(payload: dict):
+        url = payload.get("url")
+        if not url:
+            raise HTTPException(status_code=400, detail="Missing 'url'")
+        settings.esp32_ws_url = url
+        hub = app.state.hub
+        if hasattr(app.state, "ingress_task") and app.state.ingress_task:
+            app.state.ingress_task.cancel()
+        app.state.ingress_task = asyncio.create_task(
+            run_esp32_ingress(hub, url), name="kvc-esp32-ingress"
+        )
+        return {"status": "CONNECTING", "url": url}
+
+    @app.post("/api/esp32/command")
+    async def esp32_command(payload: dict):
+        import websockets
+        action = payload.get("action")
+        if not action:
+            raise HTTPException(status_code=400, detail="Missing 'action'")
+        target_url = settings.esp32_ws_url
+        try:
+            async with websockets.connect(target_url, open_timeout=2.0, close_timeout=1.0) as ws:
+                import json
+                await ws.send(json.dumps(payload))
+                try:
+                    reply = await asyncio.wait_for(ws.recv(), timeout=2.0)
+                    return {"status": "OK", "action": action, "reply": reply}
+                except Exception:
+                    return {"status": "OK", "action": action, "reply": "SENT (No direct response)"}
+        except Exception as exc:
+            return {"status": "FAILED", "action": action, "error": str(exc)}
+
     @app.websocket("/ws/telemetry")
     async def telemetry(websocket: WebSocket):
         # Browser origins limited to the same loopback development origins.
@@ -377,7 +433,7 @@ if __name__ == "__main__":
         import os
         os.environ["KVC_ENABLE_MOCK"] = "0"
     enable_esp32 = False if args.no_esp32 else _env_bool("KVC_ENABLE_ESP32", True)
-    esp32_url = args.esp32_url or _env_str("KVC_ESP32_WS_URL", "ws://10.254.44.101:8080/telemetry")
+    esp32_url = args.esp32_url or _env_str("KVC_ESP32_WS_URL", "ws://10.136.131.101:8080/telemetry")
 
     settings_kwargs = {
         "enable_mock": enable_mock,

@@ -67,8 +67,8 @@ export function getEsp32PhysicalStatus(
   if (!wsConnected) {
     return {
       status: 'BACKEND_DOWN',
-      label: 'MẤT KẾT NỐI GCS BACKEND',
-      shortLabel: 'GCS DOWN',
+      label: 'BACKEND: MẤT KẾT NỐI',
+      shortLabel: 'MẤT KẾT NỐI',
       description: 'Trình duyệt mất kết nối tới Backend FastAPI (cổng 8000). Hãy kiểm tra dịch vụ backend.',
       badgeVariant: 'destructive',
       badgeColorClass: 'border-red-500/40 text-red-600 dark:text-red-400 bg-red-500/10',
@@ -85,8 +85,8 @@ export function getEsp32PhysicalStatus(
   if (isFresh) {
     return {
       status: 'LIVE',
-      label: `ESP32 TRỰC TUYẾN (${rxAgeMs}ms)`,
-      shortLabel: 'ESP32 LIVE',
+      label: 'ESP32: ĐÃ KẾT NỐI',
+      shortLabel: 'ĐÃ KẾT NỐI',
       description: `Đang nhận gói tin trực tiếp từ Gateway ESP32 qua ${hardwareLink.port || 'Wi-Fi SoftAP'}.`,
       badgeVariant: 'default',
       badgeColorClass: 'border-emerald-500/40 text-emerald-600 dark:text-emerald-400 bg-emerald-500/10',
@@ -96,28 +96,27 @@ export function getEsp32PhysicalStatus(
     }
   }
 
-  // Đang kết nối nhưng bị gián đoạn tín hiệu quá 3s (Stale / Timeout)
+  // Đang kết nối Gateway nhưng chưa có gói tin từ Sonix hoặc bị gián đoạn sóng quá 3s
   if (isHardwareConnected && (isStale || rxAgeMs > 3000)) {
-    const ageSeconds = (rxAgeMs / 1000).toFixed(1)
     return {
       status: 'LOST_SIGNAL',
-      label: `MẤT SÓNG ESP32 (>${ageSeconds}s)`,
-      shortLabel: 'MẤT SÓNG ESP32',
-      description: `Đã quá 3,000ms không nhận được gói tin từ Gateway ESP32 (Trễ: ${rxAgeMs}ms). Kiểm tra nguồn ESP32 hoặc cự ly thu phát.`,
-      badgeVariant: 'destructive',
-      badgeColorClass: 'border-red-500/40 text-red-600 dark:text-red-400 bg-red-500/10',
-      dotColorClass: 'bg-red-500',
-      pingClass: 'bg-red-400',
-      iconName: 'radio-off',
+      label: 'GATEWAY: ĐÃ NỐI (CHỜ SÓNG RF)',
+      shortLabel: 'CHỜ SÓNG RF',
+      description: `Gateway ESP32 đã kết nối qua ${hardwareLink.port || 'Wi-Fi'}. Đang lắng nghe sóng LoRa 433MHz từ MCU Sonix...`,
+      badgeVariant: 'outline',
+      badgeColorClass: 'border-amber-500/50 text-amber-600 dark:text-amber-400 bg-amber-500/10',
+      dotColorClass: 'bg-amber-500',
+      pingClass: 'bg-amber-400',
+      iconName: 'radio',
     }
   }
 
-  // Backend đã sẵn sàng nhưng REAL Ingress chưa được triển khai hoặc ESP32 Gateway chưa kết nối
+  // Backend đã sẵn sàng nhưng ESP32 Gateway chưa kết nối hoặc chưa có ingress
   return {
     status: 'WAITING',
-    label: 'CHƯA KHẢ DỤNG (CHƯA CÓ INGRESS)',
-    shortLabel: 'CHƯA KHẢ DỤNG',
-    description: 'Chế độ REAL chưa khả dụng: Backend GCS hiện chưa triển khai Ingress nhận tin từ Gateway ESP32-C3 / giải mã RF.',
+    label: 'ESP32: CHƯA KẾT NỐI',
+    shortLabel: 'CHƯA KẾT NỐI',
+    description: 'Chế độ REAL: Đang chờ kết nối từ Gateway ESP32-C3 qua cổng Ingress WebSocket (:8080).',
     badgeVariant: 'destructive',
     badgeColorClass: 'border-rose-500/50 text-rose-600 dark:text-rose-400 bg-rose-500/10',
     dotColorClass: 'bg-rose-500',

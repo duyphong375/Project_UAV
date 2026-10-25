@@ -55,24 +55,25 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
 
   // Màu và nhãn độ trễ tín hiệu (rx_age_ms)
   const getAgeStatus = (age: number, stale: boolean) => {
-    if (stale || age > 3000) {
+    const safeAge = Math.max(0, age)
+    if (stale || safeAge > 3000) {
       return {
         color: 'text-red-500 bg-red-500/10 border-red-500/30',
         dot: 'bg-red-500',
-        label: `${(age / 1000).toFixed(1)}s (MẤT SÓNG)`,
+        label: `${(safeAge / 1000).toFixed(1)}s (MẤT SÓNG)`,
       }
     }
-    if (age > 1000) {
+    if (safeAge > 1000) {
       return {
         color: 'text-amber-500 bg-amber-500/10 border-amber-500/30',
         dot: 'bg-amber-500',
-        label: `${(age / 1000).toFixed(1)}s (Trễ)`,
+        label: `${(safeAge / 1000).toFixed(1)}s (Trễ)`,
       }
     }
     return {
       color: 'text-emerald-500 bg-emerald-500/10 border-emerald-500/30',
       dot: 'bg-emerald-500',
-      label: `${age}ms (Tốt)`,
+      label: `${Math.round(safeAge)}ms (Tốt)`,
     }
   }
 
@@ -109,7 +110,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
       default:
         return {
           btnClass: 'bg-rose-600/90 text-white border border-rose-500/60 shadow-xs',
-          label: 'REAL (CHƯA KHẢ DỤNG)',
+          label: 'REAL (CHƯA KẾT NỐI)',
           ping: null,
           dot: 'bg-white',
         }
@@ -176,7 +177,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
             title={
               source_mode === 'REAL'
                 ? `Chế độ REAL: ${esp32Status.description}`
-                : 'Chuyển sang chế độ REAL (Lưu ý: Backend hiện chưa có ingress từ ESP32-C3 / giải mã RF)'
+                : 'Chuyển sang chế độ REAL (Nhận dữ liệu từ Gateway ESP32)'
             }
             aria-label="Chế độ Thực tế REAL"
           >
@@ -206,7 +207,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
             <span>REPLAY</span>
           </button>
         </div>
-        <InfoTip text="Nguồn dữ liệu: MOCK (kịch bản mô phỏng), REAL (dữ liệu từ Gateway ESP32; hiện chưa có ingress ở backend), REPLAY (phát lại nhật ký SQLite). Trình duyệt chỉ nhận qua Backend GCS localhost." />
+        <InfoTip text="Nguồn dữ liệu: MOCK (kịch bản mô phỏng), REAL (dữ liệu từ Gateway ESP32 qua Ingress), REPLAY (phát lại nhật ký SQLite). Trình duyệt chỉ nhận qua Backend GCS localhost." />
       </div>
 
       {/* 3. Bên phải: Chỉ số hệ thống tóm tắt & Công cụ */}
@@ -260,7 +261,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
 
         {/* Độ trễ tín hiệu telemetry (rx_age) */}
         <div
-          className={`flex items-center gap-1.5 px-2 py-1 rounded-md border text-xs font-mono font-medium ${ageStatus.color}`}
+          className={`flex items-center gap-1.5 px-2 py-1 rounded-md border text-xs font-mono tabular-nums font-medium ${ageStatus.color}`}
           title="Độ trễ tín hiệu gói tin gần nhất từ tải UAV"
         >
           <Clock className="h-3.5 w-3.5 shrink-0 opacity-80" />

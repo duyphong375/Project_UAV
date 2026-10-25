@@ -28,8 +28,8 @@ export const UavHardwareGaugeCard: React.FC<{ className?: string }> = ({ classNa
       : 'CÓ DỮ LIỆU'
   const subsystems = [
     { id: 'gnss', title: '1. GNSS NEO-M8N / ATGM336H', detail: !is_stale && telemetry.gps_valid ? 'Fix hợp lệ theo nguồn' : source_mode === 'REAL' ? 'Chờ gói RF tải bay' : 'Fix: Chờ vệ tinh', status: !is_stale && telemetry.gps_valid ? dataStatus : 'N/A' },
-    { id: 'lidar', title: '2. LiDAR TF-Luna', detail: !is_stale && telemetry.lidar_valid && telemetry.lidar_range_cm !== null ? 'Cự ly dọc tia: ' + (telemetry.lidar_range_cm / 100).toFixed(2) + ' m' : source_mode === 'REAL' ? 'Chờ gói RF tải bay' : 'Cự ly: Chờ đo', status: !is_stale && telemetry.lidar_valid ? dataStatus : 'N/A' },
-    { id: 'imu', title: '3. IMU GY-87', detail: 'Tư thế & góc nghiêng UAV', status: !is_stale && telemetry.imu_valid ? dataStatus : 'N/A' },
+    { id: 'lidar', title: '2. Siêu âm AJ-SR04M (tiền thân TF-Luna)', detail: !is_stale && telemetry.lidar_valid && telemetry.lidar_range_cm !== null ? 'Cự ly mặt nước: ' + (telemetry.lidar_range_cm / 100).toFixed(2) + ' m' : source_mode === 'REAL' ? 'Chờ gói RF tải bay' : 'Cự ly: Chờ đo', status: !is_stale && telemetry.lidar_valid ? dataStatus : 'N/A' },
+    { id: 'imu', title: '3. IMU GY-87', detail: !is_stale && telemetry.imu_valid && (telemetry.roll_deg !== null || telemetry.pitch_deg !== null) ? 'Roll: ' + (telemetry.roll_deg != null && telemetry.roll_deg > 0 ? '+' + telemetry.roll_deg : (telemetry.roll_deg ?? 0)) + '° • Pitch: ' + (telemetry.pitch_deg != null && telemetry.pitch_deg > 0 ? '+' + telemetry.pitch_deg : (telemetry.pitch_deg ?? 0)) + '°' : 'Tư thế & góc nghiêng UAV', status: !is_stale && telemetry.imu_valid ? dataStatus : 'N/A' },
     { id: 'camera', title: '4. Camera RGB', detail: 'Kênh video độc lập • Chờ tích hợp', status: 'CHƯA TÍCH HỢP' },
     { id: 'fpga', title: '5. OneKiwi Primer 20K V1.1', detail: 'YOLO11n mục tiêu • ' + inference_device, status: 'AI ENGINE' },
     { id: 'sonix', title: '6. Sonix SN34F788', detail: 'MCU tải: Cảm biến/Định vị/RF', status: 'MCU TẢI' },

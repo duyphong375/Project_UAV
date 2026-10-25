@@ -113,11 +113,10 @@ export const DevicesPage: React.FC = () => {
               <span className="text-muted-foreground">Nguồn dữ liệu hiện tại:</span>
               <Badge
                 variant="outline"
-                className={`font-mono text-[10px] ${
-                  source_mode === 'MOCK'
-                    ? 'border-purple-500/40 text-purple-600 dark:text-purple-300 bg-purple-500/10'
-                    : 'border-emerald-500/40 text-emerald-600 dark:text-emerald-400 bg-emerald-500/10'
-                }`}
+                className={`font-mono text-[10px] ${source_mode === 'MOCK'
+                  ? 'border-purple-500/40 text-purple-600 dark:text-purple-300 bg-purple-500/10'
+                  : 'border-emerald-500/40 text-emerald-600 dark:text-emerald-400 bg-emerald-500/10'
+                  }`}
               >
                 {source_mode}
               </Badge>
@@ -169,8 +168,8 @@ export const DevicesPage: React.FC = () => {
                   esp32Status.status === 'LIVE'
                     ? 'text-emerald-600 dark:text-emerald-400 font-semibold'
                     : esp32Status.status === 'WAITING'
-                    ? 'text-amber-600 dark:text-amber-400 font-semibold'
-                    : 'text-red-600 dark:text-red-400 font-semibold'
+                      ? 'text-amber-600 dark:text-amber-400 font-semibold'
+                      : 'text-red-600 dark:text-red-400 font-semibold'
                 }>
                   {esp32Status.description}
                 </span>
@@ -188,8 +187,8 @@ export const DevicesPage: React.FC = () => {
                 {telemetry.packet_rssi_dbm !== null
                   ? `${telemetry.packet_rssi_dbm} dBm / ${telemetry.packet_snr_db ?? 'N/A'} dB`
                   : source_mode === 'MOCK'
-                  ? '-82 dBm / 7.5 dB (Mô phỏng)'
-                  : 'Chưa có dữ liệu sóng'}
+                    ? '-82 dBm / 7.5 dB (Mô phỏng)'
+                    : 'Chưa có dữ liệu sóng'}
               </span>
             </div>
             <div className="flex items-center justify-between py-1 border-b border-border/40">
@@ -244,11 +243,10 @@ export const DevicesPage: React.FC = () => {
                 <TableCell className="py-3">
                   <Badge
                     variant={telemetry.gps_valid && camera_position.is_valid ? 'default' : 'outline'}
-                    className={`text-[10px] py-0 px-1.5 font-mono ${
-                      telemetry.gps_valid && camera_position.is_valid
-                        ? 'bg-emerald-600 text-white'
-                        : 'border-amber-500/40 text-amber-500 bg-amber-500/10'
-                    }`}
+                    className={`text-[10px] py-0 px-1.5 font-mono ${telemetry.gps_valid && camera_position.is_valid
+                      ? 'bg-emerald-600 text-white'
+                      : 'border-amber-500/40 text-amber-500 bg-amber-500/10'
+                      }`}
                   >
                     {telemetry.gps_valid && camera_position.is_valid ? '3D FIX' : 'NO FIX'}
                   </Badge>
@@ -267,25 +265,24 @@ export const DevicesPage: React.FC = () => {
               <TableRow className="border-border/60 hover:bg-muted/30">
                 <TableCell className="text-xs font-semibold text-foreground flex items-center gap-2 py-3">
                   <ArrowDownUp className="h-4 w-4 text-emerald-500 shrink-0" />
-                  <span>Cảm biến đo cao LiDAR</span>
+                  <span>Cảm biến siêu âm AJ-SR04M</span>
                 </TableCell>
                 <TableCell className="py-3">
                   <Badge
                     variant={telemetry.lidar_valid ? 'default' : 'outline'}
-                    className={`text-[10px] py-0 px-1.5 font-mono ${
-                      telemetry.lidar_valid
-                        ? 'bg-emerald-600 text-white'
-                        : 'border-amber-500/40 text-amber-500 bg-amber-500/10'
-                    }`}
+                    className={`text-[10px] py-0 px-1.5 font-mono ${telemetry.lidar_valid
+                      ? 'bg-emerald-600 text-white'
+                      : 'border-amber-500/40 text-amber-500 bg-amber-500/10'
+                      }`}
                   >
                     {telemetry.lidar_valid ? 'HỢP LỆ' : 'KHÔNG HỢP LỆ'}
                   </Badge>
                 </TableCell>
                 <TableCell className="text-xs font-mono text-foreground py-3">
-                  {telemetry.lidar_range_cm !== null ? `${telemetry.lidar_range_cm} cm (Đo dọc tia)` : 'Chưa có dữ liệu'}
+                  {telemetry.lidar_range_cm !== null ? `${telemetry.lidar_range_cm} cm (Đo cự ly mặt nước)` : 'Chưa có dữ liệu'}
                 </TableCell>
                 <TableCell className="text-xs text-muted-foreground py-3">
-                  Đo khoảng cách đến mặt nước (20–800cm).
+                  Đo khoảng cách đến mặt nước bằng sóng siêu âm chống nước (20–800cm).
                 </TableCell>
               </TableRow>
 
@@ -298,17 +295,18 @@ export const DevicesPage: React.FC = () => {
                 <TableCell className="py-3">
                   <Badge
                     variant={telemetry.imu_valid ? 'default' : 'outline'}
-                    className={`text-[10px] py-0 px-1.5 font-mono ${
-                      telemetry.imu_valid
-                        ? 'bg-emerald-600 text-white'
-                        : 'border-amber-500/40 text-amber-500 bg-amber-500/10'
-                    }`}
+                    className={`text-[10px] py-0 px-1.5 font-mono ${telemetry.imu_valid
+                      ? 'bg-emerald-600 text-white'
+                      : 'border-amber-500/40 text-amber-500 bg-amber-500/10'
+                      }`}
                   >
                     {telemetry.imu_valid ? 'HOẠT ĐỘNG' : 'CHƯA SẴN SÀNG'}
                   </Badge>
                 </TableCell>
                 <TableCell className="text-xs font-mono text-foreground py-3">
-                  {camera_position.heading_deg !== null && camera_position.heading_deg !== undefined
+                  {telemetry.imu_valid && (telemetry.roll_deg !== null || telemetry.pitch_deg !== null)
+                    ? `Roll: ${telemetry.roll_deg != null ? (telemetry.roll_deg > 0 ? `+${telemetry.roll_deg}` : telemetry.roll_deg) : 0}° • Pitch: ${telemetry.pitch_deg != null ? (telemetry.pitch_deg > 0 ? `+${telemetry.pitch_deg}` : telemetry.pitch_deg) : 0}°${camera_position.heading_deg !== null && camera_position.heading_deg !== undefined ? ` • H: ${camera_position.heading_deg.toFixed(1)}°` : ''}`
+                    : camera_position.heading_deg !== null && camera_position.heading_deg !== undefined
                     ? `Heading: ${camera_position.heading_deg.toFixed(1)}° • Ống kính: 45° chúc`
                     : 'Ống kính: 45° chúc'}
                 </TableCell>
@@ -326,13 +324,12 @@ export const DevicesPage: React.FC = () => {
                 <TableCell className="py-3">
                   <Badge
                     variant="outline"
-                    className={`text-[10px] py-0 px-1.5 font-mono ${
-                      inference_device === 'FPGA_GW2A'
-                        ? 'border-emerald-500/40 text-emerald-600 dark:text-emerald-400 bg-emerald-500/10'
-                        : inference_device === 'PC_REFERENCE'
+                    className={`text-[10px] py-0 px-1.5 font-mono ${inference_device === 'FPGA_GW2A'
+                      ? 'border-emerald-500/40 text-emerald-600 dark:text-emerald-400 bg-emerald-500/10'
+                      : inference_device === 'PC_REFERENCE'
                         ? 'border-cyan-500/40 text-cyan-600 dark:text-cyan-400 bg-cyan-500/10'
                         : 'border-purple-500/40 text-purple-600 dark:text-purple-300 bg-purple-500/10'
-                    }`}
+                      }`}
                   >
                     {inference_device}
                   </Badge>
@@ -360,9 +357,8 @@ export const DevicesPage: React.FC = () => {
                 <TableCell className="py-3">
                   <Badge
                     variant={video.is_connected ? 'default' : 'outline'}
-                    className={`text-[10px] py-0 px-1.5 font-mono ${
-                      video.is_connected ? 'bg-emerald-600 text-white' : 'border-red-500/40 text-red-500'
-                    }`}
+                    className={`text-[10px] py-0 px-1.5 font-mono ${video.is_connected ? 'bg-emerald-600 text-white' : 'border-red-500/40 text-red-500'
+                      }`}
                   >
                     {video.source_type}
                   </Badge>
@@ -384,11 +380,10 @@ export const DevicesPage: React.FC = () => {
                 <TableCell className="py-3">
                   <Badge
                     variant={diagnostics.logger_status === 'OK' ? 'default' : 'outline'}
-                    className={`text-[10px] py-0 px-1.5 font-mono ${
-                      diagnostics.logger_status === 'OK'
-                        ? 'bg-emerald-600 text-white'
-                        : 'border-red-500 text-red-500'
-                    }`}
+                    className={`text-[10px] py-0 px-1.5 font-mono ${diagnostics.logger_status === 'OK'
+                      ? 'bg-emerald-600 text-white'
+                      : 'border-red-500 text-red-500'
+                      }`}
                   >
                     {diagnostics.logger_status}
                   </Badge>

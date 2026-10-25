@@ -1,42 +1,53 @@
 /**
  * @file main.cpp
- * @brief Firmware Gateway Trạm Mặt Đất ESP32-C3 - Dự án KVC UAV Tìm kiếm Cứu nạn (SAR)
+ * @brief Firmware Gateway Trạm Mặt Đất ESP32-C3 - Dự án KVC UAV Tìm kiếm Cứu
+ * nạn (SAR)
  * @author Đoàn Thanh Trường Thịnh
  *
  * ======================================================================================
  * TIẾN ĐỘ THỰC HIỆN:
  * - GIAI ĐOẠN 1: KẾT NỐI MẠNG WI-FI (STA/LOCAL) & MÁY CHỦ WEBSOCKET [HOÀN TẤT]
- * - GIAI ĐOẠN 2: CẤU TRÚC GÓI 32-BYTE, THẨM ĐỊNH CRC-16 & ĐÓNG GÓI JSON [HOÀN TẤT]
- * - GIAI ĐOẠN 3: KIỂM THỬ THÔNG LUỒNG KHI CHƯA CÓ LORA (PHASE A: SELF-MOCK INGRESS) [HIỆN TẠI]
+ * - GIAI ĐOẠN 2: CẤU TRÚC GÓI 32-BYTE, THẨM ĐỊNH CRC-16 & ĐÓNG GÓI JSON [HOÀN
+ * TẤT]
+ * - GIAI ĐOẠN 3: KIỂM THỬ THÔNG LUỒNG KHI CHƯA CÓ LORA (PHASE A: SELF-MOCK
+ * INGRESS) [HIỆN TẠI]
  * ======================================================================================
- * 
+ *
  * Mục tiêu Giai đoạn 3:
- * 1. Tự sinh gói nhị phân 32-byte RfTelemetryPacket32 luân phiên 3 kịch bản cứu nạn (Người, Tàu, Sa bàn).
- * 2. Tính toán mã kiểm tra CRC-16/CCITT-FALSE và thẩm định tính toàn vẹn gói tin.
+ * 1. Tự sinh gói nhị phân 32-byte RfTelemetryPacket32 luân phiên 3 kịch bản cứu
+ * nạn (Người, Tàu, Sa bàn).
+ * 2. Tính toán mã kiểm tra CRC-16/CCITT-FALSE và thẩm định tính toàn vẹn gói
+ * tin.
  * 3. Chuyển đổi 32 bytes sang chuỗi Hex 64 ký tự thường (rf_payload_hex).
  * 4. Đóng gói JSON Transport Envelope v1 (IF-03) kèm RSSI và SNR.
- * 5. Phát broadcast qua WebSocket (:8080/telemetry) mỗi 1.0 giây để kích hoạt thông luồng lên Web GCS.
+ * 5. Phát broadcast qua WebSocket (:8080/telemetry) mỗi 1.0 giây để kích hoạt
+ * thông luồng lên Web GCS.
  */
 
 // ======================================================================================
 // 1. KHAI BÁO CÁC THƯ VIỆN CẦN THIẾT
 // ======================================================================================
 
-// Thư viện lõi Arduino cho ESP32: cung cấp các hàm cơ bản (Serial, millis, delay, pinMode,...)
+// Thư viện lõi Arduino cho ESP32: cung cấp các hàm cơ bản (Serial, millis,
+// delay, pinMode,...)
 #include <Arduino.h>
 
-// Thư viện điều khiển phần cứng Wi-Fi của ESP32: quản lý kết nối vào mạng Wi-Fi (Station Mode)
+// Thư viện điều khiển phần cứng Wi-Fi của ESP32: quản lý kết nối vào mạng Wi-Fi
+// (Station Mode)
 #include <WiFi.h>
 
-// Thư viện máy chủ WebSocket: quản lý các kết nối TCP 2 chiều (Full-Duplex) với Laptop thời gian thực
+// Thư viện máy chủ WebSocket: quản lý các kết nối TCP 2 chiều (Full-Duplex) với
+// Laptop thời gian thực
 #include <WebSocketsServer.h>
 
-// Thư viện ArduinoJson: hỗ trợ tuần tự hóa và đóng gói chuỗi JSON chuẩn mực, an toàn bộ nhớ
+// Thư viện ArduinoJson: hỗ trợ tuần tự hóa và đóng gói chuỗi JSON chuẩn mực, an
+// toàn bộ nhớ
 #include <ArduinoJson.h>
 
 // Thư viện điều khiển module truyền thông LoRa SX1278 (Ra-02) qua bus SPI
-#include <SPI.h>
 #include <LoRa.h>
+#include <SPI.h>
+
 
 // ======================================================================================
 // 1.1. CẤU HÌNH CHÂN PHẦN CỨNG LORA RA-02 (SX1278) TRẠM MẶT ĐẤT
@@ -44,19 +55,20 @@
 // ======================================================================================
 #if defined(CONFIG_IDF_TARGET_ESP32C3) || defined(ARDUINO_ESP32C3_DEV)
 // Cấu hình chuẩn khuyến nghị cho bo mạch ESP32-C3
-static const int LORA_PIN_NSS  = 7;  // SPI Chip Select (CS / NSS)
-static const int LORA_PIN_SCK  = 4;  // SPI Clock (SCK)
-static const int LORA_PIN_MOSI = 6;  // SPI Master Out Slave In (MOSI)
-static const int LORA_PIN_MISO = 5;  // SPI Master In Slave Out (MISO)
-static const int LORA_PIN_RST  = 1;  // Hardware Reset (RST)
-static const int LORA_PIN_DIO0 = 3;  // Ngắt báo nhận xong gói tin (DIO0 / RxDone)
+static const int LORA_PIN_NSS = 7;  // SPI Chip Select (CS / NSS)
+static const int LORA_PIN_SCK = 4;  // SPI Clock (SCK)
+static const int LORA_PIN_MOSI = 6; // SPI Master Out Slave In (MOSI)
+static const int LORA_PIN_MISO = 5; // SPI Master In Slave Out (MISO)
+static const int LORA_PIN_RST = 1;  // Hardware Reset (RST)
+static const int LORA_PIN_DIO0 =
+    3; // Ngắt báo nhận xong gói tin (DIO0 / RxDone)
 #else
 // Cấu hình dự phòng cho bo mạch ESP32-WROOM-32 (NodeMCU 30/38 pins)
-static const int LORA_PIN_NSS  = 5;
-static const int LORA_PIN_SCK  = 18;
+static const int LORA_PIN_NSS = 5;
+static const int LORA_PIN_SCK = 18;
 static const int LORA_PIN_MOSI = 23;
 static const int LORA_PIN_MISO = 19;
-static const int LORA_PIN_RST  = 14;
+static const int LORA_PIN_RST = 14;
 static const int LORA_PIN_DIO0 = 2;
 #endif
 
@@ -71,14 +83,15 @@ static const long LORA_BAND_HZ = 433E6;
  * Cấu hình mạng Wi-Fi cục bộ để ESP32 và Laptop cùng bắt chung.
  * Lưu ý: ESP32-C3 chỉ hỗ trợ băng tần 2.4GHz.
  */
-const char *WIFI_SSID = "Galaxy A15 11C8";         // <-- Tên Wi-Fi nhà bạn / phòng Lab
-const char *WIFI_PASS = "321123321";   // <-- Mật khẩu Wi-Fi của bạn
+const char *WIFI_SSID = "Galaxy A15 11C8"; // <-- Tên Wi-Fi nhà bạn / phòng Lab
+const char *WIFI_PASS = "321123321";       // <-- Mật khẩu Wi-Fi của bạn
 
 // ======================================================================================
 // 3. CẤU HÌNH DỊCH VỤ WEBSOCKET SERVER
 // ======================================================================================
 
-// Cổng mạng TCP quy định cho dịch vụ WebSocket (Chuẩn IF_ESP32_GCS_WS.md quy định cổng 8080)
+// Cổng mạng TCP quy định cho dịch vụ WebSocket (Chuẩn IF_ESP32_GCS_WS.md quy
+// định cổng 8080)
 const uint16_t WS_PORT = 8080;
 
 // Khởi tạo đối tượng máy chủ WebSocket lắng nghe trên cổng 8080
@@ -89,30 +102,36 @@ WebSocketsServer webSocket = WebSocketsServer(WS_PORT);
 // ======================================================================================
 
 /**
- * @brief Cấu trúc gói tin 32 bytes Little-Endian truyền từ máy bay UAV về mặt đất.
- * 
+ * @brief Cấu trúc gói tin 32 bytes Little-Endian truyền từ máy bay UAV về mặt
+ * đất.
+ *
  * ⚠️ QUY TẮC CỐT LÕI:
- * Phải sử dụng __attribute__((packed)) để vô hiệu hóa tính năng căn chỉnh tự động của compiler,
- * đảm bảo kích thước struct chính xác tròn trĩnh 32 bytes không có byte rác (padding),
- * tương thích 100% với struct.unpack("<2sBBIIIhhHBBBB4sH") trên Backend Python.
+ * Phải sử dụng __attribute__((packed)) để vô hiệu hóa tính năng căn chỉnh tự
+ * động của compiler, đảm bảo kích thước struct chính xác tròn trĩnh 32 bytes
+ * không có byte rác (padding), tương thích 100% với
+ * struct.unpack("<2sBBIIIhhHBBBB4sH") trên Backend Python.
  */
 struct __attribute__((packed)) RfTelemetryPacket32 {
   // Byte 0..1: Tiêu đề đồng bộ nhận diện gói tin UAV (Cố định: 0xAA 0x55)
   uint8_t sync[2];
 
-  // Byte 2: Mã định danh loại gói tin (0x01 = Telemetry cứu nạn, 0x02 = Heartbeat)
+  // Byte 2: Mã định danh loại gói tin (0x01 = Telemetry cứu nạn, 0x02 =
+  // Heartbeat)
   uint8_t msg_id;
 
-  // Byte 3: Số thứ tự gói tin (0 - 255, xoay vòng) giúp phát hiện rớt gói vô tuyến
+  // Byte 3: Số thứ tự gói tin (0 - 255, xoay vòng) giúp phát hiện rớt gói vô
+  // tuyến
   uint8_t seq_num;
 
   // Byte 4..7: Mốc thời gian bay của UAV tính bằng mili-giây kể từ lúc cất cánh
   uint32_t timestamp_ms;
 
-  // Byte 8..11: Vĩ độ WGS-84 mục tiêu nhân 10^7 (Ví dụ: 107723450 = 10.772345°N)
+  // Byte 8..11: Vĩ độ WGS-84 mục tiêu nhân 10^7 (Ví dụ: 107723450
+  // = 10.772345°N)
   int32_t target_lat;
 
-  // Byte 12..15: Kinh độ WGS-84 mục tiêu nhân 10^7 (Ví dụ: 1066578900 = 106.657890°E)
+  // Byte 12..15: Kinh độ WGS-84 mục tiêu nhân 10^7 (Ví dụ: 1066578900 =
+  // 106.657890°E)
   int32_t target_lon;
 
   // Byte 16..17: Tọa độ X tương đối so với mốc sa bàn/bể bơi thực nghiệm (cm)
@@ -121,28 +140,33 @@ struct __attribute__((packed)) RfTelemetryPacket32 {
   // Byte 18..19: Tọa độ Y tương đối so với mốc sa bàn/bể bơi thực nghiệm (cm)
   int16_t target_y_local;
 
-  // Byte 20..21: Khoảng cách cảm biến đo mặt nước từ AJ-SR04M siêu âm (cm) [tiền thân LiDAR TF-Luna]
+  // Byte 20..21: Khoảng cách cảm biến đo mặt nước từ AJ-SR04M siêu âm (cm)
+  // [tiền thân LiDAR TF-Luna]
   union {
     uint16_t alt_dist_cm;
     uint16_t lidar_dist_cm; // Bí danh tương thích mã nguồn hiện hành
   };
 
-  // Byte 22: Phân loại mục tiêu do AI nhận diện (1 = Người/person, 2 = Phao/tàu thuyền)
+  // Byte 22: Phân loại mục tiêu do AI nhận diện (1 = Người/person, 2 = Phao/tàu
+  // thuyền)
   uint8_t class_id;
 
   // Byte 23: Độ tin cậy nhận diện của AI (0 đến 100%)
   uint8_t confidence;
 
-  // Byte 24: Cờ trạng thái cảm biến (Bit 0: GPS, Bit 1: Siêu âm ALT, Bit 2: IMU, Bit 3: Khóa AI)
+  // Byte 24: Cờ trạng thái cảm biến (Bit 0: GPS, Bit 1: Siêu âm ALT, Bit 2:
+  // IMU, Bit 3: Khóa AI)
   uint8_t sensor_flags;
 
   // Byte 25: Điện áp Pin UAV (Đơn vị: 0.1V/bit, ví dụ 126 tương đương 12.6V)
   uint8_t battery_raw;
 
-  // Byte 26..29: 4 byte dự phòng mở rộng (áp suất khí quyển, nhiệt độ môi trường, ...)
+  // Byte 26..29: 4 byte dự phòng mở rộng (áp suất khí quyển, nhiệt độ môi
+  // trường, ...)
   uint8_t reserved[4];
 
-  // Byte 30..31: Mã kiểm tra an toàn CRC-16/CCITT-FALSE (tính trên 30 byte đầu từ byte 0..29)
+  // Byte 30..31: Mã kiểm tra an toàn CRC-16/CCITT-FALSE (tính trên 30 byte đầu
+  // từ byte 0..29)
   uint16_t crc16;
 };
 
@@ -150,7 +174,8 @@ struct __attribute__((packed)) RfTelemetryPacket32 {
 // 5. CÁC BIẾN QUẢN LÝ THỜI GIAN, PHIÊN LÀM VIỆC, SELF-MOCK & THỐNG KÊ HỆ THỐNG
 // ======================================================================================
 
-// Cấu hình chế độ Self-Mock cho Giai đoạn 3 (Khi chưa cắm module LoRa phần cứng)
+// Cấu hình chế độ Self-Mock cho Giai đoạn 3 (Khi chưa cắm module LoRa phần
+// cứng)
 static const bool ENABLE_SELF_MOCK = false;
 
 // Chu kỳ phát bản tin Self-Mock (1000ms = 1.0 giây / gói tin)
@@ -159,7 +184,8 @@ static const uint32_t SELF_MOCK_INTERVAL_MS = 1000;
 // Mốc thời gian lần phát gói Self-Mock gần nhất
 static uint32_t lastSelfMockMs = 0;
 
-// Chỉ số kịch bản Self-Mock xoay vòng (0 = Người WGS-84, 1 = Tàu thuyền WGS-84, 2 = Sa bàn Local Grid)
+// Chỉ số kịch bản Self-Mock xoay vòng (0 = Người WGS-84, 1 = Tàu thuyền WGS-84,
+// 2 = Sa bàn Local Grid)
 static uint8_t selfMockScenarioIdx = 0;
 
 // Số thứ tự gói tin RF tự tăng (Sequence Number 1..255)
@@ -171,16 +197,20 @@ static uint32_t lastHeartbeatMs = 0;
 // Khoảng thời gian định kỳ giữa các lần in Heartbeat (5000ms = 5 giây)
 static const uint32_t HEARTBEAT_INTERVAL_MS = 5000;
 
-// Biến đếm số lượng máy tính / thiết bị GCS đang duy trì kết nối WebSocket tới ESP32
+// Biến đếm số lượng máy tính / thiết bị GCS đang duy trì kết nối WebSocket tới
+// ESP32
 static uint8_t connectedClientCount = 0;
 
-// Mã định danh phiên làm việc của Gateway (Tăng lên 1 mỗi khi ESP32 khởi động lại)
+// Mã định danh phiên làm việc của Gateway (Tăng lên 1 mỗi khi ESP32 khởi động
+// lại)
 static uint32_t gatewaySessionId = 1;
 
-// Bộ đếm số lượng gói tin JSON do ESP32 phát đi qua WebSocket (tăng dần 1, 2, 3...)
+// Bộ đếm số lượng gói tin JSON do ESP32 phát đi qua WebSocket (tăng dần 1,
+// 2, 3...)
 static uint32_t gatewaySequence = 0;
 
-// Bộ đếm số lượng gói tin bị vứt bỏ do sai lệch mã kiểm tra CRC-16 hoặc sai Sync Header
+// Bộ đếm số lượng gói tin bị vứt bỏ do sai lệch mã kiểm tra CRC-16 hoặc sai
+// Sync Header
 static uint32_t rxDropCount = 0;
 
 // Trạng thái phần cứng module LoRa Ra-02 (SX1278) sau khi khởi tạo SPI
@@ -194,14 +224,16 @@ static uint32_t lastRxPacketMs = 0;
 // ======================================================================================
 
 /**
- * @brief Tính toán mã kiểm tra toàn vẹn CRC-16/CCITT-FALSE trên mảng dữ liệu byte.
- * 
+ * @brief Tính toán mã kiểm tra toàn vẹn CRC-16/CCITT-FALSE trên mảng dữ liệu
+ * byte.
+ *
  * Đặc tả kỹ thuật thuật toán:
  * - Đa thức sinh (Polynomial): 0x1021 (x^16 + x^12 + x^5 + 1)
  * - Giá trị khởi tạo (Initial Value): 0xFFFF
- * - Chiều xử lý: MSB first (Không đảo bit vào RefIn=false, không đảo bit ra RefOut=false)
+ * - Chiều xử lý: MSB first (Không đảo bit vào RefIn=false, không đảo bit ra
+ * RefOut=false)
  * - Giá trị XOR đầu ra (XorOut): 0x0000
- * 
+ *
  * @param data Con trỏ trỏ tới vùng đệm byte cần tính CRC.
  * @param length Số lượng byte cần tính (Với gói RF, length = 30 byte đầu tiên).
  * @return uint16_t Giá trị mã băm 16-bit tính được.
@@ -209,10 +241,12 @@ static uint32_t lastRxPacketMs = 0;
 uint16_t calculateCrc16(const uint8_t *data, size_t length) {
   uint16_t crc = 0xFFFF; // Khởi tạo thanh ghi với giá trị 0xFFFF
   for (size_t i = 0; i < length; i++) {
-    crc ^= ((uint16_t)data[i] << 8); // Đưa byte dữ liệu vào 8-bit cao của thanh ghi CRC
+    crc ^= ((uint16_t)data[i]
+            << 8); // Đưa byte dữ liệu vào 8-bit cao của thanh ghi CRC
     for (uint8_t bit = 0; bit < 8; bit++) {
       if (crc & 0x8000) { // Nếu bit cao nhất là 1
-        crc = (crc << 1) ^ 0x1021; // Dịch trái 1 bit và thực hiện phép chia đa thức (XOR)
+        crc = (crc << 1) ^
+              0x1021; // Dịch trái 1 bit và thực hiện phép chia đa thức (XOR)
       } else {
         crc = (crc << 1); // Dịch trái 1 bit bình thường
       }
@@ -223,11 +257,12 @@ uint16_t calculateCrc16(const uint8_t *data, size_t length) {
 
 /**
  * @brief Thẩm định tính hợp lệ của gói tin đo xa 32 bytes nhận được.
- * 
+ *
  * Kiểm tra 2 điều kiện an toàn:
  * 1. Tiêu đề đồng bộ (Sync Header) phải đúng cặp byte 0xAA 0x55.
- * 2. Mã CRC-16 tính trên 30 byte đầu phải trùng khớp hoàn toàn với 2 byte cuối (byte 30..31).
- * 
+ * 2. Mã CRC-16 tính trên 30 byte đầu phải trùng khớp hoàn toàn với 2 byte cuối
+ * (byte 30..31).
+ *
  * @param packetBuffer Con trỏ trỏ tới mảng 32 bytes nhị phân.
  * @param length Kích thước gói (bắt buộc đúng 32 bytes).
  * @return true Gói tin nguyên vẹn, hợp lệ 100%.
@@ -255,15 +290,18 @@ bool validatePacketCrc(const uint8_t *packetBuffer, size_t length) {
 }
 
 /**
- * @brief Chuyển đổi mảng byte nhị phân thành chuỗi Hex chữ thường (Zero-padded lowercase Hex).
- * 
+ * @brief Chuyển đổi mảng byte nhị phân thành chuỗi Hex chữ thường (Zero-padded
+ * lowercase Hex).
+ *
  * @param data Con trỏ trỏ tới mảng dữ liệu nhị phân.
  * @param length Số byte cần chuyển đổi (32 bytes sẽ tạo thành chuỗi 64 ký tự).
  * @param output Vùng đệm nhận chuỗi Hex; cần tối thiểu length * 2 + 1 byte.
  * @param outputSize Kích thước vùng đệm output.
- * @return true nếu chuyển đổi thành công; false nếu tham số hoặc vùng đệm không hợp lệ.
+ * @return true nếu chuyển đổi thành công; false nếu tham số hoặc vùng đệm không
+ * hợp lệ.
  */
-bool bytesToHexString(const uint8_t *data, size_t length, char *output, size_t outputSize) {
+bool bytesToHexString(const uint8_t *data, size_t length, char *output,
+                      size_t outputSize) {
   if (data == nullptr || output == nullptr || outputSize == 0) {
     return false;
   }
@@ -285,8 +323,9 @@ bool bytesToHexString(const uint8_t *data, size_t length, char *output, size_t o
 }
 
 /**
- * @brief Đóng gói chuỗi Hex và các metadata sóng vô tuyến vào JSON Transport Envelope v1 (IF-03).
- * 
+ * @brief Đóng gói chuỗi Hex và các metadata sóng vô tuyến vào JSON Transport
+ * Envelope v1 (IF-03).
+ *
  * @param hexPayload Chuỗi 64 ký tự Hex chứa 32 bytes dữ liệu UAV.
  * @param rssiDbm Cường độ sóng vô tuyến LoRa (dBm).
  * @param snrDb Tỷ số tín hiệu trên nhiễu (dB).
@@ -296,18 +335,20 @@ String buildJsonEnvelope(const char *hexPayload, int16_t rssiDbm, float snrDb) {
   // Tạo tài liệu JSON sử dụng ArduinoJson v7
   JsonDocument doc;
 
-  doc["transport_version"] = 1;               // Phiên bản giao thức (cố định: 1)
-  doc["gateway_session_id"] = gatewaySessionId; // ID phiên làm việc hiện tại của ESP32
+  doc["transport_version"] = 1; // Phiên bản giao thức (cố định: 1)
+  doc["gateway_session_id"] =
+      gatewaySessionId; // ID phiên làm việc hiện tại của ESP32
   doc["gateway_sequence"] = ++gatewaySequence; // Tăng số thứ tự gói tin phát đi
-  doc["rx_monotonic_ms"] = millis();          // Thời điểm ESP32 nhận và xử lý gói (ms)
-  doc["rf_payload_hex"] = hexPayload;         // Chuỗi 64 ký tự Hex của gói 32-byte
-  doc["rssi_dbm"] = rssiDbm;                  // Cường độ tín hiệu sóng LoRa
-  doc["snr_db"] = snrDb;                      // Tỷ số tín hiệu trên tạp âm LoRa
-  doc["rx_drop_count"] = rxDropCount;         // Số lượng gói tin đã bị loại bỏ do lỗi
+  doc["rx_monotonic_ms"] = millis();  // Thời điểm ESP32 nhận và xử lý gói (ms)
+  doc["rf_payload_hex"] = hexPayload; // Chuỗi 64 ký tự Hex của gói 32-byte
+  doc["rssi_dbm"] = rssiDbm;          // Cường độ tín hiệu sóng LoRa
+  doc["snr_db"] = snrDb;              // Tỷ số tín hiệu trên tạp âm LoRa
+  doc["rx_drop_count"] = rxDropCount; // Số lượng gói tin đã bị loại bỏ do lỗi
 
   // Chuyển đối tượng JSON thành chuỗi ký tự String
   String output;
-  output.reserve(measureJson(doc)); // Chỉ cấp phát một lần theo đúng độ dài JSON
+  output.reserve(
+      measureJson(doc)); // Chỉ cấp phát một lần theo đúng độ dài JSON
   serializeJson(doc, output);
   return output;
 }
@@ -326,11 +367,15 @@ void runPhase2SelfTest() {
 
   // TEST 1: KIỂM TRA KÍCH THƯỚC STRUCT PACKED
   size_t structSize = sizeof(RfTelemetryPacket32);
-  Serial.printf("[TEST 1 - STRUCT SIZE] Kich thuoc RfTelemetryPacket32: %u bytes\n", structSize);
+  Serial.printf(
+      "[TEST 1 - STRUCT SIZE] Kich thuoc RfTelemetryPacket32: %u bytes\n",
+      structSize);
   if (structSize == 32) {
-    Serial.println("                       -> KHOA CHAT BO NHO (PACKED) THANH CONG! [PASS]");
+    Serial.println("                       -> KHOA CHAT BO NHO (PACKED) THANH "
+                   "CONG! [PASS]");
   } else {
-    Serial.println("                       -> [FAIL] LOI PADDING: Kich thuoc bi lech khoi 32 bytes!");
+    Serial.println("                       -> [FAIL] LOI PADDING: Kich thuoc "
+                   "bi lech khoi 32 bytes!");
   }
 
   // TEST 2: KIỂM THỬ THUẬT TOÁN CRC-16 TRÊN GÓI DỮ LIỆU MẪU CHUẨN
@@ -340,29 +385,32 @@ void runPhase2SelfTest() {
   // Nạp dữ liệu giả lập mục tiêu người gặp nạn (Person rescue target)
   samplePkt.sync[0] = 0xAA;
   samplePkt.sync[1] = 0x55;
-  samplePkt.msg_id = 0x01;          // Gói Telemetry
-  samplePkt.seq_num = 42;           // Gói số 42
-  samplePkt.timestamp_ms = 1000;    // 1000 ms sau cất cánh
-  samplePkt.target_lat = 107723450; // 10.772345°N
-  samplePkt.target_lon = 1066578900;// 106.657890°E
-  samplePkt.target_x_local = 150;   // 150 cm trên sa bàn
-  samplePkt.target_y_local = 320;   // 320 cm trên sa bàn
-  samplePkt.lidar_dist_cm = 240;    // Độ cao 240 cm
-  samplePkt.class_id = 1;           // 1 = Người (person)
-  samplePkt.confidence = 92;        // 92% tin cậy
-  samplePkt.sensor_flags = 0x0F;    // GPS | LiDAR | IMU | AI
-  samplePkt.battery_raw = 126;      // 12.6V (100% pin)
+  samplePkt.msg_id = 0x01;           // Gói Telemetry
+  samplePkt.seq_num = 42;            // Gói số 42
+  samplePkt.timestamp_ms = 1000;     // 1000 ms sau cất cánh
+  samplePkt.target_lat = 107723450;  // 10.772345°N
+  samplePkt.target_lon = 1066578900; // 106.657890°E
+  samplePkt.target_x_local = 150;    // 150 cm trên sa bàn
+  samplePkt.target_y_local = 320;    // 320 cm trên sa bàn
+  samplePkt.lidar_dist_cm = 240;     // Độ cao 240 cm
+  samplePkt.class_id = 1;            // 1 = Người (person)
+  samplePkt.confidence = 92;         // 92% tin cậy
+  samplePkt.sensor_flags = 0x0F;     // GPS | LiDAR | IMU | AI
+  samplePkt.battery_raw = 126;       // 12.6V (100% pin)
 
   // Tính toán mã CRC-16 trên 30 byte đầu tiên
   uint16_t expectedCrc = calculateCrc16((const uint8_t *)&samplePkt, 30);
   samplePkt.crc16 = expectedCrc; // Gán mã vào byte 30..31
 
   // Thẩm định lại tính hợp lệ
-  bool isValid = validatePacketCrc((const uint8_t *)&samplePkt, sizeof(samplePkt));
-  Serial.printf("[TEST 2 - CRC VALID]   Computed CRC: 0x%04X | Expected: 0x%04X\n",
-                expectedCrc, samplePkt.crc16);
+  bool isValid =
+      validatePacketCrc((const uint8_t *)&samplePkt, sizeof(samplePkt));
+  Serial.printf(
+      "[TEST 2 - CRC VALID]   Computed CRC: 0x%04X | Expected: 0x%04X\n",
+      expectedCrc, samplePkt.crc16);
   if (isValid) {
-    Serial.println("                       -> THAM DINH CRC GOI TIN CHUAN: PASSED! [PASS]");
+    Serial.println("                       -> THAM DINH CRC GOI TIN CHUAN: "
+                   "PASSED! [PASS]");
   } else {
     Serial.println("                       -> [FAIL] THAM DINH CRC THAT BAI!");
   }
@@ -382,12 +430,13 @@ void runPhase2SelfTest() {
 
   // TEST 4: KIỂM THỬ CHUYỂN ĐỔI CHUỖI HEX 64 KÝ TỰ
   char hexStr[sizeof(samplePkt) * 2 + 1] = {0};
-  bool hexEncoded = bytesToHexString((const uint8_t *)&samplePkt, sizeof(samplePkt),
-                                     hexStr, sizeof(hexStr));
+  bool hexEncoded = bytesToHexString((const uint8_t *)&samplePkt,
+                                     sizeof(samplePkt), hexStr, sizeof(hexStr));
   size_t hexLength = hexEncoded ? sizeof(samplePkt) * 2 : 0;
   Serial.println("[TEST 4 - HEX ENCODE]  Chuoi Hex 64 ky tu xuat ra:");
   Serial.printf("                       %s\n", hexStr);
-  Serial.printf("                       Do dai: %u ky tu ", (unsigned int)hexLength);
+  Serial.printf("                       Do dai: %u ky tu ",
+                (unsigned int)hexLength);
   if (hexEncoded && hexLength == 64) {
     Serial.println("-> DUNG CHUAN 64 KY TU! [PASS]");
   } else {
@@ -396,21 +445,25 @@ void runPhase2SelfTest() {
 
   // TEST 5: KIỂM THỬ ĐÓNG GÓI JSON TRANSPORT ENVELOPE V1
   String jsonEnv = buildJsonEnvelope(hexStr, -76, 8.5f);
-  Serial.println("[TEST 5 - JSON ENVELOPE] Mau goi tin JSON phat qua WebSocket:");
+  Serial.println(
+      "[TEST 5 - JSON ENVELOPE] Mau goi tin JSON phat qua WebSocket:");
   Serial.printf("                         %s\n", jsonEnv.c_str());
 
   Serial.println("-------------------------------------------------------");
-  Serial.println("[TONG KET GIAI DOAN 2] TOAN BO LOGIC KIEM TRA DU LIEU HOAN TAT 100%!");
+  Serial.println(
+      "[TONG KET GIAI DOAN 2] TOAN BO LOGIC KIEM TRA DU LIEU HOAN TAT 100%!");
   Serial.println("=======================================================\n");
 }
 
 // ======================================================================================
-// 8. BỘ SINH DỮ LIỆU ĐO XA GIẢ LẬP GIAI ĐOẠN 3 (PHASE A: SELF-MOCK TELEMETRY GENERATOR)
+// 8. BỘ SINH DỮ LIỆU ĐO XA GIẢ LẬP GIAI ĐOẠN 3 (PHASE A: SELF-MOCK TELEMETRY
+// GENERATOR)
 // ======================================================================================
 /**
- * @brief Tự sinh gói nhị phân 32-byte RfTelemetryPacket32 luân phiên 3 kịch bản cứu nạn,
- * tính toán CRC-16, mã hóa chuỗi Hex 64 ký tự, đóng gói JSON Transport Envelope v1
- * và phát sóng broadcast qua WebSocket tới tất cả các client Laptop GCS đang kết nối.
+ * @brief Tự sinh gói nhị phân 32-byte RfTelemetryPacket32 luân phiên 3 kịch bản
+ * cứu nạn, tính toán CRC-16, mã hóa chuỗi Hex 64 ký tự, đóng gói JSON Transport
+ * Envelope v1 và phát sóng broadcast qua WebSocket tới tất cả các client Laptop
+ * GCS đang kết nối.
  */
 void generateAndSendSelfMockTelemetry() {
   RfTelemetryPacket32 pkt;
@@ -433,57 +486,58 @@ void generateAndSendSelfMockTelemetry() {
 
   // 2. NẠP DỮ LIỆU TÙY THEO KỊCH BẢN XOAY VÒNG
   switch (selfMockScenarioIdx) {
-    // KỊCH BẢN 1: PHÁT HIỆN NGƯỜI GẶP NẠN (PERSON) - TỌA ĐỘ TOÀN CẦU WGS-84
-    case 0: {
-      scenarioLabel = "NGUOI (Person)";
-      pkt.class_id = 1;           // 1 = Người (person)
-      pkt.confidence = 95;        // 95% độ tin cậy AI
-      pkt.target_lat = 160738520; // 16.073852° N (Đà Nẵng)
-      pkt.target_lon = 1081499210;// 108.149921° E
-      pkt.target_x_local = 0;
-      pkt.target_y_local = 0;
-      pkt.lidar_dist_cm = 250;    // 250 cm (2.50 m)
-      pkt.sensor_flags = 0x0F;    // GPS=1 | LiDAR=1 | IMU=1 | AI=1
-      pkt.battery_raw = 125;      // 12.5V (90% pin)
-      rssiDbm = -76;
-      snrDb = 8.5;
-      break;
-    }
+  // KỊCH BẢN 1: PHÁT HIỆN NGƯỜI GẶP NẠN (PERSON) - TỌA ĐỘ TOÀN CẦU WGS-84
+  case 0: {
+    scenarioLabel = "NGUOI (Person)";
+    pkt.class_id = 1;            // 1 = Người (person)
+    pkt.confidence = 95;         // 95% độ tin cậy AI
+    pkt.target_lat = 160738520;  // 16.073852° N (Đà Nẵng)
+    pkt.target_lon = 1081499210; // 108.149921° E
+    pkt.target_x_local = 0;
+    pkt.target_y_local = 0;
+    pkt.lidar_dist_cm = 250; // 250 cm (2.50 m)
+    pkt.sensor_flags = 0x0F; // GPS=1 | LiDAR=1 | IMU=1 | AI=1
+    pkt.battery_raw = 125;   // 12.5V (90% pin)
+    rssiDbm = -76;
+    snrDb = 8.5;
+    break;
+  }
 
-    // KỊCH BẢN 2: PHÁT HIỆN TÀU THUYỀN / PHAO CỨU SINH (BOAT) - TỌA ĐỘ TOÀN CẦU WGS-84
-    case 1: {
-      scenarioLabel = "TAU (Boat)";
-      pkt.class_id = 2;           // 2 = Tàu thuyền / Phao cứu nạn (boat)
-      pkt.confidence = 92;        // 92% độ tin cậy AI
-      pkt.target_lat = 160751000; // 16.075100° N
-      pkt.target_lon = 1081512000;// 108.151200° E
-      pkt.target_x_local = 0;
-      pkt.target_y_local = 0;
-      pkt.lidar_dist_cm = 230;    // 230 cm (2.30 m)
-      pkt.sensor_flags = 0x0F;    // GPS=1 | LiDAR=1 | IMU=1 | AI=1
-      pkt.battery_raw = 124;      // 12.4V (86% pin)
-      rssiDbm = -75;
-      snrDb = 9.0;
-      break;
-    }
+  // KỊCH BẢN 2: PHÁT HIỆN TÀU THUYỀN / PHAO CỨU SINH (BOAT) - TỌA ĐỘ TOÀN CẦU
+  // WGS-84
+  case 1: {
+    scenarioLabel = "TAU (Boat)";
+    pkt.class_id = 2;            // 2 = Tàu thuyền / Phao cứu nạn (boat)
+    pkt.confidence = 92;         // 92% độ tin cậy AI
+    pkt.target_lat = 160751000;  // 16.075100° N
+    pkt.target_lon = 1081512000; // 108.151200° E
+    pkt.target_x_local = 0;
+    pkt.target_y_local = 0;
+    pkt.lidar_dist_cm = 230; // 230 cm (2.30 m)
+    pkt.sensor_flags = 0x0F; // GPS=1 | LiDAR=1 | IMU=1 | AI=1
+    pkt.battery_raw = 124;   // 12.4V (86% pin)
+    rssiDbm = -75;
+    snrDb = 9.0;
+    break;
+  }
 
-    // KỊCH BẢN 3: THỰC NGHIỆM TRÊN SA BÀN / BỂ BƠI (LOCAL GRID) - TỌA ĐỘ NỘI BỘ
-    case 2:
-    default: {
-      scenarioLabel = "SA BAN LOCAL";
-      pkt.class_id = 1;           // 1 = Người (person)
-      pkt.confidence = 89;        // 89% độ tin cậy AI
-      pkt.target_lat = 0;         // Tắt GPS
-      pkt.target_lon = 0;
-      pkt.target_x_local = 150;   // X = +150 cm
-      pkt.target_y_local = 320;   // Y = +320 cm
-      pkt.lidar_dist_cm = 245;    // 245 cm (2.45 m)
-      pkt.sensor_flags = 0x0E;    // GPS=0 | LiDAR=1 | IMU=1 | AI=1 (Cờ 0x0E)
-      pkt.battery_raw = 123;      // 12.3V (81% pin)
-      rssiDbm = -76;
-      snrDb = 8.0;
-      break;
-    }
+  // KỊCH BẢN 3: THỰC NGHIỆM TRÊN SA BÀN / BỂ BƠI (LOCAL GRID) - TỌA ĐỘ NỘI BỘ
+  case 2:
+  default: {
+    scenarioLabel = "SA BAN LOCAL";
+    pkt.class_id = 1;    // 1 = Người (person)
+    pkt.confidence = 89; // 89% độ tin cậy AI
+    pkt.target_lat = 0;  // Tắt GPS
+    pkt.target_lon = 0;
+    pkt.target_x_local = 150; // X = +150 cm
+    pkt.target_y_local = 320; // Y = +320 cm
+    pkt.lidar_dist_cm = 245;  // 245 cm (2.45 m)
+    pkt.sensor_flags = 0x0E;  // GPS=0 | LiDAR=1 | IMU=1 | AI=1 (Cờ 0x0E)
+    pkt.battery_raw = 123;    // 12.3V (81% pin)
+    rssiDbm = -76;
+    snrDb = 8.0;
+    break;
+  }
   }
 
   // 3. TÍNH TOÁN CRC-16/CCITT-FALSE TRÊN 30 BYTE ĐẦU
@@ -491,7 +545,8 @@ void generateAndSendSelfMockTelemetry() {
 
   // 4. CHUYỂN ĐỔI SANG CHUỖI HEX 64 KÝ TỰ THƯỜNG
   char hexPayload[sizeof(pkt) * 2 + 1];
-  if (!bytesToHexString((const uint8_t *)&pkt, sizeof(pkt), hexPayload, sizeof(hexPayload))) {
+  if (!bytesToHexString((const uint8_t *)&pkt, sizeof(pkt), hexPayload,
+                        sizeof(hexPayload))) {
     Serial.println("[TX-WS-ERR] Khong du bo dem de ma hoa payload Hex.");
     return;
   }
@@ -504,13 +559,17 @@ void generateAndSendSelfMockTelemetry() {
 
   // 7. IN LOG THỐNG KÊ RA CỔNG SERIAL THEO ĐÚNG CHUẨN KẾ HOẠCH
   if (selfMockScenarioIdx == 2) {
-    Serial.printf("[TX-WS #%03u] %-14s | Conf: %u%% | X: %+d cm, Y: %+d cm | LiDAR: %u cm       | RSSI: %d dBm\n",
-                  pkt.seq_num, scenarioLabel, pkt.confidence, pkt.target_x_local, pkt.target_y_local,
-                  pkt.lidar_dist_cm, rssiDbm);
+    Serial.printf("[TX-WS #%03u] %-14s | Conf: %u%% | X: %+d cm, Y: %+d cm | "
+                  "LiDAR: %u cm       | RSSI: %d dBm\n",
+                  pkt.seq_num, scenarioLabel, pkt.confidence,
+                  pkt.target_x_local, pkt.target_y_local, pkt.lidar_dist_cm,
+                  rssiDbm);
   } else {
-    Serial.printf("[TX-WS #%03u] %-14s | Conf: %u%% | LiDAR: %u cm | Lat: %.6f, Lon: %.6f | RSSI: %d dBm\n",
+    Serial.printf("[TX-WS #%03u] %-14s | Conf: %u%% | LiDAR: %u cm | Lat: "
+                  "%.6f, Lon: %.6f | RSSI: %d dBm\n",
                   pkt.seq_num, scenarioLabel, pkt.confidence, pkt.lidar_dist_cm,
-                  (double)pkt.target_lat / 1e7, (double)pkt.target_lon / 1e7, rssiDbm);
+                  (double)pkt.target_lat / 1e7, (double)pkt.target_lon / 1e7,
+                  rssiDbm);
   }
 
   // 8. TĂNG CHỈ SỐ XOAY VÒNG KỊCH BẢN TIẾP THEO (0 -> 1 -> 2 -> 0)
@@ -521,14 +580,19 @@ void generateAndSendSelfMockTelemetry() {
 // 9. HÀM XỬ LÝ SỰ KIỆN WEBSOCKET (CALLBACK FUNCTION)
 // ======================================================================================
 /**
- * @brief Hàm này tự động được thư viện WebSockets gọi mỗi khi có sự kiện mạng xảy ra.
+ * @brief Hàm này tự động được thư viện WebSockets gọi mỗi khi có sự kiện mạng
+ * xảy ra.
  *
- * @param num     Mã định danh duy nhất (Client ID, bắt đầu từ 0) do ESP32 cấp cho thiết bị kết nối.
- * @param type    Loại sự kiện: WStype_CONNECTED, WStype_DISCONNECTED, WStype_TEXT, WStype_BIN, WStype_ERROR.
- * @param payload Con trỏ trỏ tới vùng nhớ chứa nội dung gói tin mà Laptop gửi lên ESP32.
+ * @param num     Mã định danh duy nhất (Client ID, bắt đầu từ 0) do ESP32 cấp
+ * cho thiết bị kết nối.
+ * @param type    Loại sự kiện: WStype_CONNECTED, WStype_DISCONNECTED,
+ * WStype_TEXT, WStype_BIN, WStype_ERROR.
+ * @param payload Con trỏ trỏ tới vùng nhớ chứa nội dung gói tin mà Laptop gửi
+ * lên ESP32.
  * @param length  Độ dài tính theo byte của gói tin nhận được.
  */
-void onWebSocketEvent(uint8_t num, WStype_t type, uint8_t *payload, size_t length) {
+void onWebSocketEvent(uint8_t num, WStype_t type, uint8_t *payload,
+                      size_t length) {
   switch (type) {
 
   // SỰ KIỆN 1: CÓ THIẾT BỊ (LAPTOP GCS) VỪA KẾT NỐI VÀO WEBSOCKET THÀNH CÔNG
@@ -537,11 +601,14 @@ void onWebSocketEvent(uint8_t num, WStype_t type, uint8_t *payload, size_t lengt
     IPAddress clientIp = webSocket.remoteIP(num);
 
     Serial.printf("\n[WS-CONNECT] >>> Laptop GCS da ket noi thanh cong!\n");
-    Serial.printf("             Client ID: %u | Dia chi IP: %s\n", num, clientIp.toString().c_str());
-    Serial.printf("             Tong so thiet bi dang ket noi: %u\n", connectedClientCount);
+    Serial.printf("             Client ID: %u | Dia chi IP: %s\n", num,
+                  clientIp.toString().c_str());
+    Serial.printf("             Tong so thiet bi dang ket noi: %u\n",
+                  connectedClientCount);
 
     // Gửi bản tin chào mừng (Handshake Frame) dạng JSON sang Laptop
-    String welcomeMsg = "{\"status\":\"CONNECTED\",\"gateway\":\"KVC_ESP32_GATEWAY\",\"mode\":\"WIFI_STA_LOCAL\"}";
+    String welcomeMsg = "{\"status\":\"CONNECTED\",\"gateway\":\"KVC_ESP32_"
+                        "GATEWAY\",\"mode\":\"WIFI_STA_LOCAL\"}";
     webSocket.sendTXT(num, welcomeMsg);
     break;
   }
@@ -551,8 +618,11 @@ void onWebSocketEvent(uint8_t num, WStype_t type, uint8_t *payload, size_t lengt
     if (connectedClientCount > 0) {
       connectedClientCount--;
     }
-    Serial.printf("\n[WS-DISCONNECT] >>> Laptop GCS (Client ID: %u) da ngat ket noi!\n", num);
-    Serial.printf("                Tong so thiet bi con lai: %u\n", connectedClientCount);
+    Serial.printf(
+        "\n[WS-DISCONNECT] >>> Laptop GCS (Client ID: %u) da ngat ket noi!\n",
+        num);
+    Serial.printf("                Tong so thiet bi con lai: %u\n",
+                  connectedClientCount);
     break;
   }
 
@@ -571,7 +641,8 @@ void onWebSocketEvent(uint8_t num, WStype_t type, uint8_t *payload, size_t lengt
 
   // SỰ KIỆN 4: NHẬN GÓI DỮ LIỆU NHỊ PHÂN THÔ (BINARY)
   case WStype_BIN:
-    Serial.printf("[WS-BIN #%u] Nhan goi tin nhi phan (%u bytes)\n", num, length);
+    Serial.printf("[WS-BIN #%u] Nhan goi tin nhi phan (%u bytes)\n", num,
+                  length);
     break;
 
   // SỰ KIỆN 5: XẢY RA LỖI ĐƯỜNG TRUYỀN SOCKET (SOCKET ERROR)
@@ -596,9 +667,7 @@ static uint8_t readSx1278Reg(uint8_t addr) {
 }
 
 // Đọc thanh ghi RegVersion (0x42) của chip LoRa SX1278 (luôn là 0x12)
-static uint8_t readSx1278Version() {
-  return readSx1278Reg(0x42);
-}
+static uint8_t readSx1278Version() { return readSx1278Reg(0x42); }
 
 // Khởi tạo hoặc tái thiết lập lại toàn bộ cấu hình module LoRa Ra-02 (SX1278)
 static bool initLoRaHardware() {
@@ -627,10 +696,12 @@ static bool initLoRaHardware() {
 // 10. HÀM KHỞI TẠO HỆ THỐNG SETUP() - CHỈ CHẠY 1 LẦN DUY NHẤT KHI BẬT NGUỒN
 // ======================================================================================
 void setup() {
-  // Khởi động cổng Serial với tốc độ baud 115200 (chuẩn giao tiếp nạp code và debug)
+  // Khởi động cổng Serial với tốc độ baud 115200 (chuẩn giao tiếp nạp code và
+  // debug)
   Serial.begin(115200);
 
-  // Dừng 1 giây để điện áp nguồn nuôi và bộ đệm chip UART trên ESP32 hoàn toàn ổn định
+  // Dừng 1 giây để điện áp nguồn nuôi và bộ đệm chip UART trên ESP32 hoàn toàn
+  // ổn định
   delay(1000);
 
   // In biểu ngữ thông tin dự án ra Serial Monitor
@@ -654,12 +725,14 @@ void setup() {
 
   // Vòng lặp chờ kết nối (cho phép chờ tối đa 10 giây)
   uint32_t startAttemptTime = millis();
-  while (WiFi.status() != WL_CONNECTED && (millis() - startAttemptTime < 10000)) {
+  while (WiFi.status() != WL_CONNECTED &&
+         (millis() - startAttemptTime < 10000)) {
     delay(500);
     Serial.print(".");
   }
 
-  // Kiểm tra kết quả kết nối Wi-Fi (Nếu thất bại, tự động chuyển sang SoftAP KVC_GROUND_STATION)
+  // Kiểm tra kết quả kết nối Wi-Fi (Nếu thất bại, tự động chuyển sang SoftAP
+  // KVC_GROUND_STATION)
   if (WiFi.status() == WL_CONNECTED) {
     Serial.println("\n[WIFI-STA] Ket noi Wi-Fi STA THANH CONG!");
     Serial.print("[WIFI-STA] Dia chi IP do Router cap cho ESP32: ");
@@ -667,18 +740,21 @@ void setup() {
     Serial.printf("[WIFI-STA] Cuong do song RSSI: %d dBm\n", WiFi.RSSI());
   } else {
     Serial.println("\n[WIFI-STA] Khong the ket noi Wi-Fi STA sau 10 giay.");
-    Serial.println("[WIFI-AP]  Kich hoat che do tu phat Wi-Fi SoftAP du phong...");
+    Serial.println(
+        "[WIFI-AP]  Kich hoat che do tu phat Wi-Fi SoftAP du phong...");
     WiFi.mode(WIFI_AP);
     WiFi.softAP("KVC_GROUND_STATION", "kvc123456");
     delay(500);
     Serial.println("[WIFI-AP]  Phat SoftAP THANH CONG!");
-    Serial.print("[WIFI-AP]  Ten mang (SSID): KVC_GROUND_STATION | Mat khau: kvc123456\n");
+    Serial.print("[WIFI-AP]  Ten mang (SSID): KVC_GROUND_STATION | Mat khau: "
+                 "kvc123456\n");
     Serial.print("[WIFI-AP]  Dia chi IP Gateway: ");
     Serial.println(WiFi.softAPIP());
   }
 
   // BƯỚC 3: KHỞI ĐỘNG DỊCH VỤ MÁY CHỦ WEBSOCKET SERVER
   webSocket.begin();
+  webSocket.enableHeartbeat(15000, 3000, 2);
   webSocket.onEvent(onWebSocketEvent);
 
   Serial.println("\n=======================================================");
@@ -694,16 +770,22 @@ void setup() {
 
   // BƯỚC 4: KHỞI TẠO MODULE PHẦN CỨNG LORA RA-02 (SX1278) THEO MASTER PINOUT
   Serial.println("-------------------------------------------------------");
-  Serial.println("[LORA] Khoi tao module LoRa Ra-02 theo Master Pinout (Muc 4)...");
-  Serial.printf("[LORA] Cau hinh: NSS=%d, SCK=%d, MOSI=%d, MISO=%d, RST=%d, DIO0=%d | Tan so: 433 MHz\n",
-                LORA_PIN_NSS, LORA_PIN_SCK, LORA_PIN_MOSI, LORA_PIN_MISO, LORA_PIN_RST, LORA_PIN_DIO0);
+  Serial.println(
+      "[LORA] Khoi tao module LoRa Ra-02 theo Master Pinout (Muc 4)...");
+  Serial.printf("[LORA] Cau hinh: NSS=%d, SCK=%d, MOSI=%d, MISO=%d, RST=%d, "
+                "DIO0=%d | Tan so: 433 MHz\n",
+                LORA_PIN_NSS, LORA_PIN_SCK, LORA_PIN_MOSI, LORA_PIN_MISO,
+                LORA_PIN_RST, LORA_PIN_DIO0);
 
   SPI.begin(LORA_PIN_SCK, LORA_PIN_MISO, LORA_PIN_MOSI, LORA_PIN_NSS);
   if (initLoRaHardware()) {
-    Serial.println("[LORA] >>> PHAT HIEN VA KHOI TAO PHAN CUNG LORA RA-02 THANH CONG! [OK]");
+    Serial.println("[LORA] >>> PHAT HIEN VA KHOI TAO PHAN CUNG LORA RA-02 "
+                   "THANH CONG! [OK]");
   } else {
-    Serial.println("[LORA-WARN] Chua phat hien phan cung LoRa Ra-02 (hoac day cam chua noi).");
-    Serial.println("[LORA-WARN] Gateway tiep tuc hoat dong voi che do Self-Mock Ingress.");
+    Serial.println("[LORA-WARN] Chua phat hien phan cung LoRa Ra-02 (hoac day "
+                   "cam chua noi).");
+    Serial.println(
+        "[LORA-WARN] Gateway tiep tuc hoat dong voi che do Self-Mock Ingress.");
   }
 }
 
@@ -724,7 +806,8 @@ void loop() {
     static uint32_t lastReconnectAttempt = 0;
     if (now - lastReconnectAttempt >= 5000) {
       lastReconnectAttempt = now;
-      Serial.println("[WIFI-STA-WARN] Mat ket noi Wi-Fi STA! Dang tu dong ket noi lai...");
+      Serial.println(
+          "[WIFI-STA-WARN] Mat ket noi Wi-Fi STA! Dang tu dong ket noi lai...");
       WiFi.reconnect();
     }
   }
@@ -738,7 +821,8 @@ void loop() {
   }
 
   // ----------------------------------------------------------------------------------
-  // GIAI ĐOẠN 4: THU NHẬN GÓI TIN LORA RF THỰC TẾ TỪ UAV (KHI ĐÃ CẮM MODULE RA-02)
+  // GIAI ĐOẠN 4: THU NHẬN GÓI TIN LORA RF THỰC TẾ TỪ UAV (KHI ĐÃ CẮM MODULE
+  // RA-02)
   // ----------------------------------------------------------------------------------
   if (loraHardwareReady) {
     int packetSize = LoRa.parsePacket();
@@ -749,7 +833,8 @@ void loop() {
         while (LoRa.available()) {
           LoRa.read(); // Xả sạch bộ đệm gói tin rác/nhiễu
         }
-        Serial.printf("[RX-LORA-ERR] Tu choi goi bat thuong %d bytes (Khac chuan 32B)! (Tong drop: %u)\n",
+        Serial.printf("[RX-LORA-ERR] Tu choi goi bat thuong %d bytes (Khac "
+                      "chuan 32B)! (Tong drop: %u)\n",
                       packetSize, rxDropCount);
       } else {
         uint8_t rxBuffer[sizeof(RfTelemetryPacket32)];
@@ -766,57 +851,72 @@ void loop() {
         float snrDb = LoRa.packetSnr();
 
         if (validatePacketCrc(rxBuffer, bytesRead)) {
-          lastRxPacketMs = now; // Cập nhật mốc thời gian nhận gói hợp lệ thành công
+          lastRxPacketMs =
+              now; // Cập nhật mốc thời gian nhận gói hợp lệ thành công
           char hexPayload[sizeof(RfTelemetryPacket32) * 2 + 1];
-          if (!bytesToHexString(rxBuffer, bytesRead, hexPayload, sizeof(hexPayload))) {
+          if (!bytesToHexString(rxBuffer, bytesRead, hexPayload,
+                                sizeof(hexPayload))) {
             rxDropCount++;
-            Serial.println("[RX-LORA-ERR] Khong du bo dem de ma hoa payload Hex.");
+            Serial.println(
+                "[RX-LORA-ERR] Khong du bo dem de ma hoa payload Hex.");
           } else {
             String jsonEnv = buildJsonEnvelope(hexPayload, rssiDbm, snrDb);
             webSocket.broadcastTXT(jsonEnv);
-            const RfTelemetryPacket32 *rxPkt = (const RfTelemetryPacket32 *)rxBuffer;
+            const RfTelemetryPacket32 *rxPkt =
+                (const RfTelemetryPacket32 *)rxBuffer;
             bool gnssValid = (rxPkt->sensor_flags & (1U << 0)) != 0;
-            bool altValid  = (rxPkt->sensor_flags & (1U << 1)) != 0;
-            bool imuValid  = (rxPkt->sensor_flags & (1U << 2)) != 0;
-            bool aiValid   = (rxPkt->sensor_flags & (1U << 3)) != 0;
+            bool altValid = (rxPkt->sensor_flags & (1U << 1)) != 0;
+            bool imuValid = (rxPkt->sensor_flags & (1U << 2)) != 0;
+            bool aiValid = (rxPkt->sensor_flags & (1U << 3)) != 0;
 
             // Giám sát tính toàn vẹn chuỗi số Sequence từ UAV
             static uint8_t lastUavSeq = 0;
             if (lastUavSeq > 0 && rxPkt->seq_num != (uint8_t)(lastUavSeq + 1)) {
               uint8_t gap = (uint8_t)(rxPkt->seq_num - lastUavSeq - 1);
-              Serial.printf("[LORA-GAP] Canh bao: Mat nhay coc %u goi tin! (UAV Seq: %u -> %u)\n",
+              Serial.printf("[LORA-GAP] Canh bao: Mat nhay coc %u goi tin! "
+                            "(UAV Seq: %u -> %u)\n",
                             gap, lastUavSeq, rxPkt->seq_num);
             }
             lastUavSeq = rxPkt->seq_num;
 
             char imuStr[28] = "IMU:N/A";
             if (imuValid) {
-              int16_t roll = (int16_t)(rxPkt->reserved[0] | (rxPkt->reserved[1] << 8));
-              int16_t pitch = (int16_t)(rxPkt->reserved[2] | (rxPkt->reserved[3] << 8));
-              snprintf(imuStr, sizeof(imuStr), "R:%+.1f P:%+.1f", (float)roll / 10.0f, (float)pitch / 10.0f);
+              int16_t roll =
+                  (int16_t)(rxPkt->reserved[0] | (rxPkt->reserved[1] << 8));
+              int16_t pitch =
+                  (int16_t)(rxPkt->reserved[2] | (rxPkt->reserved[3] << 8));
+              snprintf(imuStr, sizeof(imuStr), "R:%+.1f P:%+.1f",
+                       (float)roll / 10.0f, (float)pitch / 10.0f);
             }
 
             char gnssStr[36] = "GPS:NO_FIX";
-            if (gnssValid && (rxPkt->target_lat != 0 || rxPkt->target_lon != 0)) {
+            if (gnssValid &&
+                (rxPkt->target_lat != 0 || rxPkt->target_lon != 0)) {
               snprintf(gnssStr, sizeof(gnssStr), "GPS:%.5f,%.5f",
-                       (double)rxPkt->target_lat / 1e7, (double)rxPkt->target_lon / 1e7);
+                       (double)rxPkt->target_lat / 1e7,
+                       (double)rxPkt->target_lon / 1e7);
             }
 
             char aiStr[24] = "AI:IDLE";
             if (aiValid || rxPkt->class_id != 0) {
-              const char *clsName = (rxPkt->class_id == 1) ? "PERSON" :
-                                    (rxPkt->class_id == 2) ? "BOAT" : "TARGET";
-              snprintf(aiStr, sizeof(aiStr), "AI:%s(%u%%)", clsName, rxPkt->confidence);
+              const char *clsName = (rxPkt->class_id == 1)   ? "PERSON"
+                                    : (rxPkt->class_id == 2) ? "BOAT"
+                                                             : "TARGET";
+              snprintf(aiStr, sizeof(aiStr), "AI:%s(%u%%)", clsName,
+                       rxPkt->confidence);
             }
 
-            Serial.printf("[RX-LORA #%03u] Seq:%-3u | %ddBm SNR:%+.1f | Alt:%3u cm [%s] | %s | %s | %s | Pin:%.1fV\n",
+            Serial.printf("[RX-LORA #%03u] Seq:%-3u | %ddBm SNR:%+.1f | "
+                          "Alt:%3u cm [%s] | %s | %s | %s | Pin:%.1fV\n",
                           gatewaySequence, rxPkt->seq_num, rssiDbm, snrDb,
-                          rxPkt->alt_dist_cm, altValid ? "ALT_VALID" : "ALT_INVALID",
-                          imuStr, gnssStr, aiStr, (float)rxPkt->battery_raw / 10.0f);
+                          rxPkt->alt_dist_cm,
+                          altValid ? "ALT_VALID" : "ALT_INVALID", imuStr,
+                          gnssStr, aiStr, (float)rxPkt->battery_raw / 10.0f);
           }
         } else {
           rxDropCount++;
-          Serial.printf("[RX-LORA-ERR] Tu choi goi %d bytes do sai ma CRC-16! (Tong drop: %u)\n",
+          Serial.printf("[RX-LORA-ERR] Tu choi goi %d bytes do sai ma CRC-16! "
+                        "(Tong drop: %u)\n",
                         bytesRead, rxDropCount);
         }
       }
@@ -826,18 +926,28 @@ void loop() {
   // ----------------------------------------------------------------------------------
   // WATCHDOG TỰ ĐỘNG PHỤC HỒI KHI CHỈNH DÂY / RUNG LẮC (CHỐNG TREO BỘ THU LORA)
   // ----------------------------------------------------------------------------------
-  // Nếu đã từng nhận được gói tin từ UAV mà quá 4.0 giây không có gói mới (do sụt nguồn/lỏng dây)
-  if (loraHardwareReady && lastRxPacketMs > 0 && (now - lastRxPacketMs >= 4000)) {
+  // Nếu đã từng nhận được gói tin từ UAV mà quá 10.0 giây không có gói mới
+  if (loraHardwareReady && lastRxPacketMs > 0 &&
+      (now - lastRxPacketMs >= 10000)) {
     static uint32_t lastRecoveryAttempt = 0;
-    if (now - lastRecoveryAttempt >= 3000) {
+    if (now - lastRecoveryAttempt >= 5000) {
       lastRecoveryAttempt = now;
       uint8_t opMode = readSx1278Reg(0x01);
-      Serial.printf("[LORA-WATCHDOG] Phat hien mat song qua 4s hoac rot OpMode=0x%02X! Dang tu dong reset va nap lai Ra-02...\n", opMode);
-      if (initLoRaHardware()) {
-        Serial.println("[LORA-WATCHDOG] >>> KHOI PHUC VA TAI NAP LAI PHAN CUNG RA-02 THANH CONG! [OK]");
-        lastRxPacketMs = now; // Tránh gọi lặp lại dồn dập
-      } else {
-        Serial.println("[LORA-WATCHDOG-ERR] Khoi phuc that bai! Vui long kiem tra lai tiep xuc day jumper.");
+      uint8_t ver = readSx1278Version();
+      // Chỉ tự động reset khi chip SX1278 thực sự bị sụt nguồn rớt về FSK hoặc
+      // mất giao tiếp SPI
+      if ((opMode & 0x80) == 0 || ver != 0x12) {
+        Serial.printf("[LORA-WATCHDOG] Phat hien su co phan cung Ra-02 "
+                      "(Ver=0x%02X, OpMode=0x%02X)! Dang tai nap lai...\n",
+                      ver, opMode);
+        if (initLoRaHardware()) {
+          Serial.println("[LORA-WATCHDOG] >>> KHOI PHUC VA TAI NAP LAI PHAN "
+                         "CUNG RA-02 THANH CONG! [OK]");
+          lastRxPacketMs = now; // Tránh gọi lặp lại dồn dập
+        } else {
+          Serial.println("[LORA-WATCHDOG-ERR] Khoi phuc that bai! Vui long "
+                         "kiem tra lai tiep xuc day jumper.");
+        }
       }
     }
   }
@@ -850,17 +960,24 @@ void loop() {
 
     // Giám sát sức khỏe phần cứng LoRa SX1278 (Ra-02)
     if (loraHardwareReady) {
-      uint8_t loraVersion = readSx1278Version(); // RegVersion của SX1278 phải là 0x12
-      uint8_t opMode = readSx1278Reg(0x01);      // RegOpMode bit 7 phải là 1 (LoRa Mode)
-      bool loraModeLost = ((opMode & 0x80) == 0); // Nếu bit 7 = 0 tức là chip bị sụt nguồn rớt về FSK
+      uint8_t loraVersion =
+          readSx1278Version(); // RegVersion của SX1278 phải là 0x12
+      uint8_t opMode =
+          readSx1278Reg(0x01); // RegOpMode bit 7 phải là 1 (LoRa Mode)
+      bool loraModeLost =
+          ((opMode & 0x80) ==
+           0); // Nếu bit 7 = 0 tức là chip bị sụt nguồn rớt về FSK
 
       if (loraVersion != 0x12 || loraModeLost) {
-        Serial.printf("[LORA-WARN] Ra-02 gap su co (Ver=0x%02X, OpMode=0x%02X)! Dang tai nap lai phan cung...\n",
+        Serial.printf("[LORA-WARN] Ra-02 gap su co (Ver=0x%02X, "
+                      "OpMode=0x%02X)! Dang tai nap lai phan cung...\n",
                       loraVersion, opMode);
         if (initLoRaHardware()) {
-          Serial.println("[LORA] >>> Khoi phuc ket noi LoRa Ra-02 THANH CONG! [OK]");
+          Serial.println(
+              "[LORA] >>> Khoi phuc ket noi LoRa Ra-02 THANH CONG! [OK]");
         } else {
-          Serial.println("[LORA-ERR] Khoi phuc LoRa that bai! Kiem tra lai day jumper SPI.");
+          Serial.println("[LORA-ERR] Khoi phuc LoRa that bai! Kiem tra lai day "
+                         "jumper SPI.");
         }
       }
     }
@@ -879,11 +996,13 @@ void loop() {
 
     int activeClients = webSocket.connectedClients();
 
-    Serial.printf("[HEARTBEAT] UpTime: %02u:%02u:%02u | IP: %s | Clients: %d | Drops: %u\n",
-                  hours, minutes, seconds, ipStr.c_str(), activeClients, rxDropCount);
+    Serial.printf("[HEARTBEAT] UpTime: %02u:%02u:%02u | IP: %s | Clients: %d | "
+                  "Drops: %u\n",
+                  hours, minutes, seconds, ipStr.c_str(), activeClients,
+                  rxDropCount);
   }
 
-  // Nghỉ 2ms mỗi chu kỳ để giải phóng nhân CPU, hạ nhiệt độ chip và ổn định nguồn 3.3V
+  // Nghỉ 2ms mỗi chu kỳ để giải phóng nhân CPU, hạ nhiệt độ chip và ổn định
+  // nguồn 3.3V
   delay(2);
 }
-

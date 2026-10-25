@@ -131,6 +131,9 @@ class MissionStore:
             }
             if not merged["lidar_valid"]:
                 merged["lidar_range_cm"] = None
+            if not merged["imu_valid"]:
+                merged["roll_deg"] = None
+                merged["pitch_deg"] = None
             self.telemetry = Telemetry.model_validate(merged).model_dump()
             self.times["telemetry"] = None if data["telemetry"] is None else self.now_ms()
         if "target" in data:

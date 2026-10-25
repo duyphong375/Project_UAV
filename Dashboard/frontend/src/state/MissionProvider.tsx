@@ -149,7 +149,7 @@ export const MissionProvider: React.FC<{ children: React.ReactNode }> = ({ child
     lastAgeTickRef.current = monotonicNow()
     const timer = setInterval(() => {
       const now = monotonicNow()
-      const elapsedMs = Math.max(0, now - lastAgeTickRef.current)
+      const elapsedMs = Math.max(0, Math.round(now - lastAgeTickRef.current))
       lastAgeTickRef.current = now
       dispatch({ type: 'TICK_AGE', payload: elapsedMs })
     }, APP_CONFIG.HEARTBEAT_INTERVAL_MS)
