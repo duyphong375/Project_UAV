@@ -16,6 +16,8 @@ build_*/
 coverage/
 *.log
 .vscode/
+tmp/
+*.exe
 
 # Hardware outputs (keep source, constraints and project files)
 .pio/
