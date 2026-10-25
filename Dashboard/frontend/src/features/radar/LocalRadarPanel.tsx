@@ -30,10 +30,11 @@ export const LocalRadarPanel: React.FC<LocalRadarPanelProps> = ({
 
   const isLocalGrid = target?.coordinate_frame === 'LOCAL_GRID'
   const hasLocalCoord =
-    isLocalGrid &&
     Boolean(target?.pos_valid) &&
     target?.local_x_cm !== null &&
     target?.local_y_cm !== null &&
+    target?.local_x_cm !== undefined &&
+    target?.local_y_cm !== undefined &&
     !isNaN(target.local_x_cm) &&
     !isNaN(target.local_y_cm)
 
@@ -126,23 +127,23 @@ export const LocalRadarPanel: React.FC<LocalRadarPanelProps> = ({
             label={
               !ws_connected
                 ? 'MẤT KẾT NỐI'
+                : hasLocalCoord
+                ? isDataStale
+                  ? 'DỮ LIỆU CŨ (>3s)'
+                  : 'KHÓA MỤC TIÊU'
                 : isLocalGrid
-                ? hasLocalCoord
-                  ? isDataStale
-                    ? 'DỮ LIỆU CŨ (>3s)'
-                    : 'KHÓA MỤC TIÊU'
-                  : 'TÌM KIẾM MỤC TIÊU'
+                ? 'TÌM KIẾM MỤC TIÊU'
                 : 'WGS-84 ACTIVE'
             }
             variant={
               !ws_connected
                 ? 'red'
+                : hasLocalCoord
+                ? isDataStale
+                  ? 'amber'
+                  : 'emerald'
                 : isLocalGrid
-                ? hasLocalCoord
-                  ? isDataStale
-                    ? 'amber'
-                    : 'emerald'
-                  : 'cyan'
+                ? 'cyan'
                 : 'slate'
             }
           />
@@ -546,23 +547,23 @@ export const LocalRadarPanel: React.FC<LocalRadarPanelProps> = ({
             label={
               !ws_connected
                 ? 'MẤT KẾT NỐI'
+                : hasLocalCoord
+                ? isDataStale
+                  ? 'DỮ LIỆU CŨ (>3s)'
+                  : 'KHÓA MỤC TIÊU'
                 : isLocalGrid
-                ? hasLocalCoord
-                  ? isDataStale
-                    ? 'DỮ LIỆU CŨ (>3s)'
-                    : 'KHÓA MỤC TIÊU'
-                  : 'TÌM KIẾM MỤC TIÊU'
+                ? 'TÌM KIẾM MỤC TIÊU'
                 : 'WGS-84 ACTIVE'
             }
             variant={
               !ws_connected
                 ? 'red'
+                : hasLocalCoord
+                ? isDataStale
+                  ? 'amber'
+                  : 'emerald'
                 : isLocalGrid
-                ? hasLocalCoord
-                  ? isDataStale
-                    ? 'amber'
-                    : 'emerald'
-                  : 'cyan'
+                ? 'cyan'
                 : 'slate'
             }
           />

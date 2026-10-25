@@ -276,7 +276,7 @@ function normalizeTarget(target: TargetInfo): TargetInfo {
   if (target.coordinate_frame === 'LOCAL_GRID') {
     return { ...target, latitude: null, longitude: null }
   }
-  return { ...target, local_x_cm: null, local_y_cm: null, origin_id: null }
+  return { ...target, origin_id: null }
 }
 
 function parseDiagnosticsPatch(raw: unknown): Partial<DiagnosticsInfo> | null {

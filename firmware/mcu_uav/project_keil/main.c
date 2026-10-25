@@ -19,6 +19,14 @@
 #include "kvc_fpga_bbox.h"
 #include <string.h>
 
+/* Cấu hình chế độ tọa độ:
+ * 0 = Chế độ bay thực tế: Chỉ xuất tọa độ khi GPS có Fix thực sự, tuyệt đối không gửi tọa độ giả khi chưa có fix.
+ * 1 = Chế độ phòng Lab: Dùng tọa độ mẫu Đà Nẵng khi chưa có sóng vệ tinh trong nhà để test Web GCS.
+ */
+#ifndef KVC_ENABLE_INDOOR_MOCK_GPS
+#define KVC_ENABLE_INDOOR_MOCK_GPS  0
+#endif
+
 /* Hàm trễ thời gian phần cứng chuẩn xác tuyệt đối qua bộ đếm SysTick của Cortex-M4 (Xung 12 MHz) */
 static void delay_ms(uint32_t ms) {
     while (ms--) {
@@ -270,8 +278,8 @@ int main(void) {
     memset(&pkt, 0, sizeof(pkt));
 
     pkt.msg_id         = KVC_MSG_ID_TELEMETRY;
-    pkt.target_lat     = 160738520;   /* Mặc định: 16.0738520° N (Vĩ độ mẫu Đà Nẵng) */
-    pkt.target_lon     = 1081499210;  /* Mặc định: 108.1499210° E (Kinh độ mẫu Đà Nẵng) */
+    pkt.target_lat     = 0;           /* Mặc định 0: Chưa có GPS 3D fix */
+    pkt.target_lon     = 0;           /* Mặc định 0: Chưa có GPS 3D fix */
     pkt.alt_dist_cm    = 0;
     pkt.class_id       = KVC_CLASS_ID_NONE;
     pkt.confidence     = 0;
@@ -343,18 +351,26 @@ int main(void) {
 
         /* Cập nhật trạng thái định vị vệ tinh từ module GNSS NEO-M10 (Polling không chặn) */
         kvc_gnss_poll(pkt.timestamp_ms);
-        int32_t uav_lat = 160738520;   /* Mặc định: 16.0738520° N (Đà Nẵng) */
-        int32_t uav_lon = 1081499210;  /* Mặc định: 108.1499210° E (Đà Nẵng) */
+        int32_t uav_lat = 0;
+        int32_t uav_lon = 0;
         if (kvc_gnss_is_valid()) {
+            /* Cảm biến GPS đã thu nhận được tín hiệu vệ tinh thực tế */
             const KvcGnssState *gnss_st = kvc_gnss_get_state();
             uav_lat = gnss_st->lat_deg7;
             uav_lon = gnss_st->lon_deg7;
             pkt.sensor_flags |= KVC_FLAG_GNSS_VALID;
         } else {
-            /* KHI THỬ NGHIỆM TRONG PHÒNG (INDOORS):
-             * Module GPS chưa bắt được vệ tinh, tự động dùng tọa độ mẫu Đà Nẵng
-             * và bật cờ GNSS_VALID để Bản đồ Web vẽ vị trí máy bay và mục tiêu cứu nạn */
+#if (KVC_ENABLE_INDOOR_MOCK_GPS == 1)
+            /* Chế độ phòng Lab: Dùng tọa độ mẫu Đà Nẵng khi chưa có sóng vệ tinh trong nhà */
+            uav_lat = 160738520;
+            uav_lon = 1081499210;
             pkt.sensor_flags |= KVC_FLAG_GNSS_VALID;
+#else
+            /* Chế độ bay thực tế (Mặc định): Khi chưa có GPS Fix, TUYỆT ĐỐI KHÔNG gửi tọa độ giả cố định */
+            uav_lat = 0;
+            uav_lon = 0;
+            pkt.sensor_flags &= ~KVC_FLAG_GNSS_VALID;
+#endif
         }
 
         /* Cập nhật và giải mã khung BBox từ FPGA (UART1 P2.3) */
@@ -401,27 +417,43 @@ int main(void) {
                 int32_t d_lat_deg7 = (int32_t)(delta_y_m * 89.977f);
                 int32_t d_lon_deg7 = (int32_t)(delta_x_m * 93.633f);
 
-                pkt.target_lat = uav_lat + d_lat_deg7;
-                pkt.target_lon = uav_lon + d_lon_deg7;
+                /* Chỉ xuất tọa độ mục tiêu toàn cầu WGS-84 khi có GPS Fix hợp lệ */
+                if (pkt.sensor_flags & KVC_FLAG_GNSS_VALID) {
+                    pkt.target_lat = uav_lat + d_lat_deg7;
+                    pkt.target_lon = uav_lon + d_lon_deg7;
+                } else {
+                    pkt.target_lat = 0;
+                    pkt.target_lon = 0;
+                }
 
-                /* Gửi chỉ số mục tiêu (1, 2, 3...) vào target_x_local để Trạm mặt đất phân biệt các người gặp nạn */
-                pkt.target_x_local = (int16_t)(target_idx + 1);
+                /* Xuất cự ly tương đối thực tế (cm) quanh UAV để màn hình Radar vẽ đúng vị trí mục tiêu */
+                pkt.target_x_local = (int16_t)(delta_x_m * 100.0f);
                 pkt.target_y_local = (int16_t)(delta_y_m * 100.0f);
             } else {
                 /* Khung hình không có mục tiêu (count == 0) */
                 pkt.sensor_flags &= ~KVC_FLAG_AI_DETECTED;
                 pkt.class_id = KVC_CLASS_ID_NONE;
                 pkt.confidence = 0;
-                pkt.target_lat = uav_lat;
-                pkt.target_lon = uav_lon;
+                if (pkt.sensor_flags & KVC_FLAG_GNSS_VALID) {
+                    pkt.target_lat = uav_lat;
+                    pkt.target_lon = uav_lon;
+                } else {
+                    pkt.target_lat = 0;
+                    pkt.target_lon = 0;
+                }
                 pkt.target_x_local = 0;
                 pkt.target_y_local = 0;
             }
         } else {
             /* Chưa có tín hiệu BBox mới trong 2.0 giây: hạ cờ AI, giữ vị trí UAV */
             pkt.sensor_flags &= ~KVC_FLAG_AI_DETECTED;
-            pkt.target_lat = uav_lat;
-            pkt.target_lon = uav_lon;
+            if (pkt.sensor_flags & KVC_FLAG_GNSS_VALID) {
+                pkt.target_lat = uav_lat;
+                pkt.target_lon = uav_lon;
+            } else {
+                pkt.target_lat = 0;
+                pkt.target_lon = 0;
+            }
             pkt.target_x_local = 0;
             pkt.target_y_local = 0;
         }

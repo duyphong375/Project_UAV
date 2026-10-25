@@ -59,8 +59,8 @@ def parse_rf_payload(rf_payload_hex: str) -> dict[str, Any]:
                 "coordinate_frame": "WGS84",
                 "latitude": lat_scaled / 1e7,
                 "longitude": lon_scaled / 1e7,
-                "local_x_cm": None,
-                "local_y_cm": None,
+                "local_x_cm": float(x_local_cm),
+                "local_y_cm": float(y_local_cm),
                 "origin_id": None,
             }
         else:
@@ -86,8 +86,23 @@ def parse_rf_payload(rf_payload_hex: str) -> dict[str, Any]:
         roll_deg = round(r_raw / 10.0, 1)
         pitch_deg = round(p_raw / 10.0, 1)
 
-    uav_lat = round(lat_scaled / 1e7, 7) if (lat_scaled != 0 and gps_valid) else None
-    uav_lon = round(lon_scaled / 1e7, 7) if (lon_scaled != 0 and gps_valid) else None
+    target_lat = round(lat_scaled / 1e7, 7) if (lat_scaled != 0 and gps_valid) else None
+    target_lon = round(lon_scaled / 1e7, 7) if (lon_scaled != 0 and gps_valid) else None
+
+    # Tách biệt tọa độ UAV với tọa độ người trôi dạt:
+    # UAV giữ nguyên vị trí bay thực tế, không bị nhảy giật theo mục tiêu
+    if target_lat is not None and target_lon is not None:
+        if has_target and (x_local_cm != 0 or y_local_cm != 0):
+            d_lat = (y_local_cm / 100.0) * (89.977 / 1e7)
+            d_lon = (x_local_cm / 100.0) * (93.633 / 1e7)
+            uav_lat = round(target_lat - d_lat, 7)
+            uav_lon = round(target_lon - d_lon, 7)
+        else:
+            uav_lat = target_lat
+            uav_lon = target_lon
+    else:
+        uav_lat = None
+        uav_lon = None
 
     return {
         "sync_valid": sync == b"\xaa\x55",
